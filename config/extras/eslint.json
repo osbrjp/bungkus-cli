@@ -1,0 +1,11 @@
+{
+  "extra": "eslint",
+  "template": "eslint/eslint.config.mjs",
+  "base": {
+    "astro": {
+      "packages": ["eslint", "eslint-plugin-astro"],
+      "imports": ["import eslintPluginAstro from 'eslint-plugin-astro';"],
+      "spreads": ["...eslintPluginAstro.configs['flat/recommended']"]
+    }
+  }
+}

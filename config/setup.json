@@ -1,0 +1,18 @@
+{
+  "base": "astro",
+  "packages": ["astro"],
+  "npm": {
+    "scripts": {
+      "dev": "astro dev",
+      "build": "astro build",
+      "preview": "astro preview"
+    }
+  },
+  "config": {
+    "path": "astro.config.mjs",
+    "template": "import { defineConfig } from 'astro/config';\n\n// https://astro.build/config\nexport default defineConfig({});\n"
+  },
+  "files": [
+    { "src": "astro/src/pages/index.astro", "dest": "src/pages/index.astro" }
+  ]
+}
