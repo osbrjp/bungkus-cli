@@ -1,0 +1,57 @@
+name: Addition
+type: Addition
+title: Add *** support to ***.
+description: A format for changes made to introduce new code, features, or functionality that did not exist before.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please write the Title concisely and accurately to reflect the purpose of this issue (e.g., "Implement a feature to do *** when ***" or "Resolve the issue where *** occurs under *** conditions").
+
+        -----------------------------------------------
+
+  - type: textarea
+    id: requirement
+    attributes:
+      label: Requirement
+      description: Please describe the background and necessity of this feature development, such as the background and awareness of the issues that require this feature development. If you can describe non-functional requirements (performance, availability, security measures, etc.), please do so.
+      placeholder: Example - Users can only check the contents of uploaded DOCX files by downloading them and opening Word each time, which is cumbersome. I want to be able to preview it on the service.
+    validations:
+      required: true
+
+  - type: textarea
+    id: note
+    attributes:
+      label: Notes
+      description: Please include additional information such as links to related issues or desired release dates.
+      value: |
+        ### Related Issues
+
+        1. (URL of the related issue)
+
+  - type: markdown
+    attributes:
+      value: |
+        -----------------------------------------------
+
+        ## After Issue Creation
+
+        ### Set Project Attributes
+
+        Once the issue is created, it will be automatically registered to a Project. For fields requiring numeric input, please use the following guidelines:
+
+        * Effort (person-days)
+          * Enter an estimated amount of time it would take an average developer participating in this project. Assume 1 person-day = 8 hours, with a minimum of 0.25 person-days (2 hours) and a maximum of 10 person-days (2 weeks). If it exceeds this range, consider splitting the issue.
+        * Difficulty
+          - 4 = High - Tasks where what needs to be done is already clear.
+          - 3 = Moderately High - Tasks that can be clarified through investigation or understanding specifications.
+          - 2 = Moderately Low - Tasks requiring independent problem understanding and issue identification.
+          - 1 = Low - Tasks where it's unclear where to start.
+
+        ### Assigning a Responsible Person
+
+        Assigning an Assignee to the issue will automatically create a Pull Request. Normally, development proceeds by checking out the branch for this Pull Request.
+
+        ### Writing Design and Testing Specifications
+
+        Design and testing specifications should be documented in the pull request (not the issue).
