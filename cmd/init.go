@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 
-	"github.com/spencer-osbrjp/bungkus-cli/config"
+	"github.com/spencer-osbrjp/bungkus-cli/internal/config"
 	"github.com/spencer-osbrjp/bungkus-cli/internal/patcher"
 	"github.com/spf13/cobra"
 )

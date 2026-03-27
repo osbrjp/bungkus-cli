@@ -1,0 +1,13 @@
+{
+  "extra": "vanilla",
+  "base": {
+    "astro": {
+      "packages": [],
+      "imports": [],
+      "plugins": [],
+      "files": [
+        { "src": "vanilla/global.css", "dest": "src/styles/global.css" }
+      ]
+    }
+  }
+}

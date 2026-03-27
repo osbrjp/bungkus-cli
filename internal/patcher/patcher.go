@@ -9,7 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/spencer-osbrjp/bungkus-cli/config"
+	"github.com/spencer-osbrjp/bungkus-cli/internal/config"
 )
 
 var embeddedJS []byte
