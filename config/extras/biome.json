@@ -1,0 +1,9 @@
+{
+  "extra": "biome",
+  "template": "biome/biome.json",
+  "base": {
+    "astro": {
+      "packages": ["@biomejs/biome"]
+    }
+  }
+}
