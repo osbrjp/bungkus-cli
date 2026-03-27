@@ -13,6 +13,7 @@
     "template": "import { defineConfig } from 'astro/config';\n\n// https://astro.build/config\nexport default defineConfig({});\n"
   },
   "files": [
+    { "src": "astro/src/layouts/Layout.astro", "dest": "src/layouts/Layout.astro" },
     { "src": "astro/src/pages/index.astro", "dest": "src/pages/index.astro" }
   ]
 }
