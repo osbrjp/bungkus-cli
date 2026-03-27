@@ -6,11 +6,14 @@
       "dev": "astro dev",
       "build": "astro build",
       "preview": "astro preview"
+    },
+    "overrides": {
+      "vite": "^7"
     }
   },
   "config": {
     "path": "astro.config.mjs",
-    "template": "import { defineConfig } from 'astro/config';\n\n// https://astro.build/config\nexport default defineConfig({});\n"
+    "template": "astro/astro.config.mjs"
   },
   "files": [
     { "src": "astro/src/layouts/Layout.astro", "dest": "src/layouts/Layout.astro" },

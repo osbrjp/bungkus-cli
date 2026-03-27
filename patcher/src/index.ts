@@ -1,5 +1,11 @@
 import fs from 'fs';
-import { Project, SyntaxKind } from 'ts-morph';
+import {
+  IndentationText,
+  NewLineKind,
+  Project,
+  QuoteKind,
+  SyntaxKind,
+} from 'ts-morph';
 
 interface PatchArgs {
   configPath: string;
@@ -65,7 +71,15 @@ function patchJson(
 
 // JS/TS patching: imports, plugins, spreads
 function patchJs(opts: PatchArgs): void {
-  const project = new Project();
+  const project = new Project({
+    manipulationSettings: {
+      indentationText: IndentationText.TwoSpaces,
+      newLineKind: NewLineKind.LineFeed,
+      quoteKind: QuoteKind.Single,
+      usePrefixAndSuffixTextForRename: false,
+      useTrailingCommas: true,
+    },
+  });
   const sourceFile = project.addSourceFileAtPath(opts.configPath);
 
   // Add import statements after existing imports

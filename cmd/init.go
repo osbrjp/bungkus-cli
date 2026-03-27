@@ -107,8 +107,12 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 	// 2. Write base config file (e.g. astro.config.mjs)
 	if setup.Config.Path != "" {
+		data, err := config.LoadTemplateFile(setup.Config.Template)
+		if err != nil {
+			return fmt.Errorf("failed to load config template: %w", err)
+		}
 		configPath := filepath.Join(dir, setup.Config.Path)
-		if err := os.WriteFile(configPath, []byte(setup.Config.Template), 0644); err != nil {
+		if err := os.WriteFile(configPath, data, 0644); err != nil {
 			return fmt.Errorf("failed to write %s: %w", setup.Config.Path, err)
 		}
 		fmt.Printf("Created %s\n", setup.Config.Path)
@@ -222,6 +226,10 @@ func patchPackageJSON(pkgPath string, setup *config.Setup) error {
 
 	// Merge scripts from setup config
 	pkg["scripts"] = setup.NPM.Scripts
+
+	if len(setup.NPM.Overrides) > 0 {
+		pkg["overrides"] = setup.NPM.Overrides
+	}
 
 	out, err := json.MarshalIndent(pkg, "", "  ")
 	if err != nil {

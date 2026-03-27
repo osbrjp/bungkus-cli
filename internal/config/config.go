@@ -17,7 +17,8 @@ type Setup struct {
 }
 
 type NPMConfig struct {
-	Scripts map[string]string `json:"scripts"`
+	Scripts   map[string]string `json:"scripts"`
+	Overrides map[string]string `json:"overrides,omitempty"`
 }
 
 type ConfigFile struct {

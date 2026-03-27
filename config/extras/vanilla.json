@@ -6,7 +6,8 @@
       "imports": [],
       "plugins": [],
       "files": [
-        { "src": "vanilla/global.css", "dest": "src/styles/global.css" }
+        { "src": "vanilla/global.css", "dest": "src/styles/global.css" },
+        { "src": "vanilla/reset.css", "dest": "src/styles/reset.css" }
       ]
     }
   }
