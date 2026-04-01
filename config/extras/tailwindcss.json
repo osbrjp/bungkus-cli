@@ -8,6 +8,14 @@
       "files": [
         { "src": "tailwindcss/global.css", "dest": "src/styles/global.css" }
       ]
+    },
+    "vite": {
+      "packages": ["tailwindcss", "@tailwindcss/vite"],
+      "imports": ["import tailwindcss from '@tailwindcss/vite';"],
+      "plugins": ["tailwindcss()"],
+      "files": [
+        { "src": "tailwindcss/global.css", "dest": "src/styles/global.css" }
+      ]
     }
   }
 }

@@ -1,11 +1,12 @@
 {
   "base": "astro",
-  "packages": ["astro"],
+  "packages": ["astro", "husky"],
   "npm": {
     "scripts": {
       "dev": "astro dev",
       "build": "astro build",
-      "preview": "astro preview"
+      "preview": "astro preview",
+      "prepare": "husky"
     },
     "overrides": {
       "vite": "^7"
@@ -17,6 +18,7 @@
   },
   "files": [
     { "src": "astro/src/layouts/Layout.astro", "dest": "src/layouts/Layout.astro" },
-    { "src": "astro/src/pages/index.astro", "dest": "src/pages/index.astro" }
+    { "src": "astro/src/pages/index.astro", "dest": "src/pages/index.astro" },
+    { "src": "husky/pre-commit", "dest": ".husky/pre-commit", "executable": true }
   ]
 }

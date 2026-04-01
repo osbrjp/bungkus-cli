@@ -6,6 +6,11 @@
       "packages": ["eslint", "eslint-plugin-astro"],
       "imports": ["import eslintPluginAstro from 'eslint-plugin-astro';"],
       "spreads": ["...eslintPluginAstro.configs['flat/recommended']"]
+    },
+    "vite": {
+      "packages": ["eslint", "@eslint/js", "typescript-eslint"],
+      "imports": ["import eslint from '@eslint/js';", "import tseslint from 'typescript-eslint';"],
+      "spreads": ["eslint.configs.recommended", "...tseslint.configs.recommended"]
     }
   }
 }

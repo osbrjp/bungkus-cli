@@ -27,8 +27,9 @@ type ConfigFile struct {
 }
 
 type FileEntry struct {
-	Src  string `json:"src"`
-	Dest string `json:"dest"`
+	Src        string `json:"src"`
+	Dest       string `json:"dest"`
+	Executable bool   `json:"executable,omitempty"`
 }
 
 type Extra struct {
@@ -38,18 +39,19 @@ type Extra struct {
 }
 
 type ExtraBase struct {
-	Packages  []string       `json:"packages"`
-	Imports   []string       `json:"imports"`
-	Plugins   []string       `json:"plugins"`
-	Spreads   []string       `json:"spreads"`
-	JsonMerge map[string]any `json:"jsonMerge,omitempty"`
-	Files     []FileEntry    `json:"files"`
+	Packages  []string          `json:"packages"`
+	Imports   []string          `json:"imports"`
+	Plugins   []string          `json:"plugins"`
+	Spreads   []string          `json:"spreads"`
+	JsonMerge map[string]any    `json:"jsonMerge,omitempty"`
+	Scripts   map[string]string `json:"scripts,omitempty"`
+	Files     []FileEntry       `json:"files"`
 }
 
-func LoadSetup() (*Setup, error) {
-	data, err := configdata.FS.ReadFile("setup.json")
+func LoadSetup(base string) (*Setup, error) {
+	data, err := configdata.FS.ReadFile(filepath.Join("bases", base+".json"))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unknown base %q: %w", base, err)
 	}
 	var s Setup
 	if err := json.Unmarshal(data, &s); err != nil {
