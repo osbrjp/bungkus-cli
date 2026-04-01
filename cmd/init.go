@@ -10,6 +10,7 @@ import (
 
 	"github.com/spencer-osbrjp/bungkus-cli/internal/config"
 	"github.com/spencer-osbrjp/bungkus-cli/internal/patcher"
+	"github.com/spencer-osbrjp/bungkus-cli/internal/tui"
 	"github.com/spf13/cobra"
 )
 
@@ -17,7 +18,7 @@ var initCmd = &cobra.Command{
 	Use:     "init [path]",
 	Short:   "Setup project boilerplate",
 	Example: "bungkus init . --css tailwindcss --fmt prettier",
-	Args:    cobra.ExactArgs(1),
+	Args:    cobra.MaximumNArgs(1),
 	RunE:    runInit,
 }
 
@@ -25,23 +26,37 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 
 	defaultBase := "astro"
-	defaultCssFramework := "tailwindcss"
+	defaultCSSJFramework := "tailwindcss"
 	defaultFmt := "prettier"
 	defaultLinter := "eslint"
 
 	initCmd.Flags().StringP("base", "b", defaultBase, "Project base framework")
-	initCmd.Flags().String("css", defaultCssFramework, "CSS framework (e.g. tailwindcss)")
+	initCmd.Flags().String("css", defaultCSSJFramework, "CSS framework (e.g. tailwindcss)")
 	initCmd.Flags().String("fmt", defaultFmt, "Formatter (e.g. prettier)")
 	initCmd.Flags().String("linter", defaultLinter, "Linter (e.g. eslint)")
 }
 
 func runInit(cmd *cobra.Command, args []string) error {
-	targetPath := args[0]
+	if len(args) == 0 {
+		opts, err := tui.Run()
+		if err != nil {
+			return err
+		}
+		if opts == nil {
+			return nil // user quit
+		}
+		return RunInit(opts.Path, opts.Base, opts.CSS, opts.Formatter, opts.Linter)
+	}
+
 	base, _ := cmd.Flags().GetString("base")
 	css, _ := cmd.Flags().GetString("css")
 	formatter, _ := cmd.Flags().GetString("fmt")
 	linter, _ := cmd.Flags().GetString("linter")
 
+	return RunInit(args[0], base, css, formatter, linter)
+}
+
+func RunInit(targetPath, base, css, formatter, linter string) error {
 	// Resolve target directory
 	dir, err := resolveDir(targetPath)
 	if err != nil {
@@ -112,7 +127,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to load config template: %w", err)
 		}
 		configPath := filepath.Join(dir, setup.Config.Path)
-		if err := os.WriteFile(configPath, data, 0644); err != nil {
+		if err := os.WriteFile(configPath, data, 0o644); err != nil {
 			return fmt.Errorf("failed to write %s: %w", setup.Config.Path, err)
 		}
 		fmt.Printf("Created %s\n", setup.Config.Path)
@@ -144,7 +159,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 				return err
 			}
 			cfgPath := filepath.Join(dir, filename)
-			if err := os.WriteFile(cfgPath, data, 0644); err != nil {
+			if err := os.WriteFile(cfgPath, data, 0o644); err != nil {
 				return fmt.Errorf("failed to write %s: %w", filename, err)
 			}
 			fmt.Printf("Created %s\n", filename)
@@ -192,10 +207,10 @@ func copyTemplateFiles(dir string, files []config.FileEntry) error {
 			return err
 		}
 		destPath := filepath.Join(dir, f.Dest)
-		if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
 			return fmt.Errorf("failed to create dir for %s: %w", f.Dest, err)
 		}
-		if err := os.WriteFile(destPath, data, 0644); err != nil {
+		if err := os.WriteFile(destPath, data, 0o644); err != nil {
 			return fmt.Errorf("failed to write %s: %w", f.Dest, err)
 		}
 		fmt.Printf("Created %s\n", f.Dest)
@@ -207,7 +222,7 @@ func resolveDir(path string) (string, error) {
 	if path == "." {
 		return ".", nil
 	}
-	if err := os.MkdirAll(path, 0755); err != nil {
+	if err := os.MkdirAll(path, 0o755); err != nil {
 		return "", fmt.Errorf("failed to create directory %s: %w", path, err)
 	}
 	return path, nil
@@ -236,7 +251,5 @@ func patchPackageJSON(pkgPath string, setup *config.Setup) error {
 		return err
 	}
 
-	return os.WriteFile(pkgPath, out, 0644)
+	return os.WriteFile(pkgPath, out, 0o644)
 }
-
-
