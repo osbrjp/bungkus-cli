@@ -9,6 +9,15 @@
         { "src": "vanilla/global.css", "dest": "src/styles/global.css" },
         { "src": "vanilla/reset.css", "dest": "src/styles/reset.css" }
       ]
+    },
+    "vite": {
+      "packages": [],
+      "imports": [],
+      "plugins": [],
+      "files": [
+        { "src": "vanilla/global.css", "dest": "src/styles/global.css" },
+        { "src": "vanilla/reset.css", "dest": "src/styles/reset.css" }
+      ]
     }
   }
 }

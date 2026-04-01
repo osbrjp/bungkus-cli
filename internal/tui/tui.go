@@ -54,7 +54,7 @@ func initialModel() Model {
 	ti.Width = 40
 
 	panels := [4]Panel{
-		NewPanel("Base", []string{"astro"}, 0),
+		NewPanel("Base", []string{"astro", "vite"}, 0),
 		NewPanel("CSS", []string{"vanilla", "tailwindcss"}, 1),
 		NewPanel("Formatter", []string{"prettier", "biome"}, 0),
 		NewPanel("Linter", []string{"eslint", "biome"}, 0),

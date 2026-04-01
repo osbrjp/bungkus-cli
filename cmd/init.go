@@ -64,7 +64,7 @@ func RunInit(targetPath, base, css, formatter, linter string) error {
 	}
 
 	// Load base setup config
-	setup, err := config.LoadSetup()
+	setup, err := config.LoadSetup(base)
 	if err != nil {
 		return fmt.Errorf("failed to load setup config: %w", err)
 	}
@@ -78,6 +78,9 @@ func RunInit(targetPath, base, css, formatter, linter string) error {
 	// Collect imports and plugins for base config patching
 	var allImports []string
 	var allPlugins []string
+
+	// Collect extra scripts to merge into package.json
+	extraScripts := make(map[string]string)
 
 	// Process each flag
 	for _, name := range []string{css, formatter, linter} {
@@ -93,6 +96,9 @@ func RunInit(targetPath, base, css, formatter, linter string) error {
 			return fmt.Errorf("extra %q does not support base %q", name, base)
 		}
 		packages = append(packages, baseConfig.Packages...)
+		for k, v := range baseConfig.Scripts {
+			extraScripts[k] = v
+		}
 
 		// Only collect imports/plugins for base config from extras without templates
 		if extra.Template == "" {
@@ -114,8 +120,8 @@ func RunInit(targetPath, base, css, formatter, linter string) error {
 		return fmt.Errorf("npm init failed: %s", out)
 	}
 
-	// Patch package.json with scripts from setup config
-	if err := patchPackageJSON(filepath.Join(dir, "package.json"), setup); err != nil {
+	// Patch package.json with scripts from setup config and extras
+	if err := patchPackageJSON(filepath.Join(dir, "package.json"), setup, extraScripts); err != nil {
 		return fmt.Errorf("failed to patch package.json: %w", err)
 	}
 	fmt.Println("Created package.json")
@@ -210,7 +216,11 @@ func copyTemplateFiles(dir string, files []config.FileEntry) error {
 		if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
 			return fmt.Errorf("failed to create dir for %s: %w", f.Dest, err)
 		}
-		if err := os.WriteFile(destPath, data, 0o644); err != nil {
+		perm := os.FileMode(0o644)
+		if f.Executable {
+			perm = 0o755
+		}
+		if err := os.WriteFile(destPath, data, perm); err != nil {
 			return fmt.Errorf("failed to write %s: %w", f.Dest, err)
 		}
 		fmt.Printf("Created %s\n", f.Dest)
@@ -228,7 +238,7 @@ func resolveDir(path string) (string, error) {
 	return path, nil
 }
 
-func patchPackageJSON(pkgPath string, setup *config.Setup) error {
+func patchPackageJSON(pkgPath string, setup *config.Setup, extraScripts map[string]string) error {
 	data, err := os.ReadFile(pkgPath)
 	if err != nil {
 		return err
@@ -239,8 +249,15 @@ func patchPackageJSON(pkgPath string, setup *config.Setup) error {
 		return err
 	}
 
-	// Merge scripts from setup config
-	pkg["scripts"] = setup.NPM.Scripts
+	// Merge scripts from setup config and extras
+	scripts := make(map[string]string)
+	for k, v := range setup.NPM.Scripts {
+		scripts[k] = v
+	}
+	for k, v := range extraScripts {
+		scripts[k] = v
+	}
+	pkg["scripts"] = scripts
 
 	if len(setup.NPM.Overrides) > 0 {
 		pkg["overrides"] = setup.NPM.Overrides

@@ -3,7 +3,16 @@
   "template": "biome/biome.json",
   "base": {
     "astro": {
-      "packages": ["@biomejs/biome"]
+      "packages": ["@biomejs/biome"],
+      "scripts": {
+        "format": "biome check --write ."
+      }
+    },
+    "vite": {
+      "packages": ["@biomejs/biome"],
+      "scripts": {
+        "format": "biome check --write ."
+      }
     }
   }
 }

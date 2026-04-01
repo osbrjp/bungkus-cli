@@ -138,28 +138,32 @@ function patchJs(opts: PatchArgs): void {
       );
     }
 
-    let viteProp = configObj.getProperty('vite');
-    if (!viteProp) {
-      configObj.addPropertyAssignment({
-        name: 'vite',
-        initializer: '{\n    plugins: []\n  }',
-      });
-      viteProp = configObj.getProperty('vite')!;
-    }
+    // Look for plugins array: top-level `plugins` first, then `vite.plugins`
+    let pluginsProp = configObj.getProperty('plugins');
 
-    const viteObj = viteProp
-      .asKindOrThrow(SyntaxKind.PropertyAssignment)
-      .getInitializerIfKindOrThrow(
-        SyntaxKind.ObjectLiteralExpression,
-      );
-
-    let pluginsProp = viteObj.getProperty('plugins');
     if (!pluginsProp) {
-      viteObj.addPropertyAssignment({
-        name: 'plugins',
-        initializer: '[]',
-      });
-      pluginsProp = viteObj.getProperty('plugins')!;
+      const viteProp = configObj.getProperty('vite');
+      if (viteProp) {
+        const viteObj = viteProp
+          .asKindOrThrow(SyntaxKind.PropertyAssignment)
+          .getInitializerIfKindOrThrow(
+            SyntaxKind.ObjectLiteralExpression,
+          );
+        pluginsProp = viteObj.getProperty('plugins');
+        if (!pluginsProp) {
+          viteObj.addPropertyAssignment({
+            name: 'plugins',
+            initializer: '[]',
+          });
+          pluginsProp = viteObj.getProperty('plugins')!;
+        }
+      } else {
+        configObj.addPropertyAssignment({
+          name: 'plugins',
+          initializer: '[]',
+        });
+        pluginsProp = configObj.getProperty('plugins')!;
+      }
     }
 
     const pluginsArr = pluginsProp
