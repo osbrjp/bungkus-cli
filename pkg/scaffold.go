@@ -46,7 +46,17 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		return fmt.Errorf("failed to read formatter templates: %w", err)
 	}
 
-	return copyDir(fmtFS, destDir, cfg)
+	if err := copyDir(fmtFS, destDir, cfg); err != nil {
+		return err
+	}
+
+	// Copy shared templates (husky, etc.)
+	sharedFS, err := fs.Sub(templates, "templates/shared")
+	if err != nil {
+		return fmt.Errorf("failed to read shared templates: %w", err)
+	}
+
+	return copyDir(sharedFS, destDir, cfg)
 }
 
 func copyDir(srcFS fs.FS, destDir string, cfg ProjectConfig) error {
@@ -87,7 +97,12 @@ func renderTemplate(srcFS fs.FS, srcPath string, destPath string, cfg ProjectCon
 		return fmt.Errorf("failed to parse template %s: %w", destPath, err)
 	}
 
-	f, err := os.Create(destPath)
+	perm := os.FileMode(0644)
+	if strings.Contains(destPath, ".husky") {
+		perm = 0755
+	}
+
+	f, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, perm)
 	if err != nil {
 		return fmt.Errorf("failed to create %s: %w", destPath, err)
 	}

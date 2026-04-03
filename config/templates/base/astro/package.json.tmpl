@@ -6,7 +6,7 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "dev": "astro dev",
+    "dev": "astro dev --port 3000",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
@@ -28,9 +28,9 @@
   "devDependencies": {
     "husky": "^9.1.7"
     {{if eq .Fmt "prettier"}}
-    ,"prettier": "3.9.0"
+    ,"prettier": "3.8.1"
       {{if eq .Base "astro"}}
-      ,"prettier-plugin-astro": "0.14.2"
+      ,"prettier-plugin-astro": "0.14.1"
       {{end}}
     {{end}}
     {{if eq .Fmt "biome"}}
