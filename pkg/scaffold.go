@@ -27,14 +27,26 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		return err
 	}
 
-	// Copy CSS templates
+	// Copy CSS templates into src/styles/
 	cssDir := "templates/css/" + string(cfg.CSS)
 	cssFS, err := fs.Sub(templates, cssDir)
 	if err != nil {
 		return fmt.Errorf("failed to read css templates: %w", err)
 	}
 
-	return copyDir(cssFS, destDir, cfg)
+	stylesDir := filepath.Join(destDir, "src", "styles")
+	if err := copyDir(cssFS, stylesDir, cfg); err != nil {
+		return err
+	}
+
+	// Copy formatter templates
+	fmtDir := "templates/fmt/" + string(cfg.Fmt)
+	fmtFS, err := fs.Sub(templates, fmtDir)
+	if err != nil {
+		return fmt.Errorf("failed to read formatter templates: %w", err)
+	}
+
+	return copyDir(fmtFS, destDir, cfg)
 }
 
 func copyDir(srcFS fs.FS, destDir string, cfg ProjectConfig) error {

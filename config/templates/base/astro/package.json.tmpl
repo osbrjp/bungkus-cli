@@ -1,5 +1,5 @@
 {
-  "name": {{.ProjectName}},
+  "name": "{{.ProjectName}}",
   "type": "module",
   "version": "0.0.1",
   "engines": {
@@ -12,10 +12,10 @@
     "astro": "astro",
     "prepare": "husky",
     {{if eq .Fmt "prettier"}}
-    ,"format": "prettier check --write"
+    "format": "prettier check --write"
     {{end}}
     {{if eq .Fmt "biome"}}
-    ,"format": "biome check --write"
+    "format": "biome check --write"
     {{end}}
   },
   "dependencies": {
@@ -29,10 +29,12 @@
     "husky": "^9.1.7"
     {{if eq .Fmt "prettier"}}
     ,"prettier": "3.9.0"
+      {{if eq .Base "astro"}}
+      ,"prettier-plugin-astro": "0.14.2"
+      {{end}}
     {{end}}
     {{if eq .Fmt "biome"}}
-    ,"@biomejs/biome": "2.0.6"
+    ,"@biomejs/biome": "2.4.10"
     {{end}}
-    ""
   }
 }
