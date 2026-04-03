@@ -1,0 +1,14 @@
+// @ts-check
+import { defineConfig } from 'astro/config';
+{{ if eq .CSS "tailwindcss" }}
+import tailwindcss from "@tailwindcss/vite";
+{{ end }}
+
+// https://astro.build/config
+export default defineConfig({
+  vite: {
+    plugins: [
+      {{if eq .CSS "tailwindcss"}}tailwindcss(){{end}}
+    ]
+  }
+});

@@ -19,15 +19,16 @@ var rootCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := pkg.NewProjectConfig()
 
-		css, _ := cmd.Flags().GetString("css")
-
-		cssFramework := pkg.CSSFramework(css)
-		if !cssFramework.IsValid() {
-			return fmt.Errorf("invalid css framework: %s", css)
+		base, _ := cmd.Flags().GetString("base")
+		cfg.Base = pkg.BaseFramework(base)
+		if !cfg.Base.IsValid() {
+			return fmt.Errorf("invalid base framework: %s", base)
 		}
 
-		cfg.CSS = pkg.CSSFrameworkConfig{
-			UseTailwindCSS: cssFramework == pkg.TailwindCSS,
+		css, _ := cmd.Flags().GetString("css")
+		cfg.CSS = pkg.CSSFramework(css)
+		if !cfg.CSS.IsValid() {
+			return fmt.Errorf("invalid css framework: %s", css)
 		}
 
 		destDir := cfg.ProjectName
@@ -53,5 +54,6 @@ func Execute() {
 }
 
 func init() {
+	rootCmd.Flags().String("base", "astro", "Base framework (astro, vite)")
 	rootCmd.Flags().String("css", "vanilla", "Css Framework")
 }
