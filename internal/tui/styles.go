@@ -3,48 +3,24 @@ package tui
 import "github.com/charmbracelet/lipgloss"
 
 var (
-	focusedColor   = lipgloss.Color("205") // magenta
-	unfocusedColor = lipgloss.Color("240") // gray
-	selectedColor  = lipgloss.Color("42")  // green
-	titleColor     = lipgloss.Color("99")  // purple
+	ColorPrimary = lipgloss.Color("#88bf6e")
+	ColorAccent  = lipgloss.Color("#e0af68")
+	ColorMuted   = lipgloss.Color("#7a7f8a")
+	ColorError   = lipgloss.Color("#f7768e")
 
-	focusedBorder = lipgloss.NewStyle().
+	PrimaryStyle = lipgloss.NewStyle().Foreground(ColorPrimary).Bold(true)
+	AccentStyle  = lipgloss.NewStyle().Foreground(ColorAccent).Bold(true)
+	MutedStyle   = lipgloss.NewStyle().Foreground(ColorMuted)
+	ErrorStyle   = lipgloss.NewStyle().Foreground(ColorError).Bold(true)
+	BoldStyle    = lipgloss.NewStyle().Bold(true)
+	BoxStyle     = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
-			BorderForeground(focusedColor)
+			BorderForeground(ColorPrimary).
+			Padding(0, 1)
 
-	unfocusedBorder = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(unfocusedColor)
-
-	titleStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(titleColor).
-			MarginBottom(1)
-
-	cursorStyle = lipgloss.NewStyle().
-			Foreground(focusedColor).
-			Bold(true)
-
-	selectedStyle = lipgloss.NewStyle().
-			Foreground(selectedColor).
-			Bold(true)
-
-	normalStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("252"))
-
-	helpStyle = lipgloss.NewStyle().
-			Foreground(unfocusedColor).
-			MarginTop(1)
-
-	confirmTitleStyle = lipgloss.NewStyle().
-				Bold(true).
-				Foreground(selectedColor).
-				MarginBottom(1)
-
-	confirmLabelStyle = lipgloss.NewStyle().
-				Foreground(unfocusedColor)
-
-	confirmValueStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("252")).
-				Bold(true)
+	TitleStyle    = PrimaryStyle
+	QuestionStyle = AccentStyle
+	ActiveStyle   = PrimaryStyle
+	InactiveStyle = MutedStyle
+	HintStyle     = MutedStyle
 )
