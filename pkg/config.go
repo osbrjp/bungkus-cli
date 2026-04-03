@@ -43,6 +43,49 @@ func (f Formatter) IsValid() bool {
 	}
 }
 
+// PackageManager
+type PackageManager string
+
+const (
+	Bun  PackageManager = "bun"
+	Npm  PackageManager = "npm"
+	Yarn PackageManager = "yarn"
+	Pnpm PackageManager = "pnpm"
+)
+
+func (p PackageManager) IsValid() bool {
+	switch p {
+	case Bun, Npm, Yarn, Pnpm:
+		return true
+	default:
+		return false
+	}
+}
+
+func (p PackageManager) InstallCmd() string {
+	return string(p) + " install"
+}
+
+func (p PackageManager) Exec() string {
+	switch p {
+	case Yarn:
+		return "yarn dlx"
+	case Pnpm:
+		return "pnpx"
+	case Bun:
+		return "bunx"
+	default:
+		return "npx"
+	}
+}
+
+func (p PackageManager) RunCmd() string {
+	if p == Npm || p == Yarn {
+		return string(p) + " run dev"
+	}
+	return string(p) + " dev"
+}
+
 func (b BaseFramework) IsValid() bool {
 	switch b {
 	case ViteBase, AstroBase:
@@ -58,6 +101,8 @@ type ProjectConfig struct {
 	Base        BaseFramework
 	CSS         CSSFramework
 	Fmt         Formatter
+	PM          PackageManager
+	NoGit       bool
 }
 
 func NewProjectConfig() ProjectConfig {
@@ -66,5 +111,6 @@ func NewProjectConfig() ProjectConfig {
 		Site:        "",
 		CSS:         VanillaCSS,
 		Fmt:         PrettierFmt,
+		PM:          Bun,
 	}
 }

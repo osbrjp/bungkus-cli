@@ -42,10 +42,19 @@ var createCmd = &cobra.Command{
 			return fmt.Errorf("invalid formatter: %s", fmtFlag)
 		}
 
+		pm, _ := cmd.Flags().GetString("pm")
+		cfg.PM = pkg.PackageManager(pm)
+		if !cfg.PM.IsValid() {
+			return fmt.Errorf("invalid package manager: %s", pm)
+		}
+
+		noGit, _ := cmd.Flags().GetBool("no-git")
+		cfg.NoGit = noGit
+
 		p := tea.NewProgram(tui.NewSpinnerModel(cfg))
 		go func() {
 			err := pkg.Scaffold(cfg.ProjectName, config.Templates, cfg)
-			p.Send(tui.DoneMsg{Err: err})
+			p.Send(tui.ScaffoldDoneMsg{Err: err})
 		}()
 
 		if _, err := p.Run(); err != nil {
@@ -61,4 +70,6 @@ func init() {
 	createCmd.Flags().String("base", "astro", "Base framework (astro, vite)")
 	createCmd.Flags().String("css", "vanilla", "CSS framework (vanilla, tailwindcss)")
 	createCmd.Flags().String("fmt", "prettier", "Formatter (prettier, biome)")
+	createCmd.Flags().String("pm", "bun", "Package manager (bun, npm, yarn, pnpm)")
+	createCmd.Flags().Bool("no-git", false, "Skip git initialization")
 }
