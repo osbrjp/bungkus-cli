@@ -31,6 +31,12 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("invalid css framework: %s", css)
 		}
 
+		fmtFlag, _ := cmd.Flags().GetString("fmt")
+		cfg.Fmt = pkg.Formatter(fmtFlag)
+		if !cfg.Fmt.IsValid() {
+			return fmt.Errorf("invalid formatter: %s", fmtFlag)
+		}
+
 		destDir := cfg.ProjectName
 
 		fmt.Printf("Scaffolding project in %s...\n", destDir)
@@ -55,5 +61,6 @@ func Execute() {
 
 func init() {
 	rootCmd.Flags().String("base", "astro", "Base framework (astro, vite)")
-	rootCmd.Flags().String("css", "vanilla", "Css Framework")
+	rootCmd.Flags().String("css", "vanilla", "CSS framework (vanilla, tailwindcss)")
+	rootCmd.Flags().String("fmt", "prettier", "Formatter (prettier, biome)")
 }
