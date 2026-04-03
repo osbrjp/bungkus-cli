@@ -1,16 +1,11 @@
+/*
+Copyright © 2026 NAME HERE <EMAIL ADDRESS>
+
+*/
 package main
 
-import (
-	_ "embed"
-
-	"github.com/spencer-osbrjp/bungkus-cli/cmd"
-	"github.com/spencer-osbrjp/bungkus-cli/internal/patcher"
-)
-
-//go:embed patcher/dist/index.js
-var patcherJS []byte
+import "github.com/spencer-osbrjp/bungkus-cli/cmd"
 
 func main() {
-	patcher.SetJS(patcherJS)
 	cmd.Execute()
 }
