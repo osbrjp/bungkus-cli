@@ -1,43 +1,87 @@
-# Astro Starter Kit: Minimal
+# bungkus-cli
 
-```sh
-bun create astro@latest -- --template minimal
+A Go CLI tool that scaffolds and configures modern frontend projects with common tooling. Single binary, no external runtime dependencies.
+
+## Features
+
+- **Frameworks** -- Astro, Vite
+- **CSS** -- Vanilla, Tailwind CSS
+- **Formatters** -- Prettier, Biome
+- **Package Managers** -- bun, npm, yarn, pnpm
+- **Git** -- Optional git init with Husky pre-commit hooks
+- **Interactive TUI** -- Guided wizard when run without arguments
+
+## Getting Started
+
+### Install
+
+```bash
+go install github.com/spencer-osbrjp/bungkus-cli@latest
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+### Usage
 
-## 🚀 Project Structure
+Run the interactive wizard:
 
-Inside of your Astro project, you'll see the following folders and files:
-
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
+```bash
+bungkus-cli
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+Or use the `create` command with flags:
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+```bash
+bungkus-cli create my-app --base astro --css tailwindcss --fmt prettier --pm bun
+```
 
-Any static assets, like images, can be placed in the `public/` directory.
+#### Flags
 
-## 🧞 Commands
+| Flag       | Default      | Options                      |
+| :--------- | :----------- | :--------------------------- |
+| `--base`   | `astro`      | `astro`, `vite`              |
+| `--css`    | `vanilla`    | `vanilla`, `tailwindcss`     |
+| `--fmt`    | `prettier`   | `prettier`, `biome`          |
+| `--pm`     | `bun`        | `bun`, `npm`, `yarn`, `pnpm` |
+| `--no-git` | `false`      | Skip git initialization      |
 
-All commands are run from the root of the project, from a terminal:
+## Project Structure
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `bun install`             | Installs dependencies                            |
-| `bun dev`             | Starts local dev server at `localhost:4321`      |
-| `bun build`           | Build your production site to `./dist/`          |
-| `bun preview`         | Preview your build locally, before deploying     |
-| `bun astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `bun astro -- --help` | Get help using the Astro CLI                     |
+```
+main.go                         # Entrypoint
+cmd/
+  root.go                       # Root command (interactive wizard)
+  create.go                     # Create command (flag-based)
+  embed.go                      # Go embed directives
+config/
+  embed.go                      # Embedded config/templates FS
+  templates/
+    base/                       # Framework templates (astro, vite)
+    css/                        # CSS templates (vanilla, tailwindcss)
+    fmt/                        # Formatter configs (prettier, biome)
+    shared/                     # Shared files (husky, CLAUDE.md, AGENTS.md)
+internal/
+  tui/
+    wizard.go                   # BubbleTea interactive wizard
+    loading.go                  # Spinner during scaffolding
+    styles.go                   # Lip Gloss styles
+pkg/
+  config.go                     # Project config types & validation
+  scaffold.go                   # Scaffolding logic
+```
 
-## 👀 Want to learn more?
+## Development
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+### Build
+
+```bash
+go build -o bungkus-cli .
+```
+
+### Run locally
+
+```bash
+go run . create my-app --base vite --css tailwindcss --fmt biome
+```
+
+## License
+
+MIT
