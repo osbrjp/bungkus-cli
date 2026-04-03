@@ -1,10 +1,14 @@
 package pkg
 
-// CSSFramework
-type CSSFrameworkConfig struct {
-	UseTailwindCSS bool
-}
+// Base framework
+type BaseFramework string
 
+const (
+	ViteBase  BaseFramework = "vite"
+	AstroBase BaseFramework = "astro"
+)
+
+// CSSFramework
 type CSSFramework string
 
 const (
@@ -13,10 +17,6 @@ const (
 )
 
 // Formatter
-type FormatterConfig struct {
-	UsePrettier bool
-	UseBiome    bool
-}
 type Formatter string
 
 const (
@@ -34,9 +34,18 @@ func (c CSSFramework) IsValid() bool {
 	}
 }
 
-func (c Formatter) IsValid() bool {
-	switch c {
+func (f Formatter) IsValid() bool {
+	switch f {
 	case PrettierFmt, BiomeFmt, OxFmt:
+		return true
+	default:
+		return false
+	}
+}
+
+func (b BaseFramework) IsValid() bool {
+	switch b {
+	case ViteBase, AstroBase:
 		return true
 	default:
 		return false
@@ -46,19 +55,16 @@ func (c Formatter) IsValid() bool {
 type ProjectConfig struct {
 	ProjectName string
 	Site        string
-	CSS         CSSFrameworkConfig
-	Fmt         FormatterConfig
+	Base        BaseFramework
+	CSS         CSSFramework
+	Fmt         Formatter
 }
 
 func NewProjectConfig() ProjectConfig {
 	return ProjectConfig{
 		ProjectName: "my-app",
 		Site:        "",
-		CSS: CSSFrameworkConfig{
-			UseTailwindCSS: false,
-		},
-		Fmt: FormatterConfig{
-			UsePrettier: true,
-		},
+		CSS:         VanillaCSS,
+		Fmt:         PrettierFmt,
 	}
 }
