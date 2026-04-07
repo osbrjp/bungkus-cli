@@ -1,0 +1,30 @@
+{
+  "name": "{{.ProjectName}}",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 3000",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "prepare": "husky",
+    "format": "{{if eq .Fmt "prettier"}}prettier check --write{{end}}{{if eq .Fmt "biome"}}biome check --write{{end}}"
+  },
+  "dependencies": {
+    {{- if eq .CSS "tailwindcss"}}
+    "tailwindcss": "^4.2.2",
+    "@tailwindcss/vite": "^4.2.2"
+    {{- end}}
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vite": "^8.0.1",
+    "husky": "^9.1.7"
+    {{- if eq .Fmt "prettier"}},
+    "prettier": "3.8.1"
+    {{- end}}
+    {{- if eq .Fmt "biome"}},
+    "@biomejs/biome": "2.4.10"
+    {{- end}}
+  }
+}
