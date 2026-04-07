@@ -7,5 +7,9 @@
     "paths": {
       "@/*": ["src/*"]
     }
+    {{- if eq .Base "astro-react" -}}
+    , "jsx": "react-jsx",
+    "jsxImportSource": "react"
+    {{- end -}}
   }
 }

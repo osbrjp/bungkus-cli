@@ -89,21 +89,23 @@ func NewWizardModel() wizardModel {
 	fields := [fieldCount - 1]field{
 		{label: "Base", options: []option{
 			{label: "Astro", value: "astro"},
+			{label: "Astro Vue", value: "astro-vue"},
+			{label: "Astro React", value: "astro-react"},
 			{label: "Vite", value: "vite"},
 		}},
 		{label: "CSS", options: []option{
-			{label: "Vanilla", value: "vanilla"},
 			{label: "Tailwind", value: "tailwindcss"},
+			{label: "Vanilla", value: "vanilla"},
 		}},
 		{label: "Formatter", options: []option{
+			{label: "Biome [Recommended]", value: "biome"},
 			{label: "Prettier", value: "prettier"},
-			{label: "Biome", value: "biome"},
 		}},
 		{label: "Package Manager", options: []option{
+			{label: "pnpm [Recommended]", value: "pnpm"},
 			{label: "bun", value: "bun"},
 			{label: "npm", value: "npm"},
 			{label: "yarn", value: "yarn"},
-			{label: "pnpm", value: "pnpm"},
 		}},
 		{label: "Git", options: []option{
 			{label: "Yes", value: "yes"},

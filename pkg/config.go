@@ -3,9 +3,16 @@ package pkg
 // Base framework
 type BaseFramework string
 
+type AstroFramework struct {
+	base        string
+	integration string
+}
+
 const (
-	ViteBase  BaseFramework = "vite"
-	AstroBase BaseFramework = "astro"
+	ViteBase       BaseFramework = "vite"
+	AstroBase      BaseFramework = "astro"
+	AstroReactBase BaseFramework = "astro-react"
+	AstroVueBase   BaseFramework = "astro-vue"
 )
 
 // CSSFramework
@@ -19,11 +26,40 @@ const (
 // Formatter
 type Formatter string
 
+// PackageManager
+type PackageManager string
+
+const (
+	Bun  PackageManager = "bun"
+	Npm  PackageManager = "npm"
+	Yarn PackageManager = "yarn"
+	Pnpm PackageManager = "pnpm"
+)
+
 const (
 	PrettierFmt Formatter = "prettier"
 	BiomeFmt    Formatter = "biome"
 	OxFmt       Formatter = "oxfmt"
 )
+
+func (b BaseFramework) IsValid() bool {
+	switch b {
+
+	case ViteBase, AstroBase, AstroVueBase, AstroReactBase:
+		return true
+	default:
+		return false
+	}
+}
+
+func (b BaseFramework) IsAstro() bool {
+	switch b {
+	case AstroBase, AstroReactBase, AstroVueBase:
+		return true
+	default:
+		return false
+	}
+}
 
 func (c CSSFramework) IsValid() bool {
 	switch c {
@@ -42,16 +78,6 @@ func (f Formatter) IsValid() bool {
 		return false
 	}
 }
-
-// PackageManager
-type PackageManager string
-
-const (
-	Bun  PackageManager = "bun"
-	Npm  PackageManager = "npm"
-	Yarn PackageManager = "yarn"
-	Pnpm PackageManager = "pnpm"
-)
 
 func (p PackageManager) IsValid() bool {
 	switch p {
@@ -84,15 +110,6 @@ func (p PackageManager) RunCmd() string {
 		return string(p) + " run dev"
 	}
 	return string(p) + " dev"
-}
-
-func (b BaseFramework) IsValid() bool {
-	switch b {
-	case ViteBase, AstroBase:
-		return true
-	default:
-		return false
-	}
 }
 
 type ProjectConfig struct {

@@ -7,8 +7,13 @@
     "dev": "vite --port 3000",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "prepare": "husky",
-    "format": "{{if eq .Fmt "prettier"}}prettier check --write{{end}}{{if eq .Fmt "biome"}}biome check --write{{end}}"
+    "prepare": "husky"
+    {{- if eq .Fmt "prettier"}},
+    "format": "prettier check --write"
+    {{- end}}
+    {{- if eq .Fmt "biome"}},
+    "format": "biome check --write"
+    {{- end}}
   },
   "dependencies": {
     {{- if eq .CSS "tailwindcss"}}
