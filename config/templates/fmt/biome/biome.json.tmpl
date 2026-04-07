@@ -12,7 +12,7 @@
       "recommended": true
     }
   },
-  {{- if eq .Base "astro"}}
+  {{- if .Base.IsAstro}}
   "overrides": [
     {
       "includes": ["**/*.svelte", "**/*.astro", "**/*.vue"],
@@ -45,7 +45,7 @@
     }
   },
   "javascript": {
-    {{- if eq .Base "astro"}}
+    {{- if .Base.IsAstro}}
     "experimentalEmbeddedSnippetsEnabled": true,
     {{- end}}
     "formatter": {

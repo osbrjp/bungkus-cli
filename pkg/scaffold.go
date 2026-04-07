@@ -1,6 +1,8 @@
 package pkg
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"os"
@@ -11,20 +13,40 @@ import (
 
 // Scaffold creates the project directory and renders templates into it.
 func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
-	baseDir := "templates/base/" + string(cfg.Base)
+	var base string
+
+	if cfg.Base.IsAstro() {
+		base = "astro"
+	} else {
+		base = string(cfg.Base)
+	}
+
+	baseDir := "templates/base/" + base
 
 	baseFS, err := fs.Sub(templates, baseDir)
 	if err != nil {
 		return fmt.Errorf("failed to read base templates: %w", err)
 	}
 
-	if err := os.MkdirAll(destDir, 0755); err != nil {
+	if err := os.MkdirAll(destDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", destDir, err)
 	}
 
 	// Copy base templates
 	if err := copyDir(baseFS, destDir, cfg); err != nil {
 		return err
+	}
+
+	if integration, b := strings.CutPrefix(string(cfg.Base), "astro-"); b {
+		integrationDir := "templates/integration/astro/" + integration
+
+		integrationFS, err := fs.Sub(templates, integrationDir)
+		if err != nil {
+			return fmt.Errorf("failed to read %v integration tempaltes: %w", integration, err)
+		}
+		if err := copyDir(integrationFS, destDir, cfg); err != nil {
+			return err
+		}
 	}
 
 	// Copy CSS templates into src/styles/
@@ -73,7 +95,7 @@ func copyDir(srcFS fs.FS, destDir string, cfg ProjectConfig) error {
 		destPath := filepath.Join(destDir, path)
 
 		if d.IsDir() {
-			return os.MkdirAll(destPath, 0755)
+			return os.MkdirAll(destPath, 0o755)
 		}
 
 		// Render .tmpl files, copy everything else as-is
@@ -97,22 +119,32 @@ func renderTemplate(srcFS fs.FS, srcPath string, destPath string, cfg ProjectCon
 		return fmt.Errorf("failed to parse template %s: %w", destPath, err)
 	}
 
-	perm := os.FileMode(0644)
-	if strings.Contains(destPath, ".husky") {
-		perm = 0755
-	}
-
-	f, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, perm)
-	if err != nil {
-		return fmt.Errorf("failed to create %s: %w", destPath, err)
-	}
-	defer f.Close()
-
-	if err := t.Execute(f, cfg); err != nil {
+	var buf bytes.Buffer
+	if err := t.Execute(&buf, cfg); err != nil {
 		return fmt.Errorf("failed to render template %s: %w", destPath, err)
 	}
 
-	return nil
+	output := buf.Bytes()
+
+	// Format JSON files after rendering
+	if strings.HasSuffix(destPath, ".json") {
+		var parsed json.RawMessage
+		if err := json.Unmarshal(output, &parsed); err != nil {
+			return fmt.Errorf("failed to parse rendered JSON %s: %w", destPath, err)
+		}
+		formatted, err := json.MarshalIndent(parsed, "", "  ")
+		if err != nil {
+			return fmt.Errorf("failed to format JSON %s: %w", destPath, err)
+		}
+		output = append(formatted, '\n')
+	}
+
+	perm := os.FileMode(0o644)
+	if strings.Contains(destPath, ".husky") {
+		perm = 0o755
+	}
+
+	return os.WriteFile(destPath, output, perm)
 }
 
 func copyFile(srcFS fs.FS, srcPath string, destPath string) error {
@@ -121,9 +153,9 @@ func copyFile(srcFS fs.FS, srcPath string, destPath string) error {
 		return fmt.Errorf("failed to read %s: %w", srcPath, err)
 	}
 
-	if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
 		return fmt.Errorf("failed to create directory for %s: %w", destPath, err)
 	}
 
-	return os.WriteFile(destPath, data, 0644)
+	return os.WriteFile(destPath, data, 0o644)
 }
