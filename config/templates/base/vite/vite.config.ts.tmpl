@@ -1,12 +1,10 @@
 import { defineConfig } from 'vite'
-{{if eq .CSS "tailwindcss"}}
+{{- if eq .CSS "tailwindcss"}}
 import tailwindcss from '@tailwindcss/vite'
-{{end}}
+{{- end}}
 
 export default defineConfig({
-  plugins: [
-    {{if eq .CSS "tailwindcss"}}
-    tailwindcss(),
-    {{end}}
-  ],
+{{- if eq .CSS "tailwindcss"}}
+  plugins: [tailwindcss()],
+{{- end}}
 })
