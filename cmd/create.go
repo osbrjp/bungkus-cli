@@ -6,7 +6,7 @@ package cmd
 import (
 	"fmt"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/spencer-osbrjp/bungkus-cli/config"
 	"github.com/spencer-osbrjp/bungkus-cli/internal/tui"
 	"github.com/spencer-osbrjp/bungkus-cli/pkg"

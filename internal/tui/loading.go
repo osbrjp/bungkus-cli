@@ -5,8 +5,8 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/charmbracelet/bubbles/spinner"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/spinner"
+	tea "charm.land/bubbletea/v2"
 	"github.com/spencer-osbrjp/bungkus-cli/pkg"
 )
 
@@ -110,10 +110,10 @@ func (m model) runGitInit() tea.Cmd {
 	}
 }
 
-func (m model) View() string {
+func (m model) View() tea.View {
 	if m.step == stepDone {
 		if m.err != nil {
-			return ErrorStyle.Render("✘ "+m.err.Error()) + "\n"
+			return tea.NewView(ErrorStyle.Render("✘ "+m.err.Error()) + "\n")
 		}
 
 		header := PrimaryStyle.Render("✔ ") + "Project ready at " + AccentStyle.Render(m.cfg.ProjectName)
@@ -131,21 +131,21 @@ func (m model) View() string {
 			MutedStyle.Render("→"),
 			AccentStyle.Render("cd "+m.cfg.ProjectName+" && "+m.cfg.PM.RunCmd()),
 		)
-		return BoxStyle.Render(header+details+hint) + "\n"
+		return tea.NewView(BoxStyle.Render(header+details+hint) + "\n")
 	}
 
 	check := PrimaryStyle.Render("✔ ")
 	switch m.step {
 	case stepScaffold:
-		return m.spinner.View() + " Scaffolding project...\n"
+		return tea.NewView(m.spinner.View() + " Scaffolding project...\n")
 	case stepInstall:
-		return check + "Project scaffolded\n" +
-			m.spinner.View() + " Installing dependencies...\n"
+		return tea.NewView(check + "Project scaffolded\n" +
+			m.spinner.View() + " Installing dependencies...\n")
 	case stepGitInit:
-		return check + "Project scaffolded\n" +
+		return tea.NewView(check + "Project scaffolded\n" +
 			check + "Dependencies installed\n" +
-			m.spinner.View() + " Initializing git...\n"
+			m.spinner.View() + " Initializing git...\n")
 	}
 
-	return ""
+	return tea.NewView("")
 }
