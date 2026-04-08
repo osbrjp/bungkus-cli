@@ -12,7 +12,7 @@ import (
 
 // screen tracks which view is currently displayed.
 const (
-	screenWizard  uint = iota
+	screenWizard uint = iota
 	screenSummary
 )
 
@@ -23,9 +23,9 @@ type WizardFinalModel struct {
 	Canceled bool
 }
 
-func (m WizardFinalModel) Init() tea.Cmd                           { return nil }
-func (m WizardFinalModel) Update(tea.Msg) (tea.Model, tea.Cmd)     { return m, nil }
-func (m WizardFinalModel) View() tea.View                          { return tea.NewView("") }
+func (m WizardFinalModel) Init() tea.Cmd                       { return nil }
+func (m WizardFinalModel) Update(tea.Msg) (tea.Model, tea.Cmd) { return m, nil }
+func (m WizardFinalModel) View() tea.View                      { return tea.NewView("") }
 
 // field represents a single selectable config field.
 type field struct {
@@ -150,19 +150,25 @@ func (m wizardModel) View() tea.View {
 
 	var s strings.Builder
 
-	// Muted border by default, accent when focused.
+	// Match project name box width to the 3-column grid.
+	colWidth := m.width / 3
+	if colWidth < 20 {
+		colWidth = 20
+	}
+	gridWidth := colWidth*3 - 2
+
 	borderColor := ColorMuted
 	if m.focus == focusName {
 		borderColor = ColorAccent
 	}
 	pn := lipgloss.NewStyle().
-		Width(m.width).
-		BorderStyle(lipgloss.NormalBorder()).
+		Width(gridWidth).
+		BorderStyle(lipgloss.ASCIIBorder()).
 		BorderForeground(borderColor)
 
 	layout := lipgloss.JoinVertical(lipgloss.Top,
 		m.headerView(),
-		pn.Render(m.textInput.View()),
+		pn.Render(AccentStyle.Render("Project Name")+"\n"+m.textInput.View()),
 		m.setUpView(),
 		m.footerView(),
 	)
@@ -176,6 +182,7 @@ func (m wizardModel) View() tea.View {
 func NewWizardModel() wizardModel {
 	ti := textinput.New()
 	ti.Placeholder = "my-app"
+	ti.Prompt = "  "
 	ti.Focus()
 	ti.CharLimit = 64
 	ti.SetWidth(40)
@@ -287,7 +294,7 @@ func (m wizardModel) setUpView() string {
 
 		style := lipgloss.NewStyle().
 			Width(colWidth - 2).
-			BorderStyle(lipgloss.NormalBorder()).
+			BorderStyle(lipgloss.ASCIIBorder()).
 			BorderForeground(borderColor)
 
 		content := m.lists[i].View()
@@ -377,7 +384,14 @@ func (m wizardModel) summaryView() string {
 	return b.String()
 }
 
-func (m wizardModel) headerView() string { return "Bungkus-CLI" }
+func (m wizardModel) headerView() string {
+	art := `88""Yb 88   88 88b 88  dP""b8 88  dP 88   88 .dP"Y8      dP""b8 88     88
+88__dP 88   88 88Yb88 dP   ` + "`" + `" 88odP  88   88 ` + "`" + `Ybo."     dP   ` + "`" + `" 88     88
+88""Yb Y8   8P 88 Y88 Yb  "88 88"Yb  Y8   8P o.` + "`" + `Y8b     Yb      88  .o 88
+88oodP ` + "`" + `YbodP' 88  Y8  YboodP 88  Yb ` + "`" + `YbodP' 8bodP'      YboodP 88ood8 88`
+	return PrimaryStyle.Margin(1, 0).Render(art) + "\n"
+}
+
 func (m wizardModel) footerView() string {
 	return "\n" + HintStyle.Render("  tab/shift+tab navigate • ↑/↓ select • enter confirm • esc quit")
 }
