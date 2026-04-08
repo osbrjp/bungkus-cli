@@ -1,6 +1,6 @@
 package tui
 
-import "github.com/charmbracelet/lipgloss"
+import "charm.land/lipgloss/v2"
 
 var (
 	ColorPrimary = lipgloss.Color("#88bf6e")
@@ -14,7 +14,7 @@ var (
 	ErrorStyle   = lipgloss.NewStyle().Foreground(ColorError).Bold(true)
 	BoldStyle    = lipgloss.NewStyle().Bold(true)
 	BoxStyle     = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
+			Border(lipgloss.ASCIIBorder()).
 			BorderForeground(ColorPrimary).
 			Padding(0, 1)
 
