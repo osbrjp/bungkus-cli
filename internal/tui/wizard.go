@@ -1,13 +1,31 @@
 package tui
 
 import (
-	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/list"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/spencer-osbrjp/bungkus-cli/pkg"
 )
+
+// screen tracks which view is currently displayed.
+const (
+	screenWizard  uint = iota
+	screenSummary
+)
+
+// WizardFinalModel is returned when the wizard completes.
+// The caller type-asserts the result to access Cfg or check Canceled.
+type WizardFinalModel struct {
+	Cfg      pkg.ProjectConfig
+	Canceled bool
+}
+
+func (m WizardFinalModel) Init() tea.Cmd                           { return nil }
+func (m WizardFinalModel) Update(tea.Msg) (tea.Model, tea.Cmd)     { return m, nil }
+func (m WizardFinalModel) View() tea.View                          { return tea.NewView("") }
 
 // field represents a single selectable config field.
 type field struct {
@@ -16,38 +34,20 @@ type field struct {
 	cursor  int
 }
 
-func (f *field) next() {
-	if f.cursor < len(f.options)-1 {
-		f.cursor++
-	} else {
-		f.cursor = 0
-	}
-}
-
-func (f *field) prev() {
-	if f.cursor > 0 {
-		f.cursor--
-	} else {
-		f.cursor = len(f.options) - 1
-	}
-}
-
-func (f field) selected() string {
-	return f.options[f.cursor].value
-}
-
-func (f field) selectedLabel() string {
-	return f.options[f.cursor].label
-}
-
+// option represents a single selectable value within a field.
 type option struct {
 	label string
 	value string
 }
 
+// Title, Description, FilterValue implement list.DefaultItem for use with bubbles list.
+func (o option) Title() string       { return o.label }
+func (o option) Description() string { return "" }
+func (o option) FilterValue() string { return o.label }
+
 // focusIndex tracks which field is focused.
 const (
-	focusName = iota
+	focusName uint = iota
 	focusBase
 	focusCSS
 	focusFmt
@@ -56,35 +56,129 @@ const (
 	fieldCount
 )
 
+// wizardModel is the main TUI model for the setup wizard.
 type wizardModel struct {
-	focus     int
+	screen    uint
+	focus     uint
 	textInput textinput.Model
-	fields    [fieldCount - 1]field // all fields except name
-	cfg       pkg.ProjectConfig
+	fields    [fieldCount - 1]field
+	lists     [fieldCount - 1]list.Model // bubbles list for each setup field
+	width     int
+	height    int
 }
 
-type WizardResultMsg struct {
-	Cfg      pkg.ProjectConfig
-	Canceled bool
+func (m wizardModel) Init() tea.Cmd {
+	return textinput.Blink
 }
 
-type WizardFinalModel struct {
-	Cfg      pkg.ProjectConfig
-	Canceled bool
+func (m wizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+
+		// Resize each list column to fit the 3-column grid.
+		colWidth := m.width/3 - 4
+		if colWidth < 16 {
+			colWidth = 16
+		}
+		for i := range m.lists {
+			m.lists[i].SetWidth(colWidth)
+		}
+
+	case tea.KeyPressMsg:
+		// Summary screen: enter to confirm and scaffold, esc to go back.
+		if m.screen == screenSummary {
+			switch msg.String() {
+			case "ctrl+c":
+				return WizardFinalModel{Canceled: true}, tea.Quit
+			case "esc":
+				m.screen = screenWizard
+				return m, nil
+			case "enter":
+				return WizardFinalModel{Cfg: m.buildConfig()}, tea.Quit
+			}
+			return m, nil
+		}
+
+		// Wizard screen key handling.
+		switch msg.String() {
+		case "ctrl+c", "esc":
+			return WizardFinalModel{Canceled: true}, tea.Quit
+
+		case "enter":
+			m.screen = screenSummary
+			return m, nil
+
+		// Navigate between fields.
+		case "tab":
+			if m.focus == fieldCount-1 {
+				m.focus = 0
+			} else {
+				m.focus++
+			}
+			return m, nil
+		case "shift+tab":
+			if m.focus == 0 {
+				m.focus = fieldCount - 1
+			} else {
+				m.focus--
+			}
+			return m, nil
+		}
+
+		// Delegate key events to the focused component.
+		if m.focus == focusName {
+			var cmd tea.Cmd
+			m.textInput, cmd = m.textInput.Update(msg)
+			return m, cmd
+		}
+
+		// Forward remaining keys to the focused list (up/down/j/k navigation).
+		idx := m.focus - 1
+		var cmd tea.Cmd
+		m.lists[idx], cmd = m.lists[idx].Update(msg)
+		return m, cmd
+	}
+	return m, nil
 }
 
-func (m WizardFinalModel) Init() tea.Cmd                       { return nil }
-func (m WizardFinalModel) Update(tea.Msg) (tea.Model, tea.Cmd) { return m, nil }
-func (m WizardFinalModel) View() string                        { return "" }
+func (m wizardModel) View() tea.View {
+	if m.screen == screenSummary {
+		return tea.NewView(m.summaryView())
+	}
 
+	var s strings.Builder
+
+	// Muted border by default, accent when focused.
+	borderColor := ColorMuted
+	if m.focus == focusName {
+		borderColor = ColorAccent
+	}
+	pn := lipgloss.NewStyle().
+		Width(m.width).
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(borderColor)
+
+	layout := lipgloss.JoinVertical(lipgloss.Top,
+		m.headerView(),
+		pn.Render(m.textInput.View()),
+		m.setUpView(),
+		m.footerView(),
+	)
+
+	s.Write([]byte(layout))
+	return tea.NewView(s.String())
+}
+
+// NewWizardModel creates and returns a fully initialised wizard model
+// with a text input for the project name and a bubbles list for each setup field.
 func NewWizardModel() wizardModel {
 	ti := textinput.New()
 	ti.Placeholder = "my-app"
 	ti.Focus()
 	ti.CharLimit = 64
-	ti.Width = 20
-	ti.PromptStyle = ActiveStyle
-	ti.TextStyle = BoldStyle
+	ti.SetWidth(40)
 
 	fields := [fieldCount - 1]field{
 		{label: "Base", options: []option{
@@ -113,134 +207,177 @@ func NewWizardModel() wizardModel {
 		}},
 	}
 
-	return wizardModel{
-		focus:     focusName,
-		textInput: ti,
-		fields:    fields,
-		cfg:       pkg.NewProjectConfig(),
-	}
-}
-
-func (m wizardModel) Init() tea.Cmd {
-	return textinput.Blink
-}
-
-func (m wizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c", "esc":
-			return WizardFinalModel{Canceled: true}, tea.Quit
-
-		case "tab":
-			m.focus = (m.focus + 1) % fieldCount
-			m.updateTextInputFocus()
-			return m, nil
-
-		case "shift+tab":
-			m.focus = (m.focus - 1 + fieldCount) % fieldCount
-			m.updateTextInputFocus()
-			return m, nil
-
-		case "up", "k":
-			if m.focus != focusName {
-				m.currentField().prev()
-			}
-			return m, nil
-
-		case "down", "j":
-			if m.focus != focusName {
-				m.currentField().next()
-			}
-			return m, nil
-
-		case "enter":
-			cfg := m.buildConfig()
-			return WizardFinalModel{Cfg: cfg}, tea.Quit
+	// Find the tallest field so all lists share the same height.
+	maxItems := 0
+	for _, f := range fields {
+		if len(f.options) > maxItems {
+			maxItems = len(f.options)
 		}
 	}
+	listHeight := maxItems + 2 // items + title bar overhead
 
-	if m.focus == focusName {
-		var cmd tea.Cmd
-		m.textInput, cmd = m.textInput.Update(msg)
-		return m, cmd
+	// Initialise a bubbles list for each field with compact, label-only rendering.
+	var lists [fieldCount - 1]list.Model
+	for i, f := range fields {
+		items := make([]list.Item, len(f.options))
+		for j, opt := range f.options {
+			items[j] = opt
+		}
+
+		// Compact delegate: single-line items, no description, no spacing.
+		delegate := list.NewDefaultDelegate()
+		delegate.ShowDescription = false
+		delegate.SetSpacing(0)
+		delegate.Styles.NormalTitle = lipgloss.NewStyle().
+			Foreground(ColorMuted).
+			Padding(0, 0, 0, 4)
+		delegate.Styles.SelectedTitle = lipgloss.NewStyle().
+			Foreground(ColorPrimary).
+			Bold(true).
+			PaddingLeft(1).
+			SetString("▸ ")
+
+		// Uniform height across all grid cells.
+		l := list.New(items, delegate, 20, listHeight)
+		l.Title = f.label
+		l.Styles.Title = lipgloss.NewStyle().
+			Foreground(ColorAccent).
+			Bold(true)
+		l.Styles.TitleBar = lipgloss.NewStyle().
+			Padding(0, 0, 1, 0)
+
+		// Strip all chrome — we only want title + items.
+		l.SetShowFilter(false)
+		l.SetShowHelp(false)
+		l.SetShowStatusBar(false)
+		l.SetShowPagination(false)
+		l.SetFilteringEnabled(false)
+		l.DisableQuitKeybindings()
+		l.InfiniteScrolling = true
+
+		lists[i] = l
 	}
 
-	return m, nil
-}
-
-func (m *wizardModel) updateTextInputFocus() {
-	if m.focus == focusName {
-		m.textInput.Focus()
-	} else {
-		m.textInput.Blur()
+	return wizardModel{
+		textInput: ti,
+		fields:    fields,
+		lists:     lists,
 	}
 }
 
-func (m *wizardModel) currentField() *field {
-	return &m.fields[m.focus-1]
+// setUpView renders the setup fields as a 3-column grid of bordered lists.
+// Each cell contains a bubbles list with a label title and selectable options.
+// The focused cell's border is highlighted with ColorAccent.
+func (m wizardModel) setUpView() string {
+	colWidth := m.width / 3
+	if colWidth < 20 {
+		colWidth = 20
+	}
+
+	// Build a bordered box for each field list.
+	// Unfocused boxes are muted (dim border + faint content).
+	var boxes []string
+	for i := range m.fields {
+		focused := m.focus == uint(i+1)
+
+		borderColor := ColorMuted
+		if focused {
+			borderColor = ColorAccent
+		}
+
+		style := lipgloss.NewStyle().
+			Width(colWidth - 2).
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(borderColor)
+
+		content := m.lists[i].View()
+		if !focused {
+			content = lipgloss.NewStyle().Faint(true).Render(content)
+		}
+
+		boxes = append(boxes, style.Render(content))
+	}
+
+	// Arrange boxes into rows of 3 columns.
+	var rows []string
+	for i := 0; i < len(boxes); i += 3 {
+		end := i + 3
+		if end > len(boxes) {
+			end = len(boxes)
+		}
+		row := lipgloss.JoinHorizontal(lipgloss.Top, boxes[i:end]...)
+		rows = append(rows, row)
+	}
+
+	return lipgloss.JoinVertical(lipgloss.Left, rows...)
 }
 
+// buildConfig assembles a ProjectConfig from the current wizard selections.
 func (m wizardModel) buildConfig() pkg.ProjectConfig {
+	name := m.projectName()
+	return pkg.ProjectConfig{
+		ProjectName: name,
+		Base:        pkg.BaseFramework(m.selectedValue(0).value),
+		CSS:         pkg.CSSFramework(m.selectedValue(1).value),
+		Fmt:         pkg.Formatter(m.selectedValue(2).value),
+		PM:          pkg.PackageManager(m.selectedValue(3).value),
+		NoGit:       m.selectedValue(4).value == "no",
+	}
+}
+
+// projectName returns the entered name or the placeholder default.
+func (m wizardModel) projectName() string {
 	name := strings.TrimSpace(m.textInput.Value())
 	if name == "" {
 		name = "my-app"
 	}
-
-	return pkg.ProjectConfig{
-		ProjectName: name,
-		Base:        pkg.BaseFramework(m.fields[focusBase-1].selected()),
-		CSS:         pkg.CSSFramework(m.fields[focusCSS-1].selected()),
-		Fmt:         pkg.Formatter(m.fields[focusFmt-1].selected()),
-		PM:          pkg.PackageManager(m.fields[focusPM-1].selected()),
-		NoGit:       m.fields[focusGit-1].selected() == "no",
-	}
+	return name
 }
 
-func (m wizardModel) View() string {
+// selectedValue returns the selected option's value for a given list index.
+func (m wizardModel) selectedValue(listIdx int) option {
+	item := m.lists[listIdx].SelectedItem()
+	if item == nil {
+		return m.fields[listIdx].options[0]
+	}
+	return item.(option)
+}
+
+// summaryView renders a confirmation screen with all selections and install instructions.
+func (m wizardModel) summaryView() string {
 	var b strings.Builder
 
+	name := m.projectName()
+	base := m.selectedValue(0)
+	css := m.selectedValue(1)
+	fmtOpt := m.selectedValue(2)
+	pm := m.selectedValue(3)
+	git := m.selectedValue(4)
+
+	label := lipgloss.NewStyle().Foreground(ColorMuted).Width(20)
+	value := lipgloss.NewStyle().Foreground(ColorPrimary).Bold(true)
+
 	b.WriteString(TitleStyle.Render("bungkus-cli") + "\n\n")
+	b.WriteString(AccentStyle.Render("  Summary") + "\n\n")
 
-	// Name field
-	nameLabel := HintStyle.Render("  Name ")
-	if m.focus == focusName {
-		nameLabel = AccentStyle.Render("▸ Name ")
+	rows := []struct{ l, v string }{
+		{"Project Name", name},
+		{"Base", base.label},
+		{"CSS", css.label},
+		{"Formatter", fmtOpt.label},
+		{"Package Manager", pm.label},
+		{"Git", git.label},
 	}
-	b.WriteString(nameLabel + m.textInput.View() + "\n\n")
-
-	// Selection fields
-	for i, f := range m.fields {
-		focused := m.focus == i+1
-
-		label := fmt.Sprintf("  %-17s", f.label)
-		if focused {
-			label = AccentStyle.Render(fmt.Sprintf("▸ %-17s", f.label))
-		} else {
-			label = HintStyle.Render(label)
-		}
-
-		var opts []string
-		for j, opt := range f.options {
-			if j == f.cursor {
-				if focused {
-					opts = append(opts, ActiveStyle.Render("[ "+opt.label+" ]"))
-				} else {
-					opts = append(opts, AccentStyle.Render(opt.label))
-				}
-			} else {
-				if focused {
-					opts = append(opts, HintStyle.Render("  "+opt.label+"  "))
-				} else {
-					opts = append(opts, HintStyle.Render(opt.label))
-				}
-			}
-		}
-
-		b.WriteString(label + strings.Join(opts, HintStyle.Render(" / ")) + "\n")
+	for _, r := range rows {
+		b.WriteString("  " + label.Render(r.l) + value.Render(r.v) + "\n")
 	}
 
-	b.WriteString("\n" + HintStyle.Render("  tab/shift+tab navigate • ↑/↓ change • enter confirm • esc quit") + "\n")
+	b.WriteString("\n" + HintStyle.Render("  enter scaffold • esc go back"))
 
 	return b.String()
+}
+
+func (m wizardModel) headerView() string { return "Bungkus-CLI" }
+func (m wizardModel) footerView() string {
+	return "\n" + HintStyle.Render("  tab/shift+tab navigate • ↑/↓ select • enter confirm • esc quit")
 }
