@@ -78,10 +78,8 @@ func (m wizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 
 		// Resize each list column to fit the 3-column grid.
-		colWidth := m.width/3 - 4
-		if colWidth < 16 {
-			colWidth = 16
-		}
+		colWidth := max(m.width/3-4, 16)
+
 		for i := range m.lists {
 			m.lists[i].SetWidth(colWidth)
 		}
@@ -151,10 +149,8 @@ func (m wizardModel) View() tea.View {
 	var s strings.Builder
 
 	// Match project name box width to the 3-column grid.
-	colWidth := m.width / 3
-	if colWidth < 20 {
-		colWidth = 20
-	}
+	colWidth := max(m.width/3, 20)
+
 	gridWidth := colWidth*3 - 2
 
 	borderColor := ColorMuted
@@ -276,10 +272,7 @@ func NewWizardModel() wizardModel {
 // Each cell contains a bubbles list with a label title and selectable options.
 // The focused cell's border is highlighted with ColorAccent.
 func (m wizardModel) setUpView() string {
-	colWidth := m.width / 3
-	if colWidth < 20 {
-		colWidth = 20
-	}
+	colWidth := max(m.width/3, 20)
 
 	// Build a bordered box for each field list.
 	// Unfocused boxes are muted (dim border + faint content).
@@ -308,10 +301,7 @@ func (m wizardModel) setUpView() string {
 	// Arrange boxes into rows of 3 columns.
 	var rows []string
 	for i := 0; i < len(boxes); i += 3 {
-		end := i + 3
-		if end > len(boxes) {
-			end = len(boxes)
-		}
+		end := min(i+3, len(boxes))
 		row := lipgloss.JoinHorizontal(lipgloss.Top, boxes[i:end]...)
 		rows = append(rows, row)
 	}
