@@ -1,0 +1,149 @@
+# Global AI Agent Guidance
+
+## Overview
+This project contains the following stack:
+
+- Framework: {{ .Base }}
+- CSS: {{ .CSS }}
+- Package Manager: {{ .PM }}
+
+## Dev environments tips
+- Always prioritise to use `{{ .PM }}` as package manager.
+- Development PORT is set to `:3000` by default
+- Always update README.md and AGENTS.md when new package and new script has been added
+- Do not install packages unless nesccessary, practice less dependency
+- Prioitise fixing/adding code in smaller chunk. 
+- Add useful comments to document complex features / code changes, not generic comments
+
+```bash
+{{ .PM }} install       # install dependency
+{{ .PM }} dev           # start dev server
+{{ .PM }} build         # production build
+{{ .PM }} preview       # preview build
+{{ .PM }} format        # format and lint code
+```
+
+## Workflow
+Use the information below as the standard workflow and criteria check-point:
+
+- Always clarify with the user if the instruction is unclear 
+- Always perform type check after code changes (can run `build`)
+- Always ensure no errors show after code changes (can run `build`)
+- Always ensure the test pass if test cases are provided (can run `test`)
+
+## Secrets and sensitive data
+- Never print secrets (tokens, private keys, credentials) to terminal output.
+- Do not request users paste secrets.
+- Avoid commands that might expose secrets (e.g., dumping env vars broadly, `cat ~/.ssh/*`).
+- Prefer existing authenticated CLIs; redact sensitive strings in any displayed output.
+
+## Code style
+
+### General
+- Keep components small and composable
+- Prefer functional components
+- Respect formatter (biome, prettier) configuration
+
+### Typescript
+- Typescript `strict` mode
+- NEVER use `any` type, use `unknown` type
+- AVOID using `as` assertion, always prioritise proper type casting / type guarding
+- Prefer arrow function
+
+### JSDoc Block - Documentation
+Always include JSDoc block in the very begining of every `components`, `page`, `utils`, `hooks`. Refer to the template below.
+
+#### General JSDoc Block template
+
+```typescript
+/**
+ * [Module]: [Name]
+ * 
+ * @file [path/to/this/file]
+ * @description [Simple one sentence description about this file].
+ * @module [Module]
+ */
+```
+
+Example:
+
+```typescript
+// .vue files
+<script setup lang='ts'>
+/**
+ * Components: PrimaryButton
+ * 
+ * @file @/components/ui/primary-button.vue
+ * @description Primary button to use for CTA.
+ * @module Components
+ */
+
+// ...other codes
+</script>
+
+
+// hooks files
+/**
+ * Hooks: useCustomFetch
+ *
+ * @file @/hooks/useCustomFetch.ts
+ * @description Reuseable fetch hook with custom setting.
+ * @return success bool, message string
+ * @module Hooks
+ */
+const useCustomFetch = (): { success: boolean, message: string } => {
+  // ...other codes
+}
+```
+
+## Project structure
+- Always use `kebab-case` for naming convention
+- Each project must have `/components`, `/pages`, `/libs`, `/data`. Refer to the template below for more details
+
+### Components structure
+```
+/components
+  /ui                   # primitives components (button, input, badge, select...)
+  /layout               # layout components (header, nav, footer, sidebar...)
+    /header
+    /footer
+  /page                 # per-page section components
+    /top
+    /about
+    /company
+    /contact-us
+  /icon                 # inline icon components (svg)
+```
+
+### Layouts
+```
+/layouts                # all layouts across the site
+  /default.{vue,tsx,astro}
+```
+
+
+### Hooks / Composables
+```
+/composables
+  /useCustomFetch.ts
+```
+
+### Lib & Utils
+```
+/libs
+  /utils.ts             # contains `cn()` and utils functions
+  /styles.ts            # contains `cva` styles
+```
+
+### Types
+```
+/types
+  /user.ts
+  /product.ts           
+```
+
+### Data
+```
+/data                   # contains static data, or mocking data
+  /userMock.ts
+```

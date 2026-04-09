@@ -72,6 +72,17 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		return err
 	}
 
+	// Copy Package Manager templates
+	pmDir := "templates/pm/" + string(cfg.PM)
+	pmFS, err := fs.Sub(templates, pmDir)
+	if err != nil {
+		return fmt.Errorf("failed to read Package manager templates: %w", err)
+	}
+
+	if err := copyDir(pmFS, destDir, cfg); err != nil {
+		return err
+	}
+
 	// Copy shared templates (husky, etc.)
 	sharedFS, err := fs.Sub(templates, "templates/shared")
 	if err != nil {
