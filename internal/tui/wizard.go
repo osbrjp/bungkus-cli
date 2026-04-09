@@ -188,6 +188,7 @@ func NewWizardModel() wizardModel {
 			{label: "Astro", value: "astro"},
 			{label: "Astro Vue", value: "astro-vue"},
 			{label: "Astro React", value: "astro-react"},
+			{label: "Nuxt", value: "nuxt"},
 			{label: "Vite", value: "vite"},
 		}},
 		{label: "CSS", options: []option{

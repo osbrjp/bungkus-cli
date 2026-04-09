@@ -13,6 +13,7 @@ const (
 	AstroBase      BaseFramework = "astro"
 	AstroReactBase BaseFramework = "astro-react"
 	AstroVueBase   BaseFramework = "astro-vue"
+	NuxtBase       BaseFramework = "nuxt"
 )
 
 // CSSFramework
