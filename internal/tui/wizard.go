@@ -252,38 +252,43 @@ func NewWizardModel() wizardModel {
 	ti.CharLimit = 64
 	ti.SetWidth(40)
 
+	reg := pkg.GetRegistry()
+
+	// Build Base options with category headers from registry.
+	var baseOpts []option
+	lastCat := ""
+	for _, b := range reg.Bases {
+		if b.Category != lastCat {
+			baseOpts = append(baseOpts, option{label: b.Category, isCategory: true})
+			lastCat = b.Category
+		}
+		baseOpts = append(baseOpts, option{label: b.Label, value: b.Value})
+	}
+
+	// Build flat option lists from registry.
+	var cssOpts []option
+	for _, c := range reg.CSS {
+		cssOpts = append(cssOpts, option{label: c.Label, value: c.Value})
+	}
+	var fmtOpts []option
+	for _, f := range reg.Formatters {
+		fmtOpts = append(fmtOpts, option{label: f.Label, value: f.Value})
+	}
+	var pmOpts []option
+	for _, p := range reg.PackageManagers {
+		pmOpts = append(pmOpts, option{label: p.Label, value: p.Value})
+	}
+
 	fields := [fieldCount - 1]field{
-		{label: "[1] Base", options: []option{
-			{label: " Astro", isCategory: true},
-			{label: "Astro", value: "astro"},
-			{label: "Astro + Vue 󰡄", value: "astro-vue"},
-			{label: "Astro + React ", value: "astro-react"},
-			{label: "󰡄 Nuxt", isCategory: true},
-			{label: "Nuxt", value: "nuxt"},
-			{label: " Vite", isCategory: true},
-			{label: "Vite", value: "vite"},
-		}},
-		{label: "[2] CSS", options: []option{
-			{label: "󱏿 Tailwind", value: "tailwindcss"},
-			{label: " Vanilla", value: "vanilla"},
-		}},
-		{label: "[3] Formatter", options: []option{
-			{label: " Biome [Recommended]", value: "biome"},
-			{label: " Prettier", value: "prettier"},
-			{label: " OxFmt + OxLint", value: "oxfmt"},
-		}},
-		{label: "[4] Package Manager", options: []option{
-			{label: "󰏗 pnpm [Recommended]", value: "pnpm"},
-			{label: "󰏗 bun", value: "bun"},
-			{label: "󰏗 npm", value: "npm"},
-			{label: "󰏗 yarn", value: "yarn"},
-		}},
+		{label: "[1] Base", options: baseOpts},
+		{label: "[2] CSS", options: cssOpts},
+		{label: "[3] Formatter", options: fmtOpts},
+		{label: "[4] Package Manager", options: pmOpts},
 		{label: "[5] Git", options: []option{
 			{label: "Yes", value: "yes"},
 			{label: "No", value: "no"},
 		}},
 	}
-
 	// Find the tallest field so all lists share the same height.
 	maxItems := 0
 	for _, f := range fields {

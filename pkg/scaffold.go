@@ -13,15 +13,12 @@ import (
 
 // Scaffold creates the project directory and renders templates into it.
 func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
-	var base string
-
-	if cfg.Base.IsAstro() {
-		base = "astro"
-	} else {
-		base = string(cfg.Base)
+	entry := globalRegistry.GetBase(string(cfg.Base))
+	if entry == nil {
+		return fmt.Errorf("unknown base framework: %s", cfg.Base)
 	}
 
-	baseDir := "templates/base/" + base
+	baseDir := "templates/base/" + entry.TemplateDir
 
 	baseFS, err := fs.Sub(templates, baseDir)
 	if err != nil {
@@ -37,31 +34,27 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		return err
 	}
 
-	if integration, b := strings.CutPrefix(string(cfg.Base), "astro-"); b {
-		integrationDir := "templates/integration/astro/" + integration
+	// Copy integration templates (e.g. astro-react → integration/astro/react)
+	if entry.Integration != "" {
+		integrationDir := "templates/integration/" + entry.Group + "/" + entry.Integration
 
 		integrationFS, err := fs.Sub(templates, integrationDir)
 		if err != nil {
-			return fmt.Errorf("failed to read %v integration tempaltes: %w", integration, err)
+			return fmt.Errorf("failed to read %v integration templates: %w", entry.Integration, err)
 		}
 		if err := copyDir(integrationFS, destDir, cfg); err != nil {
 			return err
 		}
 	}
 
-	// Copy CSS templates into src/styles/
+	// Copy CSS templates into the framework's styles directory
 	cssDir := "templates/css/" + string(cfg.CSS)
 	cssFS, err := fs.Sub(templates, cssDir)
 	if err != nil {
 		return fmt.Errorf("failed to read css templates: %w", err)
 	}
 
-	var stylesDir string
-	if cfg.Base == NuxtBase {
-		stylesDir = filepath.Join(destDir, "app", "assets", "styles")
-	} else {
-		stylesDir = filepath.Join(destDir, "src", "styles")
-	}
+	stylesDir := filepath.Join(destDir, entry.StylesDir)
 	if err := copyDir(cssFS, stylesDir, cfg); err != nil {
 		return err
 	}
