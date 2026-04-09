@@ -159,6 +159,28 @@ func (m wizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
+		// Jump to field by ctrl+number.
+		switch msg.String() {
+		case "ctrl+1":
+			m.focus = focusBase
+			return m, nil
+		case "ctrl+2":
+			m.focus = focusCSS
+			return m, nil
+		case "ctrl+3":
+			m.focus = focusFmt
+			return m, nil
+		case "ctrl+4":
+			m.focus = focusPM
+			return m, nil
+		case "ctrl+5":
+			m.focus = focusGit
+			return m, nil
+		case "ctrl+0":
+			m.focus = focusName
+			return m, nil
+		}
+
 		// Delegate key events to the focused component.
 		if m.focus == focusName {
 			var cmd tea.Cmd
