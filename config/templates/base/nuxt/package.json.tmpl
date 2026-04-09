@@ -36,10 +36,21 @@
   "devDependencies": {
     "husky": "^9.1.7"
     {{- if eq .Fmt "prettier"}},
-    "prettier": "3.8.1"
+    "prettier": "3.8.1",
+    "prettier-plugin-astro": "0.14.1"
+      {{- if eq .CSS "tailwindcss"}},
+        "prettier-plugin-tailwindcss": "0.7.2"
+      {{- end}}
     {{- end}}
     {{- if eq .Fmt "biome"}},
     "@biomejs/biome": "2.4.10"
     {{- end}}
   }
+  {{- if eq .PM "pnpm"}},
+  "pnpm": {
+    "overrides": {
+      "semver@6.3.1": "^7.7.1"
+    }
+  }
+  {{- end}}
 }

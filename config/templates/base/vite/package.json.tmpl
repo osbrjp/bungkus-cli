@@ -33,7 +33,11 @@
     "vite": "^8.0.1",
     "husky": "^9.1.7"
     {{- if eq .Fmt "prettier"}},
-    "prettier": "3.8.1"
+    "prettier": "3.8.1",
+    "prettier-plugin-astro": "0.14.1"
+      {{- if eq .CSS "tailwindcss"}},
+        "prettier-plugin-tailwindcss": "0.7.2"
+      {{- end}}
     {{- end}}
     {{- if eq .Fmt "biome"}},
     "@biomejs/biome": "2.4.10"
