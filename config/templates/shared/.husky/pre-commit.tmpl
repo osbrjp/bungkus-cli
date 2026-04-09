@@ -1,1 +1,1 @@
-{{if eq .Fmt "prettier"}}{{.PM.Exec}} prettier --check .{{end}}{{if eq .Fmt "biome"}}{{.PM.Exec}} @biomejs/biome check .{{end}}
+{{if eq .Fmt "prettier"}}{{.PM.Exec}} prettier --check .{{end}}{{if eq .Fmt "biome"}}{{.PM.Exec}} @biomejs/biome check .{{end}}{{if eq .Fmt "oxfmt"}}{{.PM.Exec}} oxlint .{{end}}
