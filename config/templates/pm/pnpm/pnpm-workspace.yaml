@@ -1,0 +1,6 @@
+strictDepBuilds: true
+minimumReleaseAge: 1440
+trustPolicy: no-downgrade
+allowedBuildScripts:
+  esbuild: "*"
+  sharp: "*"

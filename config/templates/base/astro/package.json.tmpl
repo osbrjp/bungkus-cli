@@ -12,7 +12,7 @@
     "astro": "astro",
     "prepare": "husky"
     {{- if eq .Fmt "prettier"}},
-    "format": "prettier check --write"
+    "format": "prettier --write ."
     {{- end}}
     {{- if eq .Fmt "biome"}},
     "format": "biome check --write"
@@ -42,12 +42,25 @@
   },
   "devDependencies": {
     "husky": "^9.1.7"
+    {{- if eq .PM "pnpm"}},
+    "vite": "^6.3.5"
+    {{- end}}
     {{- if eq .Fmt "prettier"}},
     "prettier": "3.8.1",
     "prettier-plugin-astro": "0.14.1"
+      {{- if eq .CSS "tailwindcss"}},
+        "prettier-plugin-tailwindcss": "0.7.2"
+      {{- end}}
     {{- end}}
     {{- if eq .Fmt "biome"}},
     "@biomejs/biome": "2.4.10"
     {{- end}}
   }
+  {{- if and (eq .PM "pnpm") (or (eq .Base "astro-react") (eq .Base "astro-vue"))}},
+  "pnpm": {
+    "overrides": {
+      "semver@6.3.1": "^7.7.1"
+    }
+  }
+  {{- end}}
 }
