@@ -73,9 +73,9 @@ func (d wizardDelegate) Render(w io.Writer, m list.Model, index int, item list.I
 	}
 
 	if index == m.Index() {
-		fmt.Fprint(w, d.selectedStyle.Render("▸ "+opt.label))
+		fmt.Fprint(w, d.selectedStyle.Render("  "+opt.label))
 	} else {
-		fmt.Fprint(w, d.normalStyle.Render(opt.label))
+		fmt.Fprint(w, d.normalStyle.Render("   "+opt.label))
 	}
 }
 
@@ -168,16 +168,16 @@ func (m wizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Forward remaining keys to the focused list (up/down/j/k navigation).
 		idx := m.focus - 1
-		prevIdx := m.lists[idx].Index()
 		var cmd tea.Cmd
 		m.lists[idx], cmd = m.lists[idx].Update(msg)
 
-		// Skip category headers — nudge cursor past them.
+		// Skip category headers — use actual key direction, not index comparison,
+		// so wrap-around (infinite scroll) works correctly.
 		if sel, ok := m.lists[idx].SelectedItem().(option); ok && sel.isCategory {
-			movingUp := m.lists[idx].Index() < prevIdx
-			if movingUp {
+			switch msg.String() {
+			case "up", "k":
 				m.lists[idx].CursorUp()
-			} else {
+			default:
 				m.lists[idx].CursorDown()
 			}
 		}
@@ -205,12 +205,13 @@ func (m wizardModel) View() tea.View {
 	}
 	pn := lipgloss.NewStyle().
 		Width(gridWidth).
-		BorderStyle(lipgloss.ASCIIBorder()).
-		BorderForeground(borderColor)
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(borderColor).
+		Padding(0, 1)
 
 	layout := lipgloss.JoinVertical(lipgloss.Top,
 		m.headerView(),
-		pn.Render(AccentStyle.Render("Project Name")+"\n"+m.textInput.View()),
+		pn.Render(AccentStyle.Render("[0] Project Name")+"\n"+m.textInput.View()),
 		m.setUpView(),
 		m.footerView(),
 	)
@@ -230,32 +231,32 @@ func NewWizardModel() wizardModel {
 	ti.SetWidth(40)
 
 	fields := [fieldCount - 1]field{
-		{label: "Base", options: []option{
+		{label: "[1] Base", options: []option{
 			{label: " Astro", isCategory: true},
 			{label: "Astro", value: "astro"},
 			{label: "Astro + Vue 󰡄", value: "astro-vue"},
 			{label: "Astro + React ", value: "astro-react"},
 			{label: "󰡄 Nuxt", isCategory: true},
 			{label: "Nuxt", value: "nuxt"},
-			{label: "⚡ Vite", isCategory: true},
+			{label: " Vite", isCategory: true},
 			{label: "Vite", value: "vite"},
 		}},
-		{label: "CSS", options: []option{
+		{label: "[2] CSS", options: []option{
 			{label: "󱏿 Tailwind", value: "tailwindcss"},
 			{label: " Vanilla", value: "vanilla"},
 		}},
-		{label: "Formatter", options: []option{
+		{label: "[3] Formatter", options: []option{
 			{label: " Biome [Recommended]", value: "biome"},
-			{label: " Prettier", value: "prettier"},
-			{label: "󰬏 OxFmt + OxLint", value: "oxfmt"},
+			{label: " Prettier", value: "prettier"},
+			{label: " OxFmt + OxLint", value: "oxfmt"},
 		}},
-		{label: "Package Manager", options: []option{
+		{label: "[4] Package Manager", options: []option{
 			{label: "󰏗 pnpm [Recommended]", value: "pnpm"},
 			{label: "󰏗 bun", value: "bun"},
 			{label: "󰏗 npm", value: "npm"},
 			{label: "󰏗 yarn", value: "yarn"},
 		}},
-		{label: "Git", options: []option{
+		{label: "[5] Git", options: []option{
 			{label: "Yes", value: "yes"},
 			{label: "No", value: "no"},
 		}},
@@ -280,26 +281,24 @@ func NewWizardModel() wizardModel {
 
 		delegate := wizardDelegate{
 			normalStyle: lipgloss.NewStyle().
-				Foreground(ColorMuted).
-				Padding(0, 0, 0, 4),
+				Foreground(ColorMuted),
 			selectedStyle: lipgloss.NewStyle().
-				Foreground(ColorPrimary).
-				Bold(true).
-				PaddingLeft(1),
+				Foreground(ColorGreen).
+				Bold(true),
 			categoryStyle: lipgloss.NewStyle().
 				Foreground(ColorAccent).
 				Bold(true).
-				Padding(0, 0, 0, 1),
+				PaddingLeft(1),
 		}
 
-		// Uniform height across all grid cells.
 		l := list.New(items, delegate, 20, listHeight)
 		l.Title = f.label
 		l.Styles.Title = lipgloss.NewStyle().
-			Foreground(ColorAccent).
-			Bold(true)
+			Foreground(ColorPrimary).
+			Bold(true).
+			PaddingLeft(1)
 		l.Styles.TitleBar = lipgloss.NewStyle().
-			Padding(0, 0, 1, 0)
+			Padding(0, 0, 0, 0)
 
 		// Strip all chrome — we only want title + items.
 		l.SetShowFilter(false)
@@ -331,8 +330,6 @@ func NewWizardModel() wizardModel {
 func (m wizardModel) setUpView() string {
 	colWidth := max(m.width/3, 20)
 
-	// Build a bordered box for each field list.
-	// Unfocused boxes are muted (dim border + faint content).
 	var boxes []string
 	for i := range m.fields {
 		focused := m.focus == uint(i+1)
@@ -343,16 +340,12 @@ func (m wizardModel) setUpView() string {
 		}
 
 		style := lipgloss.NewStyle().
-			Width(colWidth - 2).
-			BorderStyle(lipgloss.ASCIIBorder()).
-			BorderForeground(borderColor)
+			Width(colWidth-2).
+			BorderStyle(lipgloss.RoundedBorder()).
+			BorderForeground(borderColor).
+			Padding(0, 1)
 
-		content := m.lists[i].View()
-		if !focused {
-			content = lipgloss.NewStyle().Faint(true).Render(content)
-		}
-
-		boxes = append(boxes, style.Render(content))
+		boxes = append(boxes, style.Render(m.lists[i].View()))
 	}
 
 	// Arrange boxes into rows of 3 columns.
@@ -414,8 +407,8 @@ func (m wizardModel) summaryView() string {
 	pm := m.selectedValue(3)
 	git := m.selectedValue(4)
 
-	label := lipgloss.NewStyle().Foreground(ColorMuted).Width(20)
-	value := lipgloss.NewStyle().Foreground(ColorPrimary).Bold(true)
+	label := MutedStyle.Width(20)
+	value := ActiveStyle
 
 	b.WriteString(TitleStyle.Render("bungkus-cli") + "\n\n")
 	b.WriteString(AccentStyle.Render("  Summary") + "\n\n")
@@ -442,9 +435,9 @@ func (m wizardModel) headerView() string {
 88__dP 88   88 88Yb88 dP   ` + "`" + `" 88odP  88   88 ` + "`" + `Ybo."     dP   ` + "`" + `" 88     88
 88""Yb Y8   8P 88 Y88 Yb  "88 88"Yb  Y8   8P o.` + "`" + `Y8b     Yb      88  .o 88
 88oodP ` + "`" + `YbodP' 88  Y8  YboodP 88  Yb ` + "`" + `YbodP' 8bodP'      YboodP 88ood8 88`
-	return PrimaryStyle.Margin(1, 0).Render(art) + "\n"
+	return AccentStyle.Margin(1, 0).Render(art) + "\n"
 }
 
 func (m wizardModel) footerView() string {
-	return "\n" + HintStyle.Render("  tab/shift+tab navigate • ↑/↓ select • enter confirm • esc quit")
+	return "\n" + MutedStyle.Render("  tab/shift+tab navigate  ↑/↓ select  enter confirm  esc quit")
 }
