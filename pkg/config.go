@@ -46,7 +46,7 @@ const (
 func (b BaseFramework) IsValid() bool {
 	switch b {
 
-	case ViteBase, AstroBase, AstroVueBase, AstroReactBase:
+	case ViteBase, AstroBase, AstroVueBase, AstroReactBase, NuxtBase:
 		return true
 	default:
 		return false
