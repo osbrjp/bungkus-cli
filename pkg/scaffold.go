@@ -56,7 +56,12 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		return fmt.Errorf("failed to read css templates: %w", err)
 	}
 
-	stylesDir := filepath.Join(destDir, "src", "styles")
+	var stylesDir string
+	if cfg.Base == NuxtBase {
+		stylesDir = filepath.Join(destDir, "app", "assets", "styles")
+	} else {
+		stylesDir = filepath.Join(destDir, "src", "styles")
+	}
 	if err := copyDir(cssFS, stylesDir, cfg); err != nil {
 		return err
 	}

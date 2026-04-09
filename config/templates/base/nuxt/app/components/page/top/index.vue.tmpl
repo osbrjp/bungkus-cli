@@ -1,0 +1,31 @@
+<script setup lang="ts">
+/**
+ * Page: Home
+ *
+ * @file ./app/components/page/top/index.vue
+ * @description Top page first section.
+ * @module Components
+ */
+
+const count = ref<number>(0)
+
+const handleClick = () => {
+  count.value++
+  console.log("Count: ", count.value)
+}
+</script>
+
+<template>
+  <h1 class="bg-black text-white">
+    Welcome to Project {{ .ProjectName }}
+  </h1>
+
+  <div>
+    <span>
+      Count: {{ "{{ count }}" }}
+    </span>
+    <UiButton @click="handleClick">
+      Click Me
+    </UiButton>
+  </div>
+</template>

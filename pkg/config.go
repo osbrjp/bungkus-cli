@@ -13,6 +13,7 @@ const (
 	AstroBase      BaseFramework = "astro"
 	AstroReactBase BaseFramework = "astro-react"
 	AstroVueBase   BaseFramework = "astro-vue"
+	NuxtBase       BaseFramework = "nuxt"
 )
 
 // CSSFramework
@@ -45,7 +46,7 @@ const (
 func (b BaseFramework) IsValid() bool {
 	switch b {
 
-	case ViteBase, AstroBase, AstroVueBase, AstroReactBase:
+	case ViteBase, AstroBase, AstroVueBase, AstroReactBase, NuxtBase:
 		return true
 	default:
 		return false
