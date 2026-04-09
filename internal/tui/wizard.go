@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"fmt"
+	"io"
 	"strings"
 
 	"charm.land/bubbles/v2/list"
@@ -35,15 +37,47 @@ type field struct {
 }
 
 // option represents a single selectable value within a field.
+// When isCategory is true, the option acts as a non-selectable group header.
 type option struct {
-	label string
-	value string
+	label      string
+	value      string
+	isCategory bool
 }
 
 // Title, Description, FilterValue implement list.DefaultItem for use with bubbles list.
 func (o option) Title() string       { return o.label }
 func (o option) Description() string { return "" }
 func (o option) FilterValue() string { return o.label }
+
+// wizardDelegate is a custom list delegate that renders category headers
+// differently from selectable items.
+type wizardDelegate struct {
+	normalStyle   lipgloss.Style
+	selectedStyle lipgloss.Style
+	categoryStyle lipgloss.Style
+}
+
+func (d wizardDelegate) Height() int                             { return 1 }
+func (d wizardDelegate) Spacing() int                            { return 0 }
+func (d wizardDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
+
+func (d wizardDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
+	opt, ok := item.(option)
+	if !ok {
+		return
+	}
+
+	if opt.isCategory {
+		fmt.Fprint(w, d.categoryStyle.Render(opt.label))
+		return
+	}
+
+	if index == m.Index() {
+		fmt.Fprint(w, d.selectedStyle.Render("▸ "+opt.label))
+	} else {
+		fmt.Fprint(w, d.normalStyle.Render(opt.label))
+	}
+}
 
 // focusIndex tracks which field is focused.
 const (
@@ -134,8 +168,20 @@ func (m wizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Forward remaining keys to the focused list (up/down/j/k navigation).
 		idx := m.focus - 1
+		prevIdx := m.lists[idx].Index()
 		var cmd tea.Cmd
 		m.lists[idx], cmd = m.lists[idx].Update(msg)
+
+		// Skip category headers — nudge cursor past them.
+		if sel, ok := m.lists[idx].SelectedItem().(option); ok && sel.isCategory {
+			movingUp := m.lists[idx].Index() < prevIdx
+			if movingUp {
+				m.lists[idx].CursorUp()
+			} else {
+				m.lists[idx].CursorDown()
+			}
+		}
+
 		return m, cmd
 	}
 	return m, nil
@@ -185,25 +231,29 @@ func NewWizardModel() wizardModel {
 
 	fields := [fieldCount - 1]field{
 		{label: "Base", options: []option{
+			{label: " Astro", isCategory: true},
 			{label: "Astro", value: "astro"},
-			{label: "Astro Vue", value: "astro-vue"},
-			{label: "Astro React", value: "astro-react"},
+			{label: "Astro + Vue 󰡄", value: "astro-vue"},
+			{label: "Astro + React ", value: "astro-react"},
+			{label: "󰡄 Nuxt", isCategory: true},
 			{label: "Nuxt", value: "nuxt"},
+			{label: "⚡ Vite", isCategory: true},
 			{label: "Vite", value: "vite"},
 		}},
 		{label: "CSS", options: []option{
-			{label: "Tailwind", value: "tailwindcss"},
-			{label: "Vanilla", value: "vanilla"},
+			{label: "󱏿 Tailwind", value: "tailwindcss"},
+			{label: " Vanilla", value: "vanilla"},
 		}},
 		{label: "Formatter", options: []option{
-			{label: "Biome [Recommended]", value: "biome"},
-			{label: "Prettier", value: "prettier"},
+			{label: " Biome [Recommended]", value: "biome"},
+			{label: " Prettier", value: "prettier"},
+			{label: "󰬏 OxFmt + OxLint", value: "oxfmt"},
 		}},
 		{label: "Package Manager", options: []option{
-			{label: "pnpm [Recommended]", value: "pnpm"},
-			{label: "bun", value: "bun"},
-			{label: "npm", value: "npm"},
-			{label: "yarn", value: "yarn"},
+			{label: "󰏗 pnpm [Recommended]", value: "pnpm"},
+			{label: "󰏗 bun", value: "bun"},
+			{label: "󰏗 npm", value: "npm"},
+			{label: "󰏗 yarn", value: "yarn"},
 		}},
 		{label: "Git", options: []option{
 			{label: "Yes", value: "yes"},
@@ -228,18 +278,19 @@ func NewWizardModel() wizardModel {
 			items[j] = opt
 		}
 
-		// Compact delegate: single-line items, no description, no spacing.
-		delegate := list.NewDefaultDelegate()
-		delegate.ShowDescription = false
-		delegate.SetSpacing(0)
-		delegate.Styles.NormalTitle = lipgloss.NewStyle().
-			Foreground(ColorMuted).
-			Padding(0, 0, 0, 4)
-		delegate.Styles.SelectedTitle = lipgloss.NewStyle().
-			Foreground(ColorPrimary).
-			Bold(true).
-			PaddingLeft(1).
-			SetString("▸ ")
+		delegate := wizardDelegate{
+			normalStyle: lipgloss.NewStyle().
+				Foreground(ColorMuted).
+				Padding(0, 0, 0, 4),
+			selectedStyle: lipgloss.NewStyle().
+				Foreground(ColorPrimary).
+				Bold(true).
+				PaddingLeft(1),
+			categoryStyle: lipgloss.NewStyle().
+				Foreground(ColorAccent).
+				Bold(true).
+				Padding(0, 0, 0, 1),
+		}
 
 		// Uniform height across all grid cells.
 		l := list.New(items, delegate, 20, listHeight)
@@ -258,6 +309,11 @@ func NewWizardModel() wizardModel {
 		l.SetFilteringEnabled(false)
 		l.DisableQuitKeybindings()
 		l.InfiniteScrolling = true
+
+		// Skip initial category header so cursor starts on a selectable item.
+		if len(f.options) > 0 && f.options[0].isCategory {
+			l.Select(1)
+		}
 
 		lists[i] = l
 	}
@@ -333,12 +389,18 @@ func (m wizardModel) projectName() string {
 }
 
 // selectedValue returns the selected option's value for a given list index.
+// Skips category headers and returns the first selectable option as fallback.
 func (m wizardModel) selectedValue(listIdx int) option {
 	item := m.lists[listIdx].SelectedItem()
-	if item == nil {
-		return m.fields[listIdx].options[0]
+	if opt, ok := item.(option); ok && !opt.isCategory {
+		return opt
 	}
-	return item.(option)
+	for _, o := range m.fields[listIdx].options {
+		if !o.isCategory {
+			return o
+		}
+	}
+	return m.fields[listIdx].options[0]
 }
 
 // summaryView renders a confirmation screen with all selections and install instructions.

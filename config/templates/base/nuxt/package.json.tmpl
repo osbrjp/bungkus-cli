@@ -19,6 +19,10 @@
     {{- if eq .Fmt "biome"}},
     "format": "biome check --write"
     {{- end}}
+    {{- if eq .Fmt "oxfmt"}},
+    "format": "oxfmt",
+    "lint": "oxlint"
+    {{- end}}
   },
   "dependencies": {
     "nuxt": "^4.4.2",
@@ -44,6 +48,9 @@
     {{- end}}
     {{- if eq .Fmt "biome"}},
     "@biomejs/biome": "2.4.10"
+    {{- end}}
+    {{- if eq .Fmt "oxfmt"}},
+    "oxlint": "^1.59.0"
     {{- end}}
   }
   {{- if eq .PM "pnpm"}},
