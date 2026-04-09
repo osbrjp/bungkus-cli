@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"fmt"
+	"io"
 	"strings"
 
 	"charm.land/bubbles/v2/list"
@@ -35,15 +37,47 @@ type field struct {
 }
 
 // option represents a single selectable value within a field.
+// When isCategory is true, the option acts as a non-selectable group header.
 type option struct {
-	label string
-	value string
+	label      string
+	value      string
+	isCategory bool
 }
 
 // Title, Description, FilterValue implement list.DefaultItem for use with bubbles list.
 func (o option) Title() string       { return o.label }
 func (o option) Description() string { return "" }
 func (o option) FilterValue() string { return o.label }
+
+// wizardDelegate is a custom list delegate that renders category headers
+// differently from selectable items.
+type wizardDelegate struct {
+	normalStyle   lipgloss.Style
+	selectedStyle lipgloss.Style
+	categoryStyle lipgloss.Style
+}
+
+func (d wizardDelegate) Height() int                             { return 1 }
+func (d wizardDelegate) Spacing() int                            { return 0 }
+func (d wizardDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
+
+func (d wizardDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
+	opt, ok := item.(option)
+	if !ok {
+		return
+	}
+
+	if opt.isCategory {
+		fmt.Fprint(w, d.categoryStyle.Render(opt.label))
+		return
+	}
+
+	if index == m.Index() {
+		fmt.Fprint(w, d.selectedStyle.Render("  "+opt.label))
+	} else {
+		fmt.Fprint(w, d.normalStyle.Render("   "+opt.label))
+	}
+}
 
 // focusIndex tracks which field is focused.
 const (
@@ -125,6 +159,28 @@ func (m wizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
+		// Jump to field by ctrl+number.
+		switch msg.String() {
+		case "ctrl+1":
+			m.focus = focusBase
+			return m, nil
+		case "ctrl+2":
+			m.focus = focusCSS
+			return m, nil
+		case "ctrl+3":
+			m.focus = focusFmt
+			return m, nil
+		case "ctrl+4":
+			m.focus = focusPM
+			return m, nil
+		case "ctrl+5":
+			m.focus = focusGit
+			return m, nil
+		case "ctrl+0":
+			m.focus = focusName
+			return m, nil
+		}
+
 		// Delegate key events to the focused component.
 		if m.focus == focusName {
 			var cmd tea.Cmd
@@ -136,6 +192,18 @@ func (m wizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		idx := m.focus - 1
 		var cmd tea.Cmd
 		m.lists[idx], cmd = m.lists[idx].Update(msg)
+
+		// Skip category headers — use actual key direction, not index comparison,
+		// so wrap-around (infinite scroll) works correctly.
+		if sel, ok := m.lists[idx].SelectedItem().(option); ok && sel.isCategory {
+			switch msg.String() {
+			case "up", "k":
+				m.lists[idx].CursorUp()
+			default:
+				m.lists[idx].CursorDown()
+			}
+		}
+
 		return m, cmd
 	}
 	return m, nil
@@ -159,12 +227,13 @@ func (m wizardModel) View() tea.View {
 	}
 	pn := lipgloss.NewStyle().
 		Width(gridWidth).
-		BorderStyle(lipgloss.ASCIIBorder()).
-		BorderForeground(borderColor)
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(borderColor).
+		Padding(0, 1)
 
 	layout := lipgloss.JoinVertical(lipgloss.Top,
 		m.headerView(),
-		pn.Render(AccentStyle.Render("Project Name")+"\n"+m.textInput.View()),
+		pn.Render(AccentStyle.Render("[0] Project Name")+"\n"+m.textInput.View()),
 		m.setUpView(),
 		m.footerView(),
 	)
@@ -184,28 +253,32 @@ func NewWizardModel() wizardModel {
 	ti.SetWidth(40)
 
 	fields := [fieldCount - 1]field{
-		{label: "Base", options: []option{
+		{label: "[1] Base", options: []option{
+			{label: " Astro", isCategory: true},
 			{label: "Astro", value: "astro"},
-			{label: "Astro Vue", value: "astro-vue"},
-			{label: "Astro React", value: "astro-react"},
+			{label: "Astro + Vue 󰡄", value: "astro-vue"},
+			{label: "Astro + React ", value: "astro-react"},
+			{label: "󰡄 Nuxt", isCategory: true},
 			{label: "Nuxt", value: "nuxt"},
+			{label: " Vite", isCategory: true},
 			{label: "Vite", value: "vite"},
 		}},
-		{label: "CSS", options: []option{
-			{label: "Tailwind", value: "tailwindcss"},
-			{label: "Vanilla", value: "vanilla"},
+		{label: "[2] CSS", options: []option{
+			{label: "󱏿 Tailwind", value: "tailwindcss"},
+			{label: " Vanilla", value: "vanilla"},
 		}},
-		{label: "Formatter", options: []option{
-			{label: "Biome [Recommended]", value: "biome"},
-			{label: "Prettier", value: "prettier"},
+		{label: "[3] Formatter", options: []option{
+			{label: " Biome [Recommended]", value: "biome"},
+			{label: " Prettier", value: "prettier"},
+			{label: " OxFmt + OxLint", value: "oxfmt"},
 		}},
-		{label: "Package Manager", options: []option{
-			{label: "pnpm [Recommended]", value: "pnpm"},
-			{label: "bun", value: "bun"},
-			{label: "npm", value: "npm"},
-			{label: "yarn", value: "yarn"},
+		{label: "[4] Package Manager", options: []option{
+			{label: "󰏗 pnpm [Recommended]", value: "pnpm"},
+			{label: "󰏗 bun", value: "bun"},
+			{label: "󰏗 npm", value: "npm"},
+			{label: "󰏗 yarn", value: "yarn"},
 		}},
-		{label: "Git", options: []option{
+		{label: "[5] Git", options: []option{
 			{label: "Yes", value: "yes"},
 			{label: "No", value: "no"},
 		}},
@@ -228,27 +301,26 @@ func NewWizardModel() wizardModel {
 			items[j] = opt
 		}
 
-		// Compact delegate: single-line items, no description, no spacing.
-		delegate := list.NewDefaultDelegate()
-		delegate.ShowDescription = false
-		delegate.SetSpacing(0)
-		delegate.Styles.NormalTitle = lipgloss.NewStyle().
-			Foreground(ColorMuted).
-			Padding(0, 0, 0, 4)
-		delegate.Styles.SelectedTitle = lipgloss.NewStyle().
-			Foreground(ColorPrimary).
-			Bold(true).
-			PaddingLeft(1).
-			SetString("▸ ")
+		delegate := wizardDelegate{
+			normalStyle: lipgloss.NewStyle().
+				Foreground(ColorMuted),
+			selectedStyle: lipgloss.NewStyle().
+				Foreground(ColorGreen).
+				Bold(true),
+			categoryStyle: lipgloss.NewStyle().
+				Foreground(ColorAccent).
+				Bold(true).
+				PaddingLeft(1),
+		}
 
-		// Uniform height across all grid cells.
 		l := list.New(items, delegate, 20, listHeight)
 		l.Title = f.label
 		l.Styles.Title = lipgloss.NewStyle().
-			Foreground(ColorAccent).
-			Bold(true)
+			Foreground(ColorPrimary).
+			Bold(true).
+			PaddingLeft(1)
 		l.Styles.TitleBar = lipgloss.NewStyle().
-			Padding(0, 0, 1, 0)
+			Padding(0, 0, 0, 0)
 
 		// Strip all chrome — we only want title + items.
 		l.SetShowFilter(false)
@@ -258,6 +330,11 @@ func NewWizardModel() wizardModel {
 		l.SetFilteringEnabled(false)
 		l.DisableQuitKeybindings()
 		l.InfiniteScrolling = true
+
+		// Skip initial category header so cursor starts on a selectable item.
+		if len(f.options) > 0 && f.options[0].isCategory {
+			l.Select(1)
+		}
 
 		lists[i] = l
 	}
@@ -275,8 +352,6 @@ func NewWizardModel() wizardModel {
 func (m wizardModel) setUpView() string {
 	colWidth := max(m.width/3, 20)
 
-	// Build a bordered box for each field list.
-	// Unfocused boxes are muted (dim border + faint content).
 	var boxes []string
 	for i := range m.fields {
 		focused := m.focus == uint(i+1)
@@ -287,16 +362,12 @@ func (m wizardModel) setUpView() string {
 		}
 
 		style := lipgloss.NewStyle().
-			Width(colWidth - 2).
-			BorderStyle(lipgloss.ASCIIBorder()).
-			BorderForeground(borderColor)
+			Width(colWidth-2).
+			BorderStyle(lipgloss.RoundedBorder()).
+			BorderForeground(borderColor).
+			Padding(0, 1)
 
-		content := m.lists[i].View()
-		if !focused {
-			content = lipgloss.NewStyle().Faint(true).Render(content)
-		}
-
-		boxes = append(boxes, style.Render(content))
+		boxes = append(boxes, style.Render(m.lists[i].View()))
 	}
 
 	// Arrange boxes into rows of 3 columns.
@@ -333,12 +404,18 @@ func (m wizardModel) projectName() string {
 }
 
 // selectedValue returns the selected option's value for a given list index.
+// Skips category headers and returns the first selectable option as fallback.
 func (m wizardModel) selectedValue(listIdx int) option {
 	item := m.lists[listIdx].SelectedItem()
-	if item == nil {
-		return m.fields[listIdx].options[0]
+	if opt, ok := item.(option); ok && !opt.isCategory {
+		return opt
 	}
-	return item.(option)
+	for _, o := range m.fields[listIdx].options {
+		if !o.isCategory {
+			return o
+		}
+	}
+	return m.fields[listIdx].options[0]
 }
 
 // summaryView renders a confirmation screen with all selections and install instructions.
@@ -352,8 +429,8 @@ func (m wizardModel) summaryView() string {
 	pm := m.selectedValue(3)
 	git := m.selectedValue(4)
 
-	label := lipgloss.NewStyle().Foreground(ColorMuted).Width(20)
-	value := lipgloss.NewStyle().Foreground(ColorPrimary).Bold(true)
+	label := MutedStyle.Width(20)
+	value := ActiveStyle
 
 	b.WriteString(TitleStyle.Render("bungkus-cli") + "\n\n")
 	b.WriteString(AccentStyle.Render("  Summary") + "\n\n")
@@ -380,9 +457,9 @@ func (m wizardModel) headerView() string {
 88__dP 88   88 88Yb88 dP   ` + "`" + `" 88odP  88   88 ` + "`" + `Ybo."     dP   ` + "`" + `" 88     88
 88""Yb Y8   8P 88 Y88 Yb  "88 88"Yb  Y8   8P o.` + "`" + `Y8b     Yb      88  .o 88
 88oodP ` + "`" + `YbodP' 88  Y8  YboodP 88  Yb ` + "`" + `YbodP' 8bodP'      YboodP 88ood8 88`
-	return PrimaryStyle.Margin(1, 0).Render(art) + "\n"
+	return AccentStyle.Margin(1, 0).Render(art) + "\n"
 }
 
 func (m wizardModel) footerView() string {
-	return "\n" + HintStyle.Render("  tab/shift+tab navigate • ↑/↓ select • enter confirm • esc quit")
+	return "\n" + MutedStyle.Render("  tab/shift+tab navigate  ↑/↓ select  enter confirm  esc quit")
 }

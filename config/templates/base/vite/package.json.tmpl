@@ -17,6 +17,10 @@
     {{- if eq .Fmt "biome"}},
     "format": "biome check --write"
     {{- end}}
+    {{- if eq .Fmt "oxfmt"}},
+    "format": "oxfmt",
+    "lint": "oxlint"
+    {{- end}}
   },
   "dependencies": {
     {{- if eq .CSS "tailwindcss"}}
@@ -41,6 +45,9 @@
     {{- end}}
     {{- if eq .Fmt "biome"}},
     "@biomejs/biome": "2.4.10"
+    {{- end}}
+    {{- if eq .Fmt "oxfmt"}},
+    "oxlint": "^1.59.0"
     {{- end}}
   }
 }
