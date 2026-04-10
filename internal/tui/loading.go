@@ -59,10 +59,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.step = stepDone
 			return m, tea.Quit
 		}
-		if m.cfg.NoGit {
-			m.step = stepDone
-			return m, tea.Quit
-		}
 		m.step = stepGitInit
 		return m, m.runGitInit()
 	case GitInitDoneMsg:

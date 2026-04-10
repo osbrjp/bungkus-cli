@@ -45,6 +45,9 @@
     "@astrojs/vue": "^6.0.1",
     "vue": "^3.5.32"
     {{- end}}
+    {{- if eq .CMS "microcms"}},
+    "microcms-js-sdk": "^3.2.0"
+    {{- end}}
   },
   "devDependencies": {
     "husky": "^9.1.7"

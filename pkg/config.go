@@ -1,10 +1,16 @@
 package pkg
 
-type BaseFramework string
-type CSSFramework string
-type Formatter string
-type Linter string
-type PackageManager string
+import "errors"
+
+type (
+	BaseFramework  string
+	CSSFramework   string
+	Formatter      string
+	Linter         string
+	CMS            string
+	PackageManager string
+	BaseGroup      string
+)
 
 func (b BaseFramework) IsValid() bool {
 	return globalRegistry != nil && globalRegistry.HasBase(string(b))
@@ -18,6 +24,14 @@ func (b BaseFramework) IsAstro() bool {
 	return entry != nil && entry.Group == "astro"
 }
 
+func (b BaseFramework) IsVite() bool {
+	if globalRegistry == nil {
+		return false
+	}
+	entry := globalRegistry.GetBase(string(b))
+	return entry != nil && entry.Group == "vite"
+}
+
 func (c CSSFramework) IsValid() bool {
 	return globalRegistry != nil && globalRegistry.HasCSS(string(c))
 }
@@ -28,6 +42,19 @@ func (f Formatter) IsValid() bool {
 
 func (l Linter) IsValid() bool {
 	return globalRegistry != nil && globalRegistry.HasLinter(string(l))
+}
+
+func (b BaseFramework) GetGroup(base string) (BaseGroup, error) {
+	if globalRegistry == nil {
+		return "", errors.New("unable to read registry")
+	}
+
+	entry := globalRegistry.GetBase(base)
+	return BaseGroup(entry.Group), nil
+}
+
+func (c CMS) IsValid() bool {
+	return globalRegistry != nil && globalRegistry.HasCMS(string(c))
 }
 
 func (p PackageManager) IsValid() bool {
@@ -68,8 +95,8 @@ type ProjectConfig struct {
 	CSS         CSSFramework
 	Fmt         Formatter
 	Linter      Linter
+	CMS         CMS
 	PM          PackageManager
-	NoGit       bool
 }
 
 func NewProjectConfig() ProjectConfig {
@@ -79,6 +106,7 @@ func NewProjectConfig() ProjectConfig {
 		CSS:         "vanilla",
 		Fmt:         "prettier",
 		Linter:      "eslint",
+		CMS:         "none",
 		PM:          "bun",
 	}
 }

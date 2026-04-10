@@ -1,6 +1,8 @@
 package pkg
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 // Registry holds all option metadata loaded from config/registry.json.
 // This is the single source of truth — adding a new framework only
@@ -44,6 +46,7 @@ type Registry struct {
 	CSS             []OptionEntry `json:"css"`
 	Formatters      []OptionEntry `json:"formatters"`
 	Linters         []OptionEntry `json:"linters"`
+	CMS             []OptionEntry `json:"cms"`
 	PackageManagers []PMEntry     `json:"packageManagers"`
 }
 
@@ -113,4 +116,13 @@ func (r *Registry) GetPM(value string) *PMEntry {
 
 func (r *Registry) HasPM(value string) bool {
 	return r.GetPM(value) != nil
+}
+
+func (r *Registry) HasCMS(value string) bool {
+	for i := range r.CMS {
+		if r.CMS[i].Value == value {
+			return true
+		}
+	}
+	return false
 }

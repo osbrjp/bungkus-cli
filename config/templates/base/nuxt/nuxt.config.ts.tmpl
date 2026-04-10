@@ -4,7 +4,15 @@ import tailwindcss from "@tailwindcss/vite";
 {{- end}}
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
-  devtools: { enabled: true }
+  devtools: { enabled: true },
+  runtimeConfig: {
+    {{- if eq .CMS "microcms"}}
+    microCMS: {
+      serviceDomain: process.env.MICROCMS_SERVICE_DOMAIN,
+      apiKey: process.env.MICROCMS_API_KEY,
+    },
+    {{- end}}
+  }
   {{- if eq .CSS "tailwindcss"}},
   css: ['./app/assets/styles/main.css'],
   vite: {

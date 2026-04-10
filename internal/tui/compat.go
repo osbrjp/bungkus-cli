@@ -11,7 +11,11 @@ import (
 // updateCompat marks formatter and linter options as disabled/enabled based on:
 // 1. Base framework group exclusions (e.g. oxfmt/oxlint excluded for astro)
 // 2. Cross-field: biome formatter → only biome linter, and vice versa
-func (m wizardModel) updateCompat() wizardModel {
+// updateCompat accepts the focus that triggered the change so it only
+// applies the biome cross-constraint to the OTHER field, not the one
+// the user just changed. This prevents a deadlock where both fields
+// lock each other to biome.
+func (m wizardModel) updateCompat(_ uint) wizardModel {
 	reg := pkg.GetRegistry()
 	base := m.selectedValue(0)
 	baseEntry := reg.GetBase(base.value)
@@ -19,34 +23,35 @@ func (m wizardModel) updateCompat() wizardModel {
 		return m
 	}
 
-	selectedFmt := m.selectedValue(int(focusFmt) - 1)
-	selectedLinter := m.selectedValue(int(focusLinter) - 1)
-
-	// Update formatter list
+	// Update formatter list based on base group exclusions.
 	fmtIdx := int(focusFmt) - 1
 	var fmtItems []list.Item
 	for _, f := range reg.Formatters {
 		disabled := f.ExcludesGroup(baseEntry.Group)
-		if selectedLinter.value == "biome" && f.Value != "biome" {
-			disabled = true
-		}
 		fmtItems = append(fmtItems, option{label: f.Label, value: f.Value, disabled: disabled})
 	}
 	m.lists[fmtIdx].SetItems(fmtItems)
 	m = m.fixSelection(fmtIdx, fmtItems)
 
-	// Update linter list
+	// Update linter list based on base group exclusions.
 	linterIdx := int(focusLinter) - 1
 	var linterItems []list.Item
 	for _, l := range reg.Linters {
 		disabled := l.ExcludesGroup(baseEntry.Group)
-		if selectedFmt.value == "biome" && l.Value != "biome" {
-			disabled = true
-		}
 		linterItems = append(linterItems, option{label: l.Label, value: l.Value, disabled: disabled})
 	}
 	m.lists[linterIdx].SetItems(linterItems)
 	m = m.fixSelection(linterIdx, linterItems)
+
+	// Update CMS list based on base group exclusions.
+	cmsIdx := int(focusCMS) - 1
+	var cmsItems []list.Item
+	for _, c := range reg.CMS {
+		disabled := c.ExcludesGroup(baseEntry.Group)
+		cmsItems = append(cmsItems, option{label: c.Label, value: c.Value, disabled: disabled})
+	}
+	m.lists[cmsIdx].SetItems(cmsItems)
+	m = m.fixSelection(cmsIdx, cmsItems)
 
 	return m
 }
@@ -74,7 +79,7 @@ func (m wizardModel) buildConfig() pkg.ProjectConfig {
 		Fmt:         pkg.Formatter(m.selectedValue(2).value),
 		Linter:      pkg.Linter(m.selectedValue(3).value),
 		PM:          pkg.PackageManager(m.selectedValue(4).value),
-		NoGit:       m.selectedValue(5).value == "no",
+		CMS:         pkg.CMS(m.selectedValue(5).value),
 	}
 }
 
@@ -112,7 +117,7 @@ func (m wizardModel) summaryView() string {
 	fmtOpt := m.selectedValue(2)
 	linter := m.selectedValue(3)
 	pm := m.selectedValue(4)
-	git := m.selectedValue(5)
+	cms := m.selectedValue(5)
 
 	label := MutedStyle.Width(20)
 	value := ActiveStyle
@@ -127,7 +132,7 @@ func (m wizardModel) summaryView() string {
 		{"Formatter", fmtOpt.label},
 		{"Linter", linter.label},
 		{"Package Manager", pm.label},
-		{"Git", git.label},
+		{"CMS", cms.label},
 	}
 	for _, r := range rows {
 		b.WriteString("  " + label.Render(r.l) + value.Render(r.v) + "\n")
@@ -164,7 +169,7 @@ func (m wizardModel) setUpView() string {
 		}
 
 		style := lipgloss.NewStyle().
-			Width(colWidth - 2).
+			Width(colWidth-2).
 			BorderStyle(lipgloss.RoundedBorder()).
 			BorderForeground(borderColor).
 			Padding(0, 1)

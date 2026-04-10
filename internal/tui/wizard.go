@@ -35,7 +35,7 @@ const (
 	focusFmt
 	focusLinter
 	focusPM
-	focusGit
+	focusCMS
 	fieldCount
 )
 
@@ -122,7 +122,7 @@ func (m wizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.focus = focusPM
 			return m, nil
 		case "ctrl+6":
-			m.focus = focusGit
+			m.focus = focusCMS
 			return m, nil
 		}
 
@@ -150,7 +150,7 @@ func (m wizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Update compat when base, formatter, or linter changes.
 		if idx == 0 || m.focus == focusFmt || m.focus == focusLinter {
-			m = m.updateCompat()
+			m = m.updateCompat(m.focus)
 		}
 
 		return m, cmd
@@ -228,6 +228,10 @@ func NewWizardModel() wizardModel {
 	for _, p := range reg.PackageManagers {
 		pmOpts = append(pmOpts, option{label: p.Label, value: p.Value})
 	}
+	var cmsOpts []option
+	for _, c := range reg.CMS {
+		cmsOpts = append(cmsOpts, option{label: c.Label, value: c.Value})
+	}
 
 	fields := [fieldCount - 1]field{
 		{label: "[1] Base", options: baseOpts},
@@ -235,10 +239,7 @@ func NewWizardModel() wizardModel {
 		{label: "[3] Formatter", options: fmtOpts},
 		{label: "[4] Linter", options: linterOpts},
 		{label: "[5] Package Manager", options: pmOpts},
-		{label: "[6] Git", options: []option{
-			{label: "Yes", value: "yes"},
-			{label: "No", value: "no"},
-		}},
+		{label: "[6] CMS", options: cmsOpts},
 	}
 
 	maxItems := 0
@@ -301,5 +302,5 @@ func NewWizardModel() wizardModel {
 		fields:    fields,
 		lists:     lists,
 	}
-	return m.updateCompat()
+	return m.updateCompat(focusBase)
 }

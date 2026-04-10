@@ -44,23 +44,90 @@
     }
   ],
   "css": [
-    { "value": "tailwindcss", "label": "󱏿 Tailwind" },
-    { "value": "vanilla", "label": " Vanilla" }
+    {
+      "value": "tailwindcss",
+      "label": "󱏿 Tailwind"
+    },
+    {
+      "value": "vanilla",
+      "label": " Vanilla"
+    }
   ],
   "formatters": [
-    { "value": "biome", "label": " Biome" },
-    { "value": "prettier", "label": " Prettier" },
-    { "value": "oxfmt", "label": " OxFmt", "excludeGroups": ["astro"] }
+    {
+      "value": "biome",
+      "label": " Biome"
+    },
+    {
+      "value": "prettier",
+      "label": " Prettier"
+    },
+    {
+      "value": "oxfmt",
+      "label": " OxFmt",
+      "excludeGroups": [
+        "astro"
+      ]
+    }
   ],
   "linters": [
-    { "value": "biome", "label": " Biome" },
-    { "value": "eslint", "label": " ESLint" },
-    { "value": "oxlint", "label": " OxLint", "excludeGroups": ["astro"] }
+    {
+      "value": "biome",
+      "label": " Biome"
+    },
+    {
+      "value": "eslint",
+      "label": " ESLint"
+    },
+    {
+      "value": "oxlint",
+      "label": " OxLint",
+      "excludeGroups": [
+        "astro"
+      ]
+    }
+  ],
+  "cms": [
+    {
+      "value": "none",
+      "label": "None"
+    },
+    {
+      "value": "microcms",
+      "label": "microCMS",
+      "excludeGroups": [
+        "vite"
+      ]
+    }
   ],
   "packageManagers": [
-    { "value": "pnpm", "label": "󰏗 pnpm [Recommended]", "installCmd": "pnpm install", "execCmd": "pnpx", "runCmd": "pnpm dev" },
-    { "value": "bun", "label": "󰏗 bun", "installCmd": "bun install", "execCmd": "bunx", "runCmd": "bun dev" },
-    { "value": "npm", "label": "󰏗 npm", "installCmd": "npm install", "execCmd": "npx", "runCmd": "npm run dev" },
-    { "value": "yarn", "label": "󰏗 yarn", "installCmd": "yarn install", "execCmd": "yarn dlx", "runCmd": "yarn run dev" }
+    {
+      "value": "pnpm",
+      "label": "󰏗 pnpm [Recommended]",
+      "installCmd": "pnpm install",
+      "execCmd": "pnpx",
+      "runCmd": "pnpm dev"
+    },
+    {
+      "value": "bun",
+      "label": "󰏗 bun",
+      "installCmd": "bun install",
+      "execCmd": "bunx",
+      "runCmd": "bun dev"
+    },
+    {
+      "value": "npm",
+      "label": "󰏗 npm",
+      "installCmd": "npm install",
+      "execCmd": "npx",
+      "runCmd": "npm run dev"
+    },
+    {
+      "value": "yarn",
+      "label": "󰏗 yarn",
+      "installCmd": "yarn install",
+      "execCmd": "yarn dlx",
+      "runCmd": "yarn run dev"
+    }
   ]
 }

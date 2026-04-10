@@ -93,6 +93,26 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		return err
 	}
 
+	if cfg.CMS != "none" {
+		if cfg.Base.IsVite() {
+			return fmt.Errorf("cms integration is currently not supported in vite project")
+		}
+
+		group, err := cfg.Base.GetGroup(string(cfg.Base))
+		if err != nil {
+			return err
+		}
+
+		cmsDir := "templates/cms/" + string(group)
+		cmsFS, err := fs.Sub(templates, cmsDir)
+		if err != nil {
+			return fmt.Errorf("failed to read CMS templates: %w", err)
+		}
+		if err := copyDir(cmsFS, destDir, cfg); err != nil {
+			return err
+		}
+	}
+
 	// Copy shared templates (husky, etc.)
 	sharedFS, err := fs.Sub(templates, "templates/shared")
 	if err != nil {
