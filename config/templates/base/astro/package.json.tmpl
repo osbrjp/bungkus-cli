@@ -17,10 +17,6 @@
     {{- if eq .Fmt "biome"}},
     "format": "biome check --write"
     {{- end}}
-    {{- if eq .Fmt "oxfmt"}},
-    "format": "oxfmt",
-    "lint": "oxlint"
-    {{- end}}
   },
   "dependencies": {
     "astro": "^6.1.3"
@@ -58,9 +54,6 @@
     {{- end}}
     {{- if eq .Fmt "biome"}},
     "@biomejs/biome": "2.4.10"
-    {{- end}}
-    {{- if eq .Fmt "oxfmt"}},
-    "oxlint": "^1.59.0"
     {{- end}}
   }
   {{- if and (eq .PM "pnpm") (or (eq .Base "astro-react") (eq .Base "astro-vue"))}},

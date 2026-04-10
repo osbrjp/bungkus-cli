@@ -42,6 +42,7 @@ type option struct {
 	label      string
 	value      string
 	isCategory bool
+	disabled   bool
 }
 
 // Title, Description, FilterValue implement list.DefaultItem for use with bubbles list.
@@ -55,6 +56,7 @@ type wizardDelegate struct {
 	normalStyle   lipgloss.Style
 	selectedStyle lipgloss.Style
 	categoryStyle lipgloss.Style
+	disabledStyle lipgloss.Style
 }
 
 func (d wizardDelegate) Height() int                             { return 1 }
@@ -69,6 +71,11 @@ func (d wizardDelegate) Render(w io.Writer, m list.Model, index int, item list.I
 
 	if opt.isCategory {
 		fmt.Fprint(w, d.categoryStyle.Render(opt.label))
+		return
+	}
+
+	if opt.disabled {
+		fmt.Fprint(w, d.disabledStyle.Render("   "+opt.label))
 		return
 	}
 
@@ -193,15 +200,19 @@ func (m wizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.lists[idx], cmd = m.lists[idx].Update(msg)
 
-		// Skip category headers — use actual key direction, not index comparison,
-		// so wrap-around (infinite scroll) works correctly.
-		if sel, ok := m.lists[idx].SelectedItem().(option); ok && sel.isCategory {
+		// Skip category headers and disabled items.
+		if sel, ok := m.lists[idx].SelectedItem().(option); ok && (sel.isCategory || sel.disabled) {
 			switch msg.String() {
 			case "up", "k":
 				m.lists[idx].CursorUp()
 			default:
 				m.lists[idx].CursorDown()
 			}
+		}
+
+		// When base selection changes, update formatter compatibility.
+		if idx == 0 {
+			m = m.updateFormatterCompat()
 		}
 
 		return m, cmd
@@ -316,6 +327,10 @@ func NewWizardModel() wizardModel {
 				Foreground(ColorAccent).
 				Bold(true).
 				PaddingLeft(1),
+			disabledStyle: lipgloss.NewStyle().
+				Foreground(ColorMuted).
+				Faint(true).
+				Strikethrough(true),
 		}
 
 		l := list.New(items, delegate, 20, listHeight)
@@ -344,11 +359,12 @@ func NewWizardModel() wizardModel {
 		lists[i] = l
 	}
 
-	return wizardModel{
+	m := wizardModel{
 		textInput: ti,
 		fields:    fields,
 		lists:     lists,
 	}
+	return m.updateFormatterCompat()
 }
 
 // setUpView renders the setup fields as a 3-column grid of bordered lists.
@@ -387,6 +403,42 @@ func (m wizardModel) setUpView() string {
 }
 
 // buildConfig assembles a ProjectConfig from the current wizard selections.
+// updateFormatterCompat marks formatter options as disabled/enabled
+// based on the currently selected base framework.
+func (m wizardModel) updateFormatterCompat() wizardModel {
+	reg := pkg.GetRegistry()
+	base := m.selectedValue(0)
+	baseEntry := reg.GetBase(base.value)
+	if baseEntry == nil {
+		return m
+	}
+
+	fmtIdx := int(focusFmt) - 1 // formatter list index
+	var items []list.Item
+	for _, f := range reg.Formatters {
+		disabled := false
+		for _, fg := range f.ExcludeGroups {
+			if fg == baseEntry.Group {
+				disabled = true
+				break
+			}
+		}
+		items = append(items, option{label: f.Label, value: f.Value, disabled: disabled})
+	}
+	m.lists[fmtIdx].SetItems(items)
+
+	// If the current selection is now disabled, move to the first enabled item.
+	if sel, ok := m.lists[fmtIdx].SelectedItem().(option); ok && sel.disabled {
+		for i, item := range items {
+			if opt, ok := item.(option); ok && !opt.disabled {
+				m.lists[fmtIdx].Select(i)
+				break
+			}
+		}
+	}
+	return m
+}
+
 func (m wizardModel) buildConfig() pkg.ProjectConfig {
 	name := m.projectName()
 	return pkg.ProjectConfig{

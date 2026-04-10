@@ -17,8 +17,19 @@ type BaseEntry struct {
 }
 
 type OptionEntry struct {
-	Value string `json:"value"`
-	Label string `json:"label"`
+	Value         string   `json:"value"`
+	Label         string   `json:"label"`
+	ExcludeGroups []string `json:"excludeGroups,omitempty"`
+}
+
+// ExcludesGroup returns true if this option is incompatible with the given base group.
+func (o *OptionEntry) ExcludesGroup(group string) bool {
+	for _, g := range o.ExcludeGroups {
+		if g == group {
+			return true
+		}
+	}
+	return false
 }
 
 type PMEntry struct {
@@ -93,4 +104,18 @@ func (r *Registry) GetPM(value string) *PMEntry {
 
 func (r *Registry) HasPM(value string) bool {
 	return r.GetPM(value) != nil
+}
+
+// FormatterCompatible checks if a formatter is compatible with a base framework.
+func (r *Registry) FormatterCompatible(fmtValue, baseValue string) bool {
+	base := r.GetBase(baseValue)
+	if base == nil {
+		return false
+	}
+	for _, f := range r.Formatters {
+		if f.Value == fmtValue {
+			return !f.ExcludesGroup(base.Group)
+		}
+	}
+	return false
 }

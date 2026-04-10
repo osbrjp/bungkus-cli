@@ -50,7 +50,7 @@
   "formatters": [
     { "value": "biome", "label": " Biome [Recommended]" },
     { "value": "prettier", "label": " Prettier" },
-    { "value": "oxfmt", "label": " OxFmt + OxLint" }
+    { "value": "oxfmt", "label": " OxFmt + OxLint", "excludeGroups": ["astro"] }
   ],
   "packageManagers": [
     { "value": "pnpm", "label": "󰏗 pnpm [Recommended]", "installCmd": "pnpm install", "execCmd": "pnpx", "runCmd": "pnpm dev" },

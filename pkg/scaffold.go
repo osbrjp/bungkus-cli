@@ -18,6 +18,10 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		return fmt.Errorf("unknown base framework: %s", cfg.Base)
 	}
 
+	if !globalRegistry.FormatterCompatible(string(cfg.Fmt), string(cfg.Base)) {
+		return fmt.Errorf("formatter %s is not compatible with %s", cfg.Fmt, cfg.Base)
+	}
+
 	baseDir := "templates/base/" + entry.TemplateDir
 
 	baseFS, err := fs.Sub(templates, baseDir)

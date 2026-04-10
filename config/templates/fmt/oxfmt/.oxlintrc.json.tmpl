@@ -1,18 +1,8 @@
 {
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
   "rules": {
     "no-unused-vars": "warn",
     "no-debugger": "warn",
     "eqeqeq": "error"
-  }
-  {{- if eq .CSS "tailwindcss"}},
-  "plugins": ["tailwindcss"],
-  "overrides": [
-    {
-      "files": ["*.vue", "*.astro", "*.tsx", "*.jsx"],
-      "rules": {
-        "tailwindcss/sort-classes": "warn"
-      }
-    }
-  ]
-  {{- end}}
+  },
 }
