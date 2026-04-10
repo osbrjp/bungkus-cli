@@ -3,6 +3,7 @@ package pkg
 type BaseFramework string
 type CSSFramework string
 type Formatter string
+type Linter string
 type PackageManager string
 
 func (b BaseFramework) IsValid() bool {
@@ -23,6 +24,10 @@ func (c CSSFramework) IsValid() bool {
 
 func (f Formatter) IsValid() bool {
 	return globalRegistry != nil && globalRegistry.HasFormatter(string(f))
+}
+
+func (l Linter) IsValid() bool {
+	return globalRegistry != nil && globalRegistry.HasLinter(string(l))
 }
 
 func (p PackageManager) IsValid() bool {
@@ -62,6 +67,7 @@ type ProjectConfig struct {
 	Base        BaseFramework
 	CSS         CSSFramework
 	Fmt         Formatter
+	Linter      Linter
 	PM          PackageManager
 	NoGit       bool
 }
@@ -72,6 +78,7 @@ func NewProjectConfig() ProjectConfig {
 		Site:        "",
 		CSS:         "vanilla",
 		Fmt:         "prettier",
+		Linter:      "eslint",
 		PM:          "bun",
 	}
 }

@@ -48,9 +48,14 @@
     { "value": "vanilla", "label": " Vanilla" }
   ],
   "formatters": [
-    { "value": "biome", "label": " Biome [Recommended]" },
+    { "value": "biome", "label": " Biome" },
     { "value": "prettier", "label": " Prettier" },
-    { "value": "oxfmt", "label": " OxFmt + OxLint", "excludeGroups": ["astro"] }
+    { "value": "oxfmt", "label": " OxFmt", "excludeGroups": ["astro"] }
+  ],
+  "linters": [
+    { "value": "biome", "label": " Biome" },
+    { "value": "eslint", "label": " ESLint" },
+    { "value": "oxlint", "label": " OxLint", "excludeGroups": ["astro"] }
   ],
   "packageManagers": [
     { "value": "pnpm", "label": "󰏗 pnpm [Recommended]", "installCmd": "pnpm install", "execCmd": "pnpx", "runCmd": "pnpm dev" },

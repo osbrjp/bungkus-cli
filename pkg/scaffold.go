@@ -18,10 +18,6 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		return fmt.Errorf("unknown base framework: %s", cfg.Base)
 	}
 
-	if !globalRegistry.FormatterCompatible(string(cfg.Fmt), string(cfg.Base)) {
-		return fmt.Errorf("formatter %s is not compatible with %s", cfg.Fmt, cfg.Base)
-	}
-
 	baseDir := "templates/base/" + entry.TemplateDir
 
 	baseFS, err := fs.Sub(templates, baseDir)
@@ -72,6 +68,18 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 
 	if err := copyDir(fmtFS, destDir, cfg); err != nil {
 		return err
+	}
+
+	// Copy linter templates (skip if same tool as formatter, e.g. biome)
+	if string(cfg.Linter) != string(cfg.Fmt) {
+		linterDir := "templates/linter/" + string(cfg.Linter)
+		linterFS, err := fs.Sub(templates, linterDir)
+		if err != nil {
+			return fmt.Errorf("failed to read linter templates: %w", err)
+		}
+		if err := copyDir(linterFS, destDir, cfg); err != nil {
+			return err
+		}
 	}
 
 	// Copy Package Manager templates

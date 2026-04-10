@@ -92,6 +92,7 @@ const (
 	focusBase
 	focusCSS
 	focusFmt
+	focusLinter
 	focusPM
 	focusGit
 	fieldCount
@@ -178,9 +179,12 @@ func (m wizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.focus = focusFmt
 			return m, nil
 		case "ctrl+4":
-			m.focus = focusPM
+			m.focus = focusLinter
 			return m, nil
 		case "ctrl+5":
+			m.focus = focusPM
+			return m, nil
+		case "ctrl+6":
 			m.focus = focusGit
 			return m, nil
 		case "ctrl+0":
@@ -210,9 +214,9 @@ func (m wizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-		// When base selection changes, update formatter compatibility.
-		if idx == 0 {
-			m = m.updateFormatterCompat()
+		// Update compat when base, formatter, or linter changes.
+		if idx == 0 || m.focus == focusFmt || m.focus == focusLinter {
+			m = m.updateCompat()
 		}
 
 		return m, cmd
@@ -285,6 +289,10 @@ func NewWizardModel() wizardModel {
 	for _, f := range reg.Formatters {
 		fmtOpts = append(fmtOpts, option{label: f.Label, value: f.Value})
 	}
+	var linterOpts []option
+	for _, l := range reg.Linters {
+		linterOpts = append(linterOpts, option{label: l.Label, value: l.Value})
+	}
 	var pmOpts []option
 	for _, p := range reg.PackageManagers {
 		pmOpts = append(pmOpts, option{label: p.Label, value: p.Value})
@@ -294,8 +302,9 @@ func NewWizardModel() wizardModel {
 		{label: "[1] Base", options: baseOpts},
 		{label: "[2] CSS", options: cssOpts},
 		{label: "[3] Formatter", options: fmtOpts},
-		{label: "[4] Package Manager", options: pmOpts},
-		{label: "[5] Git", options: []option{
+		{label: "[4] Linter", options: linterOpts},
+		{label: "[5] Package Manager", options: pmOpts},
+		{label: "[6] Git", options: []option{
 			{label: "Yes", value: "yes"},
 			{label: "No", value: "no"},
 		}},
@@ -364,7 +373,7 @@ func NewWizardModel() wizardModel {
 		fields:    fields,
 		lists:     lists,
 	}
-	return m.updateFormatterCompat()
+	return m.updateCompat()
 }
 
 // setUpView renders the setup fields as a 3-column grid of bordered lists.
@@ -403,9 +412,10 @@ func (m wizardModel) setUpView() string {
 }
 
 // buildConfig assembles a ProjectConfig from the current wizard selections.
-// updateFormatterCompat marks formatter options as disabled/enabled
-// based on the currently selected base framework.
-func (m wizardModel) updateFormatterCompat() wizardModel {
+// updateCompat marks formatter and linter options as disabled/enabled based on:
+// 1. Base framework group exclusions (e.g. oxfmt/oxlint excluded for astro)
+// 2. Cross-field: biome formatter → only biome linter, and vice versa
+func (m wizardModel) updateCompat() wizardModel {
 	reg := pkg.GetRegistry()
 	base := m.selectedValue(0)
 	baseEntry := reg.GetBase(base.value)
@@ -413,25 +423,46 @@ func (m wizardModel) updateFormatterCompat() wizardModel {
 		return m
 	}
 
-	fmtIdx := int(focusFmt) - 1 // formatter list index
-	var items []list.Item
-	for _, f := range reg.Formatters {
-		disabled := false
-		for _, fg := range f.ExcludeGroups {
-			if fg == baseEntry.Group {
-				disabled = true
-				break
-			}
-		}
-		items = append(items, option{label: f.Label, value: f.Value, disabled: disabled})
-	}
-	m.lists[fmtIdx].SetItems(items)
+	selectedFmt := m.selectedValue(int(focusFmt) - 1)
+	selectedLinter := m.selectedValue(int(focusLinter) - 1)
 
-	// If the current selection is now disabled, move to the first enabled item.
-	if sel, ok := m.lists[fmtIdx].SelectedItem().(option); ok && sel.disabled {
+	// Update formatter list
+	fmtIdx := int(focusFmt) - 1
+	var fmtItems []list.Item
+	for _, f := range reg.Formatters {
+		disabled := f.ExcludesGroup(baseEntry.Group)
+		// If linter is biome, only biome formatter is allowed
+		if selectedLinter.value == "biome" && f.Value != "biome" {
+			disabled = true
+		}
+		fmtItems = append(fmtItems, option{label: f.Label, value: f.Value, disabled: disabled})
+	}
+	m.lists[fmtIdx].SetItems(fmtItems)
+	m = m.fixSelection(fmtIdx, fmtItems)
+
+	// Update linter list
+	linterIdx := int(focusLinter) - 1
+	var linterItems []list.Item
+	for _, l := range reg.Linters {
+		disabled := l.ExcludesGroup(baseEntry.Group)
+		// If formatter is biome, only biome linter is allowed
+		if selectedFmt.value == "biome" && l.Value != "biome" {
+			disabled = true
+		}
+		linterItems = append(linterItems, option{label: l.Label, value: l.Value, disabled: disabled})
+	}
+	m.lists[linterIdx].SetItems(linterItems)
+	m = m.fixSelection(linterIdx, linterItems)
+
+	return m
+}
+
+// fixSelection moves the cursor to the first enabled item if the current selection is disabled.
+func (m wizardModel) fixSelection(listIdx int, items []list.Item) wizardModel {
+	if sel, ok := m.lists[listIdx].SelectedItem().(option); ok && sel.disabled {
 		for i, item := range items {
 			if opt, ok := item.(option); ok && !opt.disabled {
-				m.lists[fmtIdx].Select(i)
+				m.lists[listIdx].Select(i)
 				break
 			}
 		}
@@ -446,8 +477,9 @@ func (m wizardModel) buildConfig() pkg.ProjectConfig {
 		Base:        pkg.BaseFramework(m.selectedValue(0).value),
 		CSS:         pkg.CSSFramework(m.selectedValue(1).value),
 		Fmt:         pkg.Formatter(m.selectedValue(2).value),
-		PM:          pkg.PackageManager(m.selectedValue(3).value),
-		NoGit:       m.selectedValue(4).value == "no",
+		Linter:      pkg.Linter(m.selectedValue(3).value),
+		PM:          pkg.PackageManager(m.selectedValue(4).value),
+		NoGit:       m.selectedValue(5).value == "no",
 	}
 }
 
@@ -483,8 +515,9 @@ func (m wizardModel) summaryView() string {
 	base := m.selectedValue(0)
 	css := m.selectedValue(1)
 	fmtOpt := m.selectedValue(2)
-	pm := m.selectedValue(3)
-	git := m.selectedValue(4)
+	linter := m.selectedValue(3)
+	pm := m.selectedValue(4)
+	git := m.selectedValue(5)
 
 	label := MutedStyle.Width(20)
 	value := ActiveStyle
@@ -497,6 +530,7 @@ func (m wizardModel) summaryView() string {
 		{"Base", base.label},
 		{"CSS", css.label},
 		{"Formatter", fmtOpt.label},
+		{"Linter", linter.label},
 		{"Package Manager", pm.label},
 		{"Git", git.label},
 	}

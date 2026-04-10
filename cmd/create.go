@@ -42,6 +42,12 @@ var createCmd = &cobra.Command{
 			return fmt.Errorf("invalid formatter: %s", fmtFlag)
 		}
 
+		linter, _ := cmd.Flags().GetString("linter")
+		cfg.Linter = pkg.Linter(linter)
+		if !cfg.Linter.IsValid() {
+			return fmt.Errorf("invalid linter: %s", linter)
+		}
+
 		pm, _ := cmd.Flags().GetString("pm")
 		cfg.PM = pkg.PackageManager(pm)
 		if !cfg.PM.IsValid() {
@@ -69,7 +75,8 @@ func init() {
 	rootCmd.AddCommand(createCmd)
 	createCmd.Flags().String("base", "astro", "Base framework (astro, vite)")
 	createCmd.Flags().String("css", "vanilla", "CSS framework (vanilla, tailwindcss)")
-	createCmd.Flags().String("fmt", "prettier", "Formatter (prettier, biome)")
+	createCmd.Flags().String("fmt", "prettier", "Formatter (prettier, biome, oxfmt)")
+	createCmd.Flags().String("linter", "eslint", "Linter (biome, eslint, oxlint)")
 	createCmd.Flags().String("pm", "bun", "Package manager (bun, npm, yarn, pnpm)")
 	createCmd.Flags().Bool("no-git", false, "Skip git initialization")
 }

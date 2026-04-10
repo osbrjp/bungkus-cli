@@ -14,14 +14,22 @@
     "postinstall": "nuxt prepare",
     "prepare": "husky"
     {{- if eq .Fmt "prettier"}},
-    "format": "prettier check --write"
+    "format": "prettier --write ."
     {{- end}}
     {{- if eq .Fmt "biome"}},
-    "format": "biome check --write"
+    "format": "biome format --write ."
     {{- end}}
     {{- if eq .Fmt "oxfmt"}},
-    "format": "oxfmt",
-    "lint": "oxlint"
+    "format": "oxfmt ."
+    {{- end}}
+    {{- if eq .Linter "biome"}},
+    "lint": "biome lint ."
+    {{- end}}
+    {{- if eq .Linter "eslint"}},
+    "lint": "eslint ."
+    {{- end}}
+    {{- if eq .Linter "oxlint"}},
+    "lint": "oxlint ."
     {{- end}}
   },
   "dependencies": {
@@ -46,10 +54,14 @@
         "prettier-plugin-tailwindcss": "0.7.2"
       {{- end}}
     {{- end}}
-    {{- if eq .Fmt "biome"}},
+    {{- if or (eq .Fmt "biome") (eq .Linter "biome")}},
     "@biomejs/biome": "2.4.10"
     {{- end}}
-    {{- if eq .Fmt "oxfmt"}},
+    {{- if eq .Linter "eslint"}},
+    "eslint": "^10.2.0",
+    "@eslint/js": "^10.2.0"
+    {{- end}}
+    {{- if or (eq .Fmt "oxfmt") (eq .Linter "oxlint")}},
     "oxlint": "^1.59.0"
     {{- end}}
   }
