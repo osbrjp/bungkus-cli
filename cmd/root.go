@@ -8,7 +8,6 @@ import (
 	"os"
 
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"github.com/spencer-osbrjp/bungkus-cli/config"
 	"github.com/spencer-osbrjp/bungkus-cli/internal/tui"
 	"github.com/spencer-osbrjp/bungkus-cli/pkg"
@@ -37,16 +36,7 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("scaffold failed: %w", err)
 		}
 
-		// Print success and install instructions in a styled box.
-		header := tui.PrimaryStyle.Render("✔ ") + "Project scaffolded at " + tui.AccentStyle.Render(cfg.ProjectName)
-		cmds := fmt.Sprintf(
-			"\n\n  %s\n\n    %s\n    %s\n    %s",
-			tui.AccentStyle.Render("Get started:"),
-			lipgloss.NewStyle().Foreground(tui.ColorAccent).Render("cd "+cfg.ProjectName),
-			lipgloss.NewStyle().Foreground(tui.ColorAccent).Render(cfg.PM.InstallCmd()),
-			lipgloss.NewStyle().Foreground(tui.ColorAccent).Render(cfg.PM.RunCmd()),
-		)
-		fmt.Println(tui.BoxStyle.Render(header + cmds))
+		tui.PrintSuccess(cfg)
 		return nil
 	},
 }

@@ -1,114 +1,89 @@
 package pkg
 
-// Base framework
-type BaseFramework string
+import "errors"
 
-type AstroFramework struct {
-	base        string
-	integration string
-}
-
-const (
-	ViteBase       BaseFramework = "vite"
-	AstroBase      BaseFramework = "astro"
-	AstroReactBase BaseFramework = "astro-react"
-	AstroVueBase   BaseFramework = "astro-vue"
-	NuxtBase       BaseFramework = "nuxt"
-)
-
-// CSSFramework
-type CSSFramework string
-
-const (
-	VanillaCSS  CSSFramework = "vanilla"
-	TailwindCSS CSSFramework = "tailwindcss"
-)
-
-// Formatter
-type Formatter string
-
-// PackageManager
-type PackageManager string
-
-const (
-	Bun  PackageManager = "bun"
-	Npm  PackageManager = "npm"
-	Yarn PackageManager = "yarn"
-	Pnpm PackageManager = "pnpm"
-)
-
-const (
-	PrettierFmt Formatter = "prettier"
-	BiomeFmt    Formatter = "biome"
-	OxFmt       Formatter = "oxfmt"
+type (
+	BaseFramework  string
+	CSSFramework   string
+	Formatter      string
+	Linter         string
+	CMS            string
+	PackageManager string
+	BaseGroup      string
 )
 
 func (b BaseFramework) IsValid() bool {
-	switch b {
-
-	case ViteBase, AstroBase, AstroVueBase, AstroReactBase, NuxtBase:
-		return true
-	default:
-		return false
-	}
+	return globalRegistry != nil && globalRegistry.HasBase(string(b))
 }
 
 func (b BaseFramework) IsAstro() bool {
-	switch b {
-	case AstroBase, AstroReactBase, AstroVueBase:
-		return true
-	default:
+	if globalRegistry == nil {
 		return false
 	}
+	entry := globalRegistry.GetBase(string(b))
+	return entry != nil && entry.Group == "astro"
+}
+
+func (b BaseFramework) IsVite() bool {
+	if globalRegistry == nil {
+		return false
+	}
+	entry := globalRegistry.GetBase(string(b))
+	return entry != nil && entry.Group == "vite"
 }
 
 func (c CSSFramework) IsValid() bool {
-	switch c {
-	case VanillaCSS, TailwindCSS:
-		return true
-	default:
-		return false
-	}
+	return globalRegistry != nil && globalRegistry.HasCSS(string(c))
 }
 
 func (f Formatter) IsValid() bool {
-	switch f {
-	case PrettierFmt, BiomeFmt, OxFmt:
-		return true
-	default:
-		return false
+	return globalRegistry != nil && globalRegistry.HasFormatter(string(f))
+}
+
+func (l Linter) IsValid() bool {
+	return globalRegistry != nil && globalRegistry.HasLinter(string(l))
+}
+
+func (b BaseFramework) GetGroup(base string) (BaseGroup, error) {
+	if globalRegistry == nil {
+		return "", errors.New("unable to read registry")
 	}
+
+	entry := globalRegistry.GetBase(base)
+	return BaseGroup(entry.Group), nil
+}
+
+func (c CMS) IsValid() bool {
+	return globalRegistry != nil && globalRegistry.HasCMS(string(c))
 }
 
 func (p PackageManager) IsValid() bool {
-	switch p {
-	case Bun, Npm, Yarn, Pnpm:
-		return true
-	default:
-		return false
-	}
+	return globalRegistry != nil && globalRegistry.HasPM(string(p))
 }
 
 func (p PackageManager) InstallCmd() string {
+	if globalRegistry != nil {
+		if entry := globalRegistry.GetPM(string(p)); entry != nil {
+			return entry.InstallCmd
+		}
+	}
 	return string(p) + " install"
 }
 
 func (p PackageManager) Exec() string {
-	switch p {
-	case Yarn:
-		return "yarn dlx"
-	case Pnpm:
-		return "pnpx"
-	case Bun:
-		return "bunx"
-	default:
-		return "npx"
+	if globalRegistry != nil {
+		if entry := globalRegistry.GetPM(string(p)); entry != nil {
+			return entry.ExecCmd
+		}
 	}
+	return "npx"
 }
 
 func (p PackageManager) RunCmd() string {
-	if p == Npm || p == Yarn {
-		return string(p) + " run dev"
+	if globalRegistry != nil {
+		if entry := globalRegistry.GetPM(string(p)); entry != nil {
+			return entry.RunCmd
+		}
 	}
 	return string(p) + " dev"
 }
@@ -119,16 +94,19 @@ type ProjectConfig struct {
 	Base        BaseFramework
 	CSS         CSSFramework
 	Fmt         Formatter
+	Linter      Linter
+	CMS         CMS
 	PM          PackageManager
-	NoGit       bool
 }
 
 func NewProjectConfig() ProjectConfig {
 	return ProjectConfig{
 		ProjectName: "my-app",
 		Site:        "",
-		CSS:         VanillaCSS,
-		Fmt:         PrettierFmt,
-		PM:          Bun,
+		CSS:         "vanilla",
+		Fmt:         "prettier",
+		Linter:      "eslint",
+		CMS:         "none",
+		PM:          "bun",
 	}
 }

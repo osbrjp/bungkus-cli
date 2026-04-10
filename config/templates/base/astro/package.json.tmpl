@@ -15,11 +15,13 @@
     "format": "prettier --write ."
     {{- end}}
     {{- if eq .Fmt "biome"}},
-    "format": "biome check --write"
+    "format": "biome format --write ."
     {{- end}}
-    {{- if eq .Fmt "oxfmt"}},
-    "format": "oxfmt",
-    "lint": "oxlint"
+    {{- if eq .Linter "biome"}},
+    "lint": "biome lint ."
+    {{- end}}
+    {{- if eq .Linter "eslint"}},
+    "lint": "eslint ."
     {{- end}}
   },
   "dependencies": {
@@ -43,6 +45,9 @@
     "@astrojs/vue": "^6.0.1",
     "vue": "^3.5.32"
     {{- end}}
+    {{- if eq .CMS "microcms"}},
+    "microcms-js-sdk": "^3.2.0"
+    {{- end}}
   },
   "devDependencies": {
     "husky": "^9.1.7"
@@ -56,11 +61,12 @@
         "prettier-plugin-tailwindcss": "0.7.2"
       {{- end}}
     {{- end}}
-    {{- if eq .Fmt "biome"}},
+    {{- if or (eq .Fmt "biome") (eq .Linter "biome")}},
     "@biomejs/biome": "2.4.10"
     {{- end}}
-    {{- if eq .Fmt "oxfmt"}},
-    "oxlint": "^1.59.0"
+    {{- if eq .Linter "eslint"}},
+    "eslint": "^10.2.0",
+    "@eslint/js": "^10.2.0"
     {{- end}}
   }
   {{- if and (eq .PM "pnpm") (or (eq .Base "astro-react") (eq .Base "astro-vue"))}},

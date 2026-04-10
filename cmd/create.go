@@ -6,7 +6,6 @@ package cmd
 import (
 	"fmt"
 
-	tea "charm.land/bubbletea/v2"
 	"github.com/spencer-osbrjp/bungkus-cli/config"
 	"github.com/spencer-osbrjp/bungkus-cli/internal/tui"
 	"github.com/spencer-osbrjp/bungkus-cli/pkg"
@@ -42,25 +41,26 @@ var createCmd = &cobra.Command{
 			return fmt.Errorf("invalid formatter: %s", fmtFlag)
 		}
 
+		linter, _ := cmd.Flags().GetString("linter")
+		cfg.Linter = pkg.Linter(linter)
+		if !cfg.Linter.IsValid() {
+			return fmt.Errorf("invalid linter: %s", linter)
+		}
+
 		pm, _ := cmd.Flags().GetString("pm")
 		cfg.PM = pkg.PackageManager(pm)
 		if !cfg.PM.IsValid() {
 			return fmt.Errorf("invalid package manager: %s", pm)
 		}
 
-		noGit, _ := cmd.Flags().GetBool("no-git")
-		cfg.NoGit = noGit
+		cms, _ := cmd.Flags().GetString("cms")
+		cfg.CMS = pkg.CMS(cms)
 
-		p := tea.NewProgram(tui.NewSpinnerModel(cfg))
-		go func() {
-			err := pkg.Scaffold(cfg.ProjectName, config.Templates, cfg)
-			p.Send(tui.ScaffoldDoneMsg{Err: err})
-		}()
-
-		if _, err := p.Run(); err != nil {
-			return err
+		if err := pkg.Scaffold(cfg.ProjectName, config.Templates, cfg); err != nil {
+			return fmt.Errorf("scaffold failed: %w", err)
 		}
 
+		tui.PrintSuccess(cfg)
 		return nil
 	},
 }
@@ -69,7 +69,8 @@ func init() {
 	rootCmd.AddCommand(createCmd)
 	createCmd.Flags().String("base", "astro", "Base framework (astro, vite)")
 	createCmd.Flags().String("css", "vanilla", "CSS framework (vanilla, tailwindcss)")
-	createCmd.Flags().String("fmt", "prettier", "Formatter (prettier, biome)")
-	createCmd.Flags().String("pm", "bun", "Package manager (bun, npm, yarn, pnpm)")
-	createCmd.Flags().Bool("no-git", false, "Skip git initialization")
+	createCmd.Flags().String("fmt", "biome", "Formatter (prettier, biome, oxfmt)")
+	createCmd.Flags().String("linter", "biome", "Linter (biome, eslint, oxlint)")
+	createCmd.Flags().String("pm", "pnpm", "Package manager (bun, npm, yarn, pnpm)")
+	createCmd.Flags().String("cms", "none", "CMS (none, microcms)")
 }
