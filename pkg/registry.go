@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"encoding/json"
+	"slices"
 )
 
 // Registry holds all option metadata loaded from config/registry.json.
@@ -11,7 +12,6 @@ import (
 type BaseEntry struct {
 	Value       string `json:"value"`
 	Label       string `json:"label"`
-	Category    string `json:"category"`
 	TemplateDir string `json:"templateDir"`
 	StylesDir   string `json:"stylesDir"`
 	Group       string `json:"group"`
@@ -25,12 +25,7 @@ type OptionEntry struct {
 }
 
 func (o *OptionEntry) ExcludesGroup(group string) bool {
-	for _, g := range o.ExcludeGroups {
-		if g == group {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(o.ExcludeGroups, group)
 }
 
 type PMEntry struct {

@@ -13,9 +13,9 @@ func PrintSuccess(cfg pkg.ProjectConfig) {
 	cmds := fmt.Sprintf(
 		"\n\n  %s\n\n    %s\n    %s\n    %s",
 		AccentStyle.Render("Get started:"),
-		lipgloss.NewStyle().Foreground(ColorAccent).Render("cd "+cfg.ProjectName),
-		lipgloss.NewStyle().Foreground(ColorAccent).Render(cfg.PM.InstallCmd()),
-		lipgloss.NewStyle().Foreground(ColorAccent).Render(cfg.PM.RunCmd()),
+		lipgloss.NewStyle().Foreground(ColorOrange).Render("cd "+cfg.ProjectName),
+		lipgloss.NewStyle().Foreground(ColorOrange).Render(cfg.PM.InstallCmd()),
+		lipgloss.NewStyle().Foreground(ColorOrange).Render(cfg.PM.RunCmd()),
 	)
 	fmt.Println(BoxStyle.Render(header + cmds))
 }
