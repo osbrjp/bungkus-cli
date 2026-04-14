@@ -284,7 +284,8 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "ctrl+c", "esc":
-			return WizardModel{Canceled: true}, tea.Quit
+			m.Canceled = true
+			return m, tea.Quit
 		case "tab":
 			m.focus = m.focusNext()
 		case "shift+tab":
