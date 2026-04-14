@@ -39,7 +39,7 @@ var rootCmd = &cobra.Command{
 		for _, args := range [][]string{
 			{"git", "init"},
 			{"git", "add", "."},
-			{"git", "commit", "-m", "initial commit"},
+			{"git", "commit", "--no-verify", "-m", "initial commit"},
 		} {
 			c := exec.Command(args[0], args[1:]...)
 			c.Dir = cfg.ProjectName
