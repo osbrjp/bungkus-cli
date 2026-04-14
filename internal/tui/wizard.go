@@ -75,6 +75,8 @@ type WizardModel struct {
 	Canceled    bool
 	screen      uint
 	focus       uint
+	width       int
+	height      int
 	BaseList    list.Model
 	addOns      AddOnsModel
 	pm          PMModel
@@ -281,11 +283,40 @@ func (m WizardModel) Init() tea.Cmd {
 
 func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		return m, nil
 	case tea.KeyPressMsg:
+		// Summary screen key handling
+		if m.screen == screenSummary {
+			switch msg.String() {
+			case "ctrl+c", "esc":
+				m.Canceled = true
+				return m, tea.Quit
+			case "enter":
+				// Confirm — quit with config ready
+				return m, tea.Quit
+			case "backspace":
+				// Go back to wizard
+				m.screen = screenWizard
+				return m, nil
+			}
+			return m, nil
+		}
+
+		// Wizard screen key handling
 		switch msg.String() {
 		case "ctrl+c", "esc":
 			m.Canceled = true
 			return m, tea.Quit
+		case "enter":
+			// Collect config and move to summary screen
+			if m.focus != focusProjectName {
+				m.collectConfig()
+				m.screen = screenSummary
+				return m, nil
+			}
 		case "tab":
 			m.focus = m.focusNext()
 		case "shift+tab":
@@ -344,6 +375,35 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+// collectConfig gathers all current selections into the ProjectConfig.
+func (m *WizardModel) collectConfig() {
+	name := m.projectName.Value()
+	if name == "" {
+		name = "my-app"
+	}
+	m.Cfg.ProjectName = name
+
+	if sel, ok := m.BaseList.SelectedItem().(Option); ok {
+		m.Cfg.Base = pkg.BaseFramework(sel.value)
+	}
+
+	for _, g := range m.addOns.groups {
+		selected := g.options[g.selected]
+		switch g.name {
+		case "CSS":
+			m.Cfg.CSS = pkg.CSSFramework(selected.value)
+		case "Formatter":
+			m.Cfg.Fmt = pkg.Formatter(selected.value)
+		case "Linter":
+			m.Cfg.Linter = pkg.Linter(selected.value)
+		case "CMS":
+			m.Cfg.CMS = pkg.CMS(selected.value)
+		}
+	}
+
+	m.Cfg.PM = pkg.PackageManager(m.pm.options[m.pm.selected].Value)
+}
+
 func (m WizardModel) View() tea.View {
 	var c *tea.Cursor
 	if !m.projectName.VirtualCursor() {
@@ -358,7 +418,56 @@ func (m WizardModel) View() tea.View {
 
 	s.Write([]byte(layout))
 
+	if m.screen == screenSummary {
+		overlay := m.summaryPopup()
+		w := m.width
+		h := m.height
+		if w == 0 {
+			w = 80
+		}
+		if h == 0 {
+			h = 24
+		}
+		placed := lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center, overlay)
+		return tea.NewView(placed)
+	}
+
 	return tea.NewView(s.String())
+}
+
+func (m WizardModel) summaryPopup() string {
+	title := AccentStyle.Render("  Confirm Project") + "\n\n"
+
+	row := func(label, value string) string {
+		return MutedStyle.Render("  "+label) + PrimaryStyle.Render(value) + "\n"
+	}
+
+	body := row("Project:    ", m.Cfg.ProjectName) +
+		row("Base:       ", string(m.Cfg.Base)) +
+		row("CSS:        ", string(m.Cfg.CSS)) +
+		row("Formatter:  ", string(m.Cfg.Fmt)) +
+		row("Linter:     ", string(m.Cfg.Linter)) +
+		row("CMS:        ", string(m.Cfg.CMS)) +
+		row("PM:         ", string(m.Cfg.PM))
+
+	key := func(k, desc string) string {
+		return FooterKeyStyle.Render(k) + FooterDescStyle.Render(" "+desc)
+	}
+
+	footer := "\n" +
+		key("enter", "confirm") +
+		FooterSepStyle.Render("  •  ") +
+		key("backspace", "back") +
+		FooterSepStyle.Render("  •  ") +
+		key("esc", "quit")
+
+	popup := lipgloss.NewStyle().
+		Border(lipgloss.ASCIIBorder()).
+		BorderForeground(ColorLack).
+		Padding(1, 2).
+		Render(title + body + footer)
+
+	return popup
 }
 
 func (m WizardModel) projectNameInputView() string {
@@ -423,7 +532,7 @@ func (m WizardModel) footerView() string {
 		bindings = append(bindings, key("space", "select"))
 	}
 
-	bindings = append(bindings, key("esc", "quit"))
+	bindings = append(bindings, key("enter", "confirm"), key("esc", "quit"))
 
 	line := strings.Join(bindings, FooterSepStyle.Render("  •  "))
 	line += "\n" + FooterDescStyle.Render("* recommended")

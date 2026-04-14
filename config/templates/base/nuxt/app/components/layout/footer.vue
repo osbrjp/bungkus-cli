@@ -6,8 +6,6 @@
  * @description Default page footer.
  * @module Components
  */
-
-const a = "2";
 </script>
 
 <template>

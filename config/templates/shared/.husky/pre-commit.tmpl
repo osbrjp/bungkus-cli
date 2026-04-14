@@ -1,2 +1,1 @@
-{{if eq .Fmt "prettier"}}{{.PM.Exec}} prettier --check .{{end}}{{if eq .Fmt "biome"}}{{.PM.Exec}} @biomejs/biome format .{{end}}{{if eq .Fmt "oxfmt"}}{{.PM.Exec}} oxfmt --check .{{end}}
-{{if eq .Linter "biome"}}{{.PM.Exec}} @biomejs/biome lint .{{end}}{{if eq .Linter "eslint"}}{{.PM.Exec}} eslint .{{end}}{{if eq .Linter "oxlint"}}{{.PM.Exec}} oxlint .{{end}}
+{{if eq .Fmt "prettier"}}{{.PM.Exec}} prettier --write .{{end}}{{if eq .Fmt "biome"}}{{.PM.Exec}} @biomejs/biome format . --write{{end}}{{if eq .Fmt "oxfmt"}}{{.PM.Exec}} oxfmt --check . --write{{end}}

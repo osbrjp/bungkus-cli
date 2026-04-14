@@ -1,5 +1,14 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.10/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.11/schema.json",
+  "files": {
+    "includes": [
+      "**",
+      "!dist"
+      {{- if .Base.IsAstro}}, "!.astro"{{- end}}
+      {{- if .Base.IsNuxt}}, "!.nuxt", "!.output", "!.nitro"{{- end}}
+      {{- if .Base.IsVite}}, "!dist-ssr"{{- end}}
+    ]
+  },
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
@@ -12,7 +21,7 @@
       "recommended": true
     }
   },
-  {{- if .Base.IsAstro}}
+  {{- if or (.Base.IsAstro)  (.Base.IsNuxt)}}
   "overrides": [
     {
       "includes": ["**/*.svelte", "**/*.astro", "**/*.vue"],

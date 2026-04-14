@@ -23,7 +23,7 @@ export default defineConfig({
 {{- if or (eq .Base "astro-vue") (eq .Base "astro-react")}}
   integrations: [{{if eq .Base "astro-vue"}}vue(){{end}}{{if eq .Base "astro-react"}}react(){{end}}],
 {{- end}}
-{{- if eq .CSS "tailwindcss"}}
+{{- if eq .CSS "tailwindcss"}},
   vite: {
     plugins: [tailwindcss()],
   },
