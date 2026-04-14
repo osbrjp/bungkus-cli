@@ -24,6 +24,14 @@ func (b BaseFramework) IsAstro() bool {
 	return entry != nil && entry.Group == "astro"
 }
 
+func (b BaseFramework) IsNuxt() bool {
+	if globalRegistry == nil {
+		return false
+	}
+	entry := globalRegistry.GetBase(string(b))
+	return entry != nil && entry.Group == "nuxt"
+}
+
 func (b BaseFramework) IsVite() bool {
 	if globalRegistry == nil {
 		return false

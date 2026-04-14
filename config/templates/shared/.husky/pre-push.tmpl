@@ -1,0 +1,1 @@
+{{if eq .Linter "biome"}}{{.PM.Exec}} @biomejs/biome lint .{{end}}{{if eq .Linter "eslint"}}{{.PM.Exec}} eslint .{{end}}{{if eq .Linter "oxlint"}}{{.PM.Exec}} oxlint .{{end}}

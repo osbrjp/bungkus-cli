@@ -82,15 +82,16 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		}
 	}
 
-	// Copy Package Manager templates
+	// Copy Package Manager templates (some PMs like bun/npm have no templates)
 	pmDir := "templates/pm/" + string(cfg.PM)
-	pmFS, err := fs.Sub(templates, pmDir)
-	if err != nil {
-		return fmt.Errorf("failed to read Package manager templates: %w", err)
-	}
-
-	if err := copyDir(pmFS, destDir, cfg); err != nil {
-		return err
+	if _, err := fs.Stat(templates, pmDir); err == nil {
+		pmFS, err := fs.Sub(templates, pmDir)
+		if err != nil {
+			return fmt.Errorf("failed to read package manager templates: %w", err)
+		}
+		if err := copyDir(pmFS, destDir, cfg); err != nil {
+			return err
+		}
 	}
 
 	if cfg.CMS != "none" {
