@@ -3,15 +3,13 @@
     {
       "value": "astro",
       "label": "Astro",
-      "category": " Astro",
       "templateDir": "astro",
       "stylesDir": "src/styles",
       "group": "astro"
     },
     {
       "value": "astro-vue",
-      "label": "Astro + Vue 󰡄",
-      "category": " Astro",
+      "label": "Astro + Vue",
       "templateDir": "astro",
       "stylesDir": "src/styles",
       "group": "astro",
@@ -20,7 +18,6 @@
     {
       "value": "astro-react",
       "label": "Astro + React ",
-      "category": " Astro",
       "templateDir": "astro",
       "stylesDir": "src/styles",
       "group": "astro",
@@ -29,7 +26,6 @@
     {
       "value": "nuxt",
       "label": "Nuxt",
-      "category": "󰡄 Nuxt",
       "templateDir": "nuxt",
       "stylesDir": "app/assets/styles",
       "group": "nuxt"
@@ -37,7 +33,6 @@
     {
       "value": "vite",
       "label": "Vite",
-      "category": " Vite",
       "templateDir": "vite",
       "stylesDir": "src/styles",
       "group": "vite"
@@ -46,25 +41,25 @@
   "css": [
     {
       "value": "tailwindcss",
-      "label": "󱏿 Tailwind"
+      "label": "TailwindCSS *"
     },
     {
       "value": "vanilla",
-      "label": " Vanilla"
+      "label": "Vanilla"
     }
   ],
   "formatters": [
     {
       "value": "biome",
-      "label": " Biome"
+      "label": "Biome"
     },
     {
       "value": "prettier",
-      "label": " Prettier"
+      "label": "Prettier"
     },
     {
       "value": "oxfmt",
-      "label": " OxFmt",
+      "label": "OxFmt",
       "excludeGroups": [
         "astro"
       ]
@@ -73,15 +68,15 @@
   "linters": [
     {
       "value": "biome",
-      "label": " Biome"
+      "label": "Biome"
     },
     {
       "value": "eslint",
-      "label": " ESLint"
+      "label": "ESLint"
     },
     {
       "value": "oxlint",
-      "label": " OxLint",
+      "label": "OxLint",
       "excludeGroups": [
         "astro"
       ]
@@ -103,28 +98,28 @@
   "packageManagers": [
     {
       "value": "pnpm",
-      "label": "󰏗 pnpm [Recommended]",
+      "label": "pnpm *",
       "installCmd": "pnpm install",
       "execCmd": "pnpx",
       "runCmd": "pnpm dev"
     },
     {
       "value": "bun",
-      "label": "󰏗 bun",
+      "label": "bun",
       "installCmd": "bun install",
       "execCmd": "bunx",
       "runCmd": "bun dev"
     },
     {
       "value": "npm",
-      "label": "󰏗 npm",
+      "label": "npm",
       "installCmd": "npm install",
       "execCmd": "npx",
       "runCmd": "npm run dev"
     },
     {
       "value": "yarn",
-      "label": "󰏗 yarn",
+      "label": "yarn",
       "installCmd": "yarn install",
       "execCmd": "yarn dlx",
       "runCmd": "yarn run dev"
