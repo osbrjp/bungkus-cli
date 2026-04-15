@@ -3,13 +3,14 @@ package pkg
 import "errors"
 
 type (
-	BaseFramework  string
-	CSSFramework   string
-	Formatter      string
-	Linter         string
-	CMS            string
-	PackageManager string
-	BaseGroup      string
+	BaseFramework   string
+	CSSFramework    string
+	Formatter       string
+	Linter          string
+	CMS             string
+	PackageManager  string
+	BaseGroup       string
+	BaseIntegration string
 )
 
 func (b BaseFramework) IsValid() bool {
@@ -38,6 +39,35 @@ func (b BaseFramework) IsVite() bool {
 	}
 	entry := globalRegistry.GetBase(string(b))
 	return entry != nil && entry.Group == "vite"
+}
+
+func (b BaseFramework) GetIntegration() (BaseIntegration, error) {
+	if globalRegistry != nil {
+		return BaseIntegration(""), errors.New("unable to read registry")
+	}
+
+	entry := globalRegistry.GetBase(string(b))
+	return BaseIntegration(entry.Integration), nil
+}
+
+// IsReactInt Check if integration is react
+func (b BaseFramework) IsReactInt() bool {
+	integration, err := b.GetIntegration()
+	if err != nil {
+		return false
+	}
+
+	return integration == "react"
+}
+
+// IsVueInt Check if integration is vue
+func (b BaseFramework) IsVueInt() bool {
+	integration, err := b.GetIntegration()
+	if err != nil {
+		return false
+	}
+
+	return integration == "react"
 }
 
 func (c CSSFramework) IsValid() bool {

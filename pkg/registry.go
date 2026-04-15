@@ -9,19 +9,29 @@ import (
 // This is the single source of truth — adding a new framework only
 // requires a JSON entry and template files, no Go code changes.
 
+type Packages struct {
+	Scripts         map[string]string `json:"scripts,omitempty"`
+	Dependencies    map[string]string `json:"dependencies,omitempty"`
+	DevDependencies map[string]string `json:"devDependencies,omitempty"`
+}
+
 type BaseEntry struct {
-	Value       string `json:"value"`
-	Label       string `json:"label"`
-	TemplateDir string `json:"templateDir"`
-	StylesDir   string `json:"stylesDir"`
-	Group       string `json:"group"`
-	Integration string `json:"integration,omitempty"`
+	Value       string   `json:"value"`
+	Label       string   `json:"label"`
+	TemplateDir string   `json:"templateDir"`
+	StylesDir   string   `json:"stylesDir"`
+	Group       string   `json:"group"`
+	Integration string   `json:"integration,omitempty"`
+	EntryPoint  string   `json:"entryPoint,omitempty"`
+	Private     bool     `json:"private,omitempty"`
+	Packages    Packages `json:"packages"`
 }
 
 type OptionEntry struct {
 	Value         string   `json:"value"`
 	Label         string   `json:"label"`
 	ExcludeGroups []string `json:"excludeGroups,omitempty"`
+	Packages      Packages `json:"packages"`
 }
 
 func (o *OptionEntry) ExcludesGroup(group string) bool {
@@ -43,6 +53,7 @@ type Registry struct {
 	Linters         []OptionEntry `json:"linters"`
 	CMS             []OptionEntry `json:"cms"`
 	PackageManagers []PMEntry     `json:"packageManagers"`
+	CommonPackages  Packages      `json:"commonPackages"`
 }
 
 var globalRegistry *Registry
@@ -113,11 +124,42 @@ func (r *Registry) HasPM(value string) bool {
 	return r.GetPM(value) != nil
 }
 
-func (r *Registry) HasCMS(value string) bool {
-	for i := range r.CMS {
-		if r.CMS[i].Value == value {
-			return true
+func (r *Registry) GetCSS(value string) *OptionEntry {
+	for i := range r.CSS {
+		if r.CSS[i].Value == value {
+			return &r.CSS[i]
 		}
 	}
-	return false
+	return nil
+}
+
+func (r *Registry) GetFormatter(value string) *OptionEntry {
+	for i := range r.Formatters {
+		if r.Formatters[i].Value == value {
+			return &r.Formatters[i]
+		}
+	}
+	return nil
+}
+
+func (r *Registry) GetLinter(value string) *OptionEntry {
+	for i := range r.Linters {
+		if r.Linters[i].Value == value {
+			return &r.Linters[i]
+		}
+	}
+	return nil
+}
+
+func (r *Registry) GetCMS(value string) *OptionEntry {
+	for i := range r.CMS {
+		if r.CMS[i].Value == value {
+			return &r.CMS[i]
+		}
+	}
+	return nil
+}
+
+func (r *Registry) HasCMS(value string) bool {
+	return r.GetCMS(value) != nil
 }
