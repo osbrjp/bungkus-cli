@@ -497,6 +497,9 @@ func (m WizardModel) summaryPopup() string {
 	title := AccentStyle.Render("  Confirm Project") + "\n\n"
 
 	row := func(label, value string) string {
+		if value == "none" {
+			return ""
+		}
 		return MutedStyle.Render("  "+label) + PrimaryStyle.Render(value) + "\n"
 	}
 
