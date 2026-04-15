@@ -36,6 +36,9 @@ var (
 	ActiveBorder   = lipgloss.NewStyle().Border(lipgloss.ASCIIBorder()).BorderForeground(ColorLack).Padding(0, 1)
 	InactiveBorder = lipgloss.NewStyle().Border(lipgloss.ASCIIBorder()).BorderForeground(ColorDark).Padding(0, 1)
 
+	// Panel title style — distinct from group labels inside panels
+	PanelTitleStyle = lipgloss.NewStyle().Foreground(ColorLuster).Bold(true).Underline(true)
+
 	// Footer keybinding styles
 	FooterBarStyle  = lipgloss.NewStyle().MarginTop(1).Foreground(ColorDim)
 	FooterKeyStyle  = lipgloss.NewStyle().Foreground(ColorLuster).Bold(true)

@@ -3,14 +3,17 @@ package pkg
 import "errors"
 
 type (
-	BaseFramework   string
-	CSSFramework    string
-	Formatter       string
-	Linter          string
-	CMS             string
-	PackageManager  string
-	BaseGroup       string
-	BaseIntegration string
+	BaseFramework    string
+	CSSFramework     string
+	Formatter        string
+	Linter           string
+	ValidationLib    string
+	FormLib          string
+	QueryLib         string
+	CMS              string
+	PackageManager   string
+	BaseGroup        string
+	BaseIntegration  string
 )
 
 func (b BaseFramework) IsValid() bool {
@@ -91,6 +94,18 @@ func (b BaseFramework) GetGroup(base string) (BaseGroup, error) {
 	return BaseGroup(entry.Group), nil
 }
 
+func (v ValidationLib) IsValid() bool {
+	return globalRegistry != nil && globalRegistry.HasValidation(string(v))
+}
+
+func (f FormLib) IsValid() bool {
+	return globalRegistry != nil && globalRegistry.HasForm(string(f))
+}
+
+func (q QueryLib) IsValid() bool {
+	return globalRegistry != nil && globalRegistry.HasQuery(string(q))
+}
+
 func (c CMS) IsValid() bool {
 	return globalRegistry != nil && globalRegistry.HasCMS(string(c))
 }
@@ -133,6 +148,9 @@ type ProjectConfig struct {
 	CSS         CSSFramework
 	Fmt         Formatter
 	Linter      Linter
+	Validation  ValidationLib
+	Form        FormLib
+	Query       QueryLib
 	CMS         CMS
 	PM          PackageManager
 }
@@ -144,6 +162,9 @@ func NewProjectConfig() ProjectConfig {
 		CSS:         "vanilla",
 		Fmt:         "prettier",
 		Linter:      "eslint",
+		Validation:  "none",
+		Form:        "none",
+		Query:       "none",
 		CMS:         "none",
 		PM:          "bun",
 	}

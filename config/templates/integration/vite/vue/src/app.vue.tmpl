@@ -10,10 +10,10 @@ const handleClick = () => {
 
 <template>
   <main>
-    <h1>Welcome!</h1>
+    <h1 class="bg-black text-white">Welcome to {{ .ProjectName }}!</h1>
     <div>
       <span>
-        Count: {{ count }}
+        Count: {{ "{{ count }}" }}
       </span>
       <button @click="handleClick">Click me</button>
     </div>

@@ -28,10 +28,12 @@ type BaseEntry struct {
 }
 
 type OptionEntry struct {
-	Value         string   `json:"value"`
-	Label         string   `json:"label"`
-	ExcludeGroups []string `json:"excludeGroups,omitempty"`
-	Packages      Packages `json:"packages"`
+	Value               string              `json:"value"`
+	Label               string              `json:"label"`
+	ExcludeGroups       []string            `json:"excludeGroups,omitempty"`
+	RequiresIntegration string              `json:"requiresIntegration,omitempty"`
+	Packages            Packages            `json:"packages"`
+	IntegrationPackages map[string]Packages `json:"integrationPackages,omitempty"`
 }
 
 func (o *OptionEntry) ExcludesGroup(group string) bool {
@@ -51,6 +53,9 @@ type Registry struct {
 	CSS             []OptionEntry `json:"css"`
 	Formatters      []OptionEntry `json:"formatters"`
 	Linters         []OptionEntry `json:"linters"`
+	Validation      []OptionEntry `json:"validation"`
+	Form            []OptionEntry `json:"form"`
+	Query           []OptionEntry `json:"query"`
 	CMS             []OptionEntry `json:"cms"`
 	PackageManagers []PMEntry     `json:"packageManagers"`
 	CommonPackages  Packages      `json:"commonPackages"`
@@ -162,4 +167,43 @@ func (r *Registry) GetCMS(value string) *OptionEntry {
 
 func (r *Registry) HasCMS(value string) bool {
 	return r.GetCMS(value) != nil
+}
+
+func (r *Registry) GetValidation(value string) *OptionEntry {
+	for i := range r.Validation {
+		if r.Validation[i].Value == value {
+			return &r.Validation[i]
+		}
+	}
+	return nil
+}
+
+func (r *Registry) HasValidation(value string) bool {
+	return r.GetValidation(value) != nil
+}
+
+func (r *Registry) GetForm(value string) *OptionEntry {
+	for i := range r.Form {
+		if r.Form[i].Value == value {
+			return &r.Form[i]
+		}
+	}
+	return nil
+}
+
+func (r *Registry) HasForm(value string) bool {
+	return r.GetForm(value) != nil
+}
+
+func (r *Registry) GetQuery(value string) *OptionEntry {
+	for i := range r.Query {
+		if r.Query[i].Value == value {
+			return &r.Query[i]
+		}
+	}
+	return nil
+}
+
+func (r *Registry) HasQuery(value string) bool {
+	return r.GetQuery(value) != nil
 }

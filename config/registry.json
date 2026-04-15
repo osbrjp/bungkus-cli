@@ -269,6 +269,100 @@
       }
     }
   ],
+  "validation": [
+    {
+      "value": "none",
+      "label": "None",
+      "packages": {}
+    },
+    {
+      "value": "zod",
+      "label": "Zod",
+      "packages": {
+        "dependencies": {
+          "zod": "^4.3.6"
+        }
+      }
+    }
+  ],
+  "form": [
+    {
+      "value": "none",
+      "label": "None",
+      "packages": {}
+    },
+    {
+      "value": "react-hook-form",
+      "label": "React Hook Form",
+      "requiresIntegration": "react",
+      "packages": {
+        "dependencies": {
+          "react-hook-form": "^7.72.1"
+        }
+      }
+    },
+    {
+      "value": "tanstack-form",
+      "label": "TanStack Form",
+      "requiresIntegration": "any",
+      "packages": {},
+      "integrationPackages": {
+        "react": {
+          "dependencies": {
+            "@tanstack/react-form": "^1.29.0"
+          }
+        },
+        "vue": {
+          "dependencies": {
+            "@tanstack/vue-form": "^1.29.0"
+          }
+        }
+      }
+    },
+    {
+      "value": "veevalidate",
+      "label": "VeeValidate",
+      "requiresIntegration": "vue",
+      "packages": {},
+      "integrationPackages": {
+        "vue": {
+          "dependencies": {
+            "vee-validate": "^4.15.1"
+          }
+        },
+        "nuxt": {
+          "dependencies": {
+            "@vee-validate/nuxt": "^4.15.1"
+          }
+        }
+      }
+    }
+  ],
+  "query": [
+    {
+      "value": "none",
+      "label": "None",
+      "packages": {}
+    },
+    {
+      "value": "tanstack-query",
+      "label": "TanStack Query",
+      "requiresIntegration": "any",
+      "packages": {},
+      "integrationPackages": {
+        "react": {
+          "dependencies": {
+            "@tanstack/react-query": "^5.80.7"
+          }
+        },
+        "vue": {
+          "dependencies": {
+            "@tanstack/vue-query": "^5.80.7"
+          }
+        }
+      }
+    }
+  ],
   "cms": [
     {
       "value": "none",

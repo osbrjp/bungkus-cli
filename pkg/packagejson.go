@@ -62,6 +62,31 @@ func BuildPackageJSON(cfg ProjectConfig) ([]byte, error) {
 		mergePackages(&pkg, linter.Packages)
 	}
 
+	if cfg.Validation != "none" {
+		if val := reg.GetValidation(string(cfg.Validation)); val != nil {
+			mergePackages(&pkg, val.Packages)
+		}
+	}
+
+	integration := base.Integration
+	if cfg.Base.IsNuxt() {
+		integration = "nuxt"
+	}
+
+	if cfg.Form != "none" {
+		if form := reg.GetForm(string(cfg.Form)); form != nil {
+			mergePackages(&pkg, form.Packages)
+			mergeIntegrationPackages(&pkg, form, integration)
+		}
+	}
+
+	if cfg.Query != "none" {
+		if query := reg.GetQuery(string(cfg.Query)); query != nil {
+			mergePackages(&pkg, query.Packages)
+			mergeIntegrationPackages(&pkg, query, integration)
+		}
+	}
+
 	if cfg.CMS != "none" {
 		if cms := reg.GetCMS(string(cfg.CMS)); cms != nil {
 			mergePackages(&pkg, cms.Packages)
@@ -79,6 +104,22 @@ func BuildPackageJSON(cfg ProjectConfig) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+func mergeIntegrationPackages(pkg *packageJSON, entry *OptionEntry, integration string) {
+	if integration == "" || entry.IntegrationPackages == nil {
+		return
+	}
+	if pkgs, ok := entry.IntegrationPackages[integration]; ok {
+		mergePackages(pkg, pkgs)
+		return
+	}
+	// nuxt falls back to "vue" when no "nuxt" key exists
+	if integration == "nuxt" {
+		if pkgs, ok := entry.IntegrationPackages["vue"]; ok {
+			mergePackages(pkg, pkgs)
+		}
+	}
 }
 
 func mergePackages(pkg *packageJSON, src Packages) {
@@ -104,6 +145,11 @@ func applyCrossCuttingRules(pkg *packageJSON, cfg ProjectConfig) {
 		pkg.DevDependencies["eslint-plugin-react-hooks"] = "^7.0.1"
 		pkg.DevDependencies["eslint-plugin-react-refresh"] = "^0.5.2"
 		pkg.DevDependencies["typescript-eslint"] = "^8.58.0"
+	}
+
+	// veevalidate + zod → @vee-validate/zod adapter
+	if cfg.Form == "veevalidate" && cfg.Validation == "zod" {
+		pkg.Dependencies["@vee-validate/zod"] = "^4.15.1"
 	}
 
 	// pnpm + astro → vite as devDep
