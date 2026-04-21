@@ -7,18 +7,23 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: [
     {{- if eq .Form "veevalidate" }}
-    '@vee-validate/nuxt',
+    [
+      '@vee-validate/nuxt',
       {
-        // disable or enable auto imports
-        autoImports: true,
-        // Use different names for components
-        componentNames: {
-          Form: 'VeeForm',
-          Field: 'VeeField',
-          FieldArray: 'VeeFieldArray',
-          ErrorMessage: 'VeeErrorMessage',
-        },
+      // disable or enable auto imports
+      autoImports: true,
+      // Use different names for components
+      componentNames: {
+      Form: 'VeeForm',
+      Field: 'VeeField',
+      FieldArray: 'VeeFieldArray',
+      ErrorMessage: 'VeeErrorMessage',
       },
+      },
+    ],
+    {{- end}}
+    {{- if eq .State "pinia" }}
+    '@pinia/nuxt',
     {{- end}}
   ],
   runtimeConfig: {
@@ -28,9 +33,9 @@ export default defineNuxtConfig({
       apiKey: process.env.MICROCMS_API_KEY,
     },
     {{- end}}
-  }
-  {{- if eq .CSS "tailwindcss"}},
+  },
   css: ['./app/assets/styles/main.css'],
+  {{- if eq .CSS "tailwindcss"}},
   vite: {
     plugins: [
       tailwindcss(),

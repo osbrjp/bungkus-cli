@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 
 	"charm.land/bubbles/v2/list"
@@ -276,6 +277,7 @@ func buildAddOnPanels(reg *pkg.Registry, group string, integration string) (AddO
 		{"Validation", reg.Validation},
 		{"Form", reg.Form},
 		{"Query", reg.Query},
+		{"State", reg.State},
 		{"CMS", reg.CMS},
 	}
 
@@ -290,11 +292,8 @@ func buildAddOnPanels(reg *pkg.Registry, group string, integration string) (AddO
 				if e.ExcludesGroup(group) {
 					continue
 				}
-				if e.RequiresIntegration != "" {
-					if effectiveInt == "" {
-						continue
-					}
-					if e.RequiresIntegration != "any" && e.RequiresIntegration != effectiveInt {
+				if len(e.RequiresIntegration) > 0 {
+					if effectiveInt == "" || !slices.Contains(e.RequiresIntegration, effectiveInt) {
 						continue
 					}
 				}
@@ -454,6 +453,8 @@ func (m *WizardModel) collectConfig() {
 			m.Cfg.Form = pkg.FormLib(selected.value)
 		case "Query":
 			m.Cfg.Query = pkg.QueryLib(selected.value)
+		case "State":
+			m.Cfg.State = pkg.StateLib(selected.value)
 		case "CMS":
 			m.Cfg.CMS = pkg.CMS(selected.value)
 		}
@@ -511,6 +512,7 @@ func (m WizardModel) summaryPopup() string {
 		row("Validation: ", string(m.Cfg.Validation)) +
 		row("Form:       ", string(m.Cfg.Form)) +
 		row("Query:      ", string(m.Cfg.Query)) +
+		row("State:      ", string(m.Cfg.State)) +
 		row("CMS:        ", string(m.Cfg.CMS)) +
 		row("PM:         ", string(m.Cfg.PM))
 
