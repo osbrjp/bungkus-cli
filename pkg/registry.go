@@ -9,19 +9,31 @@ import (
 // This is the single source of truth — adding a new framework only
 // requires a JSON entry and template files, no Go code changes.
 
+type Packages struct {
+	Scripts         map[string]string `json:"scripts,omitempty"`
+	Dependencies    map[string]string `json:"dependencies,omitempty"`
+	DevDependencies map[string]string `json:"devDependencies,omitempty"`
+}
+
 type BaseEntry struct {
-	Value       string `json:"value"`
-	Label       string `json:"label"`
-	TemplateDir string `json:"templateDir"`
-	StylesDir   string `json:"stylesDir"`
-	Group       string `json:"group"`
-	Integration string `json:"integration,omitempty"`
+	Value       string   `json:"value"`
+	Label       string   `json:"label"`
+	TemplateDir string   `json:"templateDir"`
+	StylesDir   string   `json:"stylesDir"`
+	Group       string   `json:"group"`
+	Integration string   `json:"integration,omitempty"`
+	EntryPoint  string   `json:"entryPoint,omitempty"`
+	Private     bool     `json:"private,omitempty"`
+	Packages    Packages `json:"packages"`
 }
 
 type OptionEntry struct {
-	Value         string   `json:"value"`
-	Label         string   `json:"label"`
-	ExcludeGroups []string `json:"excludeGroups,omitempty"`
+	Value               string              `json:"value"`
+	Label               string              `json:"label"`
+	ExcludeGroups       []string            `json:"excludeGroups,omitempty"`
+	RequiresIntegration string              `json:"requiresIntegration,omitempty"`
+	Packages            Packages            `json:"packages"`
+	IntegrationPackages map[string]Packages `json:"integrationPackages,omitempty"`
 }
 
 func (o *OptionEntry) ExcludesGroup(group string) bool {
@@ -41,8 +53,12 @@ type Registry struct {
 	CSS             []OptionEntry `json:"css"`
 	Formatters      []OptionEntry `json:"formatters"`
 	Linters         []OptionEntry `json:"linters"`
+	Validation      []OptionEntry `json:"validation"`
+	Form            []OptionEntry `json:"form"`
+	Query           []OptionEntry `json:"query"`
 	CMS             []OptionEntry `json:"cms"`
 	PackageManagers []PMEntry     `json:"packageManagers"`
+	CommonPackages  Packages      `json:"commonPackages"`
 }
 
 var globalRegistry *Registry
@@ -113,11 +129,81 @@ func (r *Registry) HasPM(value string) bool {
 	return r.GetPM(value) != nil
 }
 
-func (r *Registry) HasCMS(value string) bool {
-	for i := range r.CMS {
-		if r.CMS[i].Value == value {
-			return true
+func (r *Registry) GetCSS(value string) *OptionEntry {
+	for i := range r.CSS {
+		if r.CSS[i].Value == value {
+			return &r.CSS[i]
 		}
 	}
-	return false
+	return nil
+}
+
+func (r *Registry) GetFormatter(value string) *OptionEntry {
+	for i := range r.Formatters {
+		if r.Formatters[i].Value == value {
+			return &r.Formatters[i]
+		}
+	}
+	return nil
+}
+
+func (r *Registry) GetLinter(value string) *OptionEntry {
+	for i := range r.Linters {
+		if r.Linters[i].Value == value {
+			return &r.Linters[i]
+		}
+	}
+	return nil
+}
+
+func (r *Registry) GetCMS(value string) *OptionEntry {
+	for i := range r.CMS {
+		if r.CMS[i].Value == value {
+			return &r.CMS[i]
+		}
+	}
+	return nil
+}
+
+func (r *Registry) HasCMS(value string) bool {
+	return r.GetCMS(value) != nil
+}
+
+func (r *Registry) GetValidation(value string) *OptionEntry {
+	for i := range r.Validation {
+		if r.Validation[i].Value == value {
+			return &r.Validation[i]
+		}
+	}
+	return nil
+}
+
+func (r *Registry) HasValidation(value string) bool {
+	return r.GetValidation(value) != nil
+}
+
+func (r *Registry) GetForm(value string) *OptionEntry {
+	for i := range r.Form {
+		if r.Form[i].Value == value {
+			return &r.Form[i]
+		}
+	}
+	return nil
+}
+
+func (r *Registry) HasForm(value string) bool {
+	return r.GetForm(value) != nil
+}
+
+func (r *Registry) GetQuery(value string) *OptionEntry {
+	for i := range r.Query {
+		if r.Query[i].Value == value {
+			return &r.Query[i]
+		}
+	}
+	return nil
+}
+
+func (r *Registry) HasQuery(value string) bool {
+	return r.GetQuery(value) != nil
 }

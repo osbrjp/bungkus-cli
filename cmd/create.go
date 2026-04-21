@@ -53,6 +53,15 @@ var createCmd = &cobra.Command{
 			return fmt.Errorf("invalid package manager: %s", pm)
 		}
 
+		validation, _ := cmd.Flags().GetString("validation")
+		cfg.Validation = pkg.ValidationLib(validation)
+
+		form, _ := cmd.Flags().GetString("form")
+		cfg.Form = pkg.FormLib(form)
+
+		query, _ := cmd.Flags().GetString("query")
+		cfg.Query = pkg.QueryLib(query)
+
 		cms, _ := cmd.Flags().GetString("cms")
 		cfg.CMS = pkg.CMS(cms)
 
@@ -71,6 +80,9 @@ func init() {
 	createCmd.Flags().String("css", "vanilla", "CSS framework (vanilla, tailwindcss)")
 	createCmd.Flags().String("fmt", "biome", "Formatter (prettier, biome, oxfmt)")
 	createCmd.Flags().String("linter", "biome", "Linter (biome, eslint, oxlint)")
+	createCmd.Flags().String("validation", "none", "Validation library (none, zod)")
+	createCmd.Flags().String("form", "none", "Form library (none, tanstack-form)")
+	createCmd.Flags().String("query", "none", "Query library (none, tanstack-query)")
 	createCmd.Flags().String("pm", "pnpm", "Package manager (bun, npm, yarn, pnpm)")
 	createCmd.Flags().String("cms", "none", "CMS (none, microcms)")
 }

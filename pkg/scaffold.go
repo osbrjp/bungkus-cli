@@ -29,8 +29,21 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		return fmt.Errorf("failed to create directory %s: %w", destDir, err)
 	}
 
-	// Copy base templates
-	if err := copyDir(baseFS, destDir, cfg); err != nil {
+	// Generate package.json from registry data
+	pkgJSON, err := BuildPackageJSON(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to build package.json: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(destDir, "package.json"), pkgJSON, 0o644); err != nil {
+		return fmt.Errorf("failed to write package.json: %w", err)
+	}
+
+	// Copy base templates, skipping entry point when integration provides its own
+	var skip string
+	if entry.Group == "vite" && entry.EntryPoint != "" {
+		skip = "main.ts"
+	}
+	if err := copyDir(baseFS, destDir, cfg, skip); err != nil {
 		return err
 	}
 
@@ -42,7 +55,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		if err != nil {
 			return fmt.Errorf("failed to read %v integration templates: %w", entry.Integration, err)
 		}
-		if err := copyDir(integrationFS, destDir, cfg); err != nil {
+		if err := copyDir(integrationFS, destDir, cfg, ""); err != nil {
 			return err
 		}
 	}
@@ -55,7 +68,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 	}
 
 	stylesDir := filepath.Join(destDir, entry.StylesDir)
-	if err := copyDir(cssFS, stylesDir, cfg); err != nil {
+	if err := copyDir(cssFS, stylesDir, cfg, ""); err != nil {
 		return err
 	}
 
@@ -66,7 +79,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		return fmt.Errorf("failed to read formatter templates: %w", err)
 	}
 
-	if err := copyDir(fmtFS, destDir, cfg); err != nil {
+	if err := copyDir(fmtFS, destDir, cfg, ""); err != nil {
 		return err
 	}
 
@@ -77,7 +90,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		if err != nil {
 			return fmt.Errorf("failed to read linter templates: %w", err)
 		}
-		if err := copyDir(linterFS, destDir, cfg); err != nil {
+		if err := copyDir(linterFS, destDir, cfg, ""); err != nil {
 			return err
 		}
 	}
@@ -89,7 +102,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		if err != nil {
 			return fmt.Errorf("failed to read package manager templates: %w", err)
 		}
-		if err := copyDir(pmFS, destDir, cfg); err != nil {
+		if err := copyDir(pmFS, destDir, cfg, ""); err != nil {
 			return err
 		}
 	}
@@ -109,7 +122,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		if err != nil {
 			return fmt.Errorf("failed to read CMS templates: %w", err)
 		}
-		if err := copyDir(cmsFS, destDir, cfg); err != nil {
+		if err := copyDir(cmsFS, destDir, cfg, ""); err != nil {
 			return err
 		}
 	}
@@ -120,10 +133,10 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		return fmt.Errorf("failed to read shared templates: %w", err)
 	}
 
-	return copyDir(sharedFS, destDir, cfg)
+	return copyDir(sharedFS, destDir, cfg, "")
 }
 
-func copyDir(srcFS fs.FS, destDir string, cfg ProjectConfig) error {
+func copyDir(srcFS fs.FS, destDir string, cfg ProjectConfig, skip string) error {
 	return fs.WalkDir(srcFS, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -132,6 +145,19 @@ func copyDir(srcFS fs.FS, destDir string, cfg ProjectConfig) error {
 		// Skip the embedded .git directory
 		if d.IsDir() && d.Name() == ".git" {
 			return fs.SkipDir
+		}
+
+		// Skip package.json.tmpl — package.json is generated programmatically
+		if !d.IsDir() && d.Name() == "package.json.tmpl" {
+			return nil
+		}
+
+		// Skip entry point file when integration provides its own
+		if skip != "" && !d.IsDir() {
+			resolved := strings.TrimSuffix(path, ".tmpl")
+			if filepath.Base(resolved) == skip {
+				return nil
+			}
 		}
 
 		destPath := filepath.Join(destDir, path)
@@ -168,17 +194,18 @@ func renderTemplate(srcFS fs.FS, srcPath string, destPath string, cfg ProjectCon
 
 	output := buf.Bytes()
 
-	// Format JSON files after rendering
+	// Format JSON files after rendering (skip if JSONC with comments)
 	if strings.HasSuffix(destPath, ".json") {
 		var parsed json.RawMessage
-		if err := json.Unmarshal(output, &parsed); err != nil {
-			return fmt.Errorf("failed to parse rendered JSON %s: %w", destPath, err)
+		if err := json.Unmarshal(output, &parsed); err == nil {
+			var fmtBuf bytes.Buffer
+			enc := json.NewEncoder(&fmtBuf)
+			enc.SetIndent("", "  ")
+			enc.SetEscapeHTML(false)
+			if err := enc.Encode(parsed); err == nil {
+				output = fmtBuf.Bytes()
+			}
 		}
-		formatted, err := json.MarshalIndent(parsed, "", "  ")
-		if err != nil {
-			return fmt.Errorf("failed to format JSON %s: %w", destPath, err)
-		}
-		output = append(formatted, '\n')
 	}
 
 	perm := os.FileMode(0o644)

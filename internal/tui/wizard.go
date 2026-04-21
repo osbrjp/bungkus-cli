@@ -19,15 +19,17 @@ const (
 
 const (
 	focusProjectName = iota // 0 (Top input text field)
-	focusBase               // 1 (Side project base list)
-	focusExtra              // 2 (Main project config)
-	focusPM                 // 3 (Package manager horizontal selector)
+	focusBase               // 1 (Left panel: base framework list)
+	focusTooling            // 2 (Middle panel: CSS, Formatter, Linter)
+	focusLibraries          // 3 (Right panel: Validation, Form, Query, CMS)
+	focusPM                 // 4 (Package manager horizontal selector)
 	focusLen
 )
 
 const (
 	panelBoxWidth   = 30 // outer width passed to border style
 	panelInnerWidth = 26 // content width inside border(2) + padding(2)
+	fullRowWidth    = panelBoxWidth * 3
 )
 
 type PMModel struct {
@@ -78,7 +80,8 @@ type WizardModel struct {
 	width       int
 	height      int
 	BaseList    list.Model
-	addOns      AddOnsModel
+	tooling     AddOnsModel
+	libraries   AddOnsModel
 	pm          PMModel
 	projectName textinput.Model
 }
@@ -227,53 +230,84 @@ func NewWizardModel() WizardModel {
 	}
 
 	baseList := list.New(baseItems, optionDelegate{}, panelInnerWidth, len(registry.Bases)+2)
-	baseList.Title = "Bases"
+	baseList.Title = "BASES"
 	baseList.Styles.TitleBar = lipgloss.NewStyle()
-	baseList.Styles.Title = AccentStyle
+	baseList.Styles.Title = PanelTitleStyle
 	baseList.Styles.NoItems = MutedStyle
 	baseList.SetShowStatusBar(false)
 	baseList.SetFilteringEnabled(false)
 	baseList.SetShowHelp(false)
 	baseList.SetShowPagination(false)
 
-	group := registry.Bases[0].Group
-	addOns := buildAddOns(registry, group)
+	first := registry.Bases[0]
+	tooling, libraries := buildAddOnPanels(registry, first.Group, first.Integration)
 
 	pm := PMModel{options: registry.PackageManagers}
 
 	return WizardModel{
 		projectName: ti,
 		BaseList:    baseList,
-		addOns:      addOns,
+		tooling:     tooling,
+		libraries:   libraries,
 		pm:          pm,
 	}
 }
 
-func buildAddOns(reg *pkg.Registry, group string) AddOnsModel {
-	categories := []struct {
+func buildAddOnPanels(reg *pkg.Registry, group string, integration string) (AddOnsModel, AddOnsModel) {
+	// Resolve effective integration: nuxt is implicitly vue
+	effectiveInt := integration
+	if group == "nuxt" {
+		effectiveInt = "vue"
+	}
+
+	toolingCats := []struct {
 		name    string
 		entries []pkg.OptionEntry
 	}{
 		{"CSS", reg.CSS},
 		{"Formatter", reg.Formatters},
 		{"Linter", reg.Linters},
+	}
+
+	libraryCats := []struct {
+		name    string
+		entries []pkg.OptionEntry
+	}{
+		{"Validation", reg.Validation},
+		{"Form", reg.Form},
+		{"Query", reg.Query},
 		{"CMS", reg.CMS},
 	}
 
-	var groups []RadioGroup
-	for _, cat := range categories {
-		var opts []RadioOption
-		for _, e := range cat.entries {
-			if !e.ExcludesGroup(group) {
+	build := func(cats []struct {
+		name    string
+		entries []pkg.OptionEntry
+	}) AddOnsModel {
+		var groups []RadioGroup
+		for _, cat := range cats {
+			var opts []RadioOption
+			for _, e := range cat.entries {
+				if e.ExcludesGroup(group) {
+					continue
+				}
+				if e.RequiresIntegration != "" {
+					if effectiveInt == "" {
+						continue
+					}
+					if e.RequiresIntegration != "any" && e.RequiresIntegration != effectiveInt {
+						continue
+					}
+				}
 				opts = append(opts, RadioOption{label: e.Label, value: e.Value})
 			}
+			if len(opts) > 0 {
+				groups = append(groups, RadioGroup{name: cat.name, options: opts})
+			}
 		}
-		if len(opts) > 0 {
-			groups = append(groups, RadioGroup{name: cat.name, options: opts})
-		}
+		return AddOnsModel{groups: groups}
 	}
 
-	return AddOnsModel{groups: groups}
+	return build(toolingCats), build(libraryCats)
 }
 
 func (m WizardModel) Init() tea.Cmd {
@@ -328,8 +362,12 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.rebuildAddOns()
 				return m, cmd
 			}
-			if m.focus == focusExtra {
-				m.addOns.CursorDown()
+			if m.focus == focusTooling {
+				m.tooling.CursorDown()
+				return m, nil
+			}
+			if m.focus == focusLibraries {
+				m.libraries.CursorDown()
 				return m, nil
 			}
 			if m.focus == focusPM {
@@ -343,8 +381,12 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.rebuildAddOns()
 				return m, cmd
 			}
-			if m.focus == focusExtra {
-				m.addOns.CursorUp()
+			if m.focus == focusTooling {
+				m.tooling.CursorUp()
+				return m, nil
+			}
+			if m.focus == focusLibraries {
+				m.libraries.CursorUp()
 				return m, nil
 			}
 			if m.focus == focusPM {
@@ -352,8 +394,12 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 		case "space":
-			if m.focus == focusExtra {
-				m.addOns.Select()
+			if m.focus == focusTooling {
+				m.tooling.Select()
+				return m, nil
+			}
+			if m.focus == focusLibraries {
+				m.libraries.Select()
 				return m, nil
 			}
 			if m.focus == focusPM {
@@ -387,7 +433,7 @@ func (m *WizardModel) collectConfig() {
 		m.Cfg.Base = pkg.BaseFramework(sel.value)
 	}
 
-	for _, g := range m.addOns.groups {
+	for _, g := range m.tooling.groups {
 		selected := g.options[g.selected]
 		switch g.name {
 		case "CSS":
@@ -396,6 +442,18 @@ func (m *WizardModel) collectConfig() {
 			m.Cfg.Fmt = pkg.Formatter(selected.value)
 		case "Linter":
 			m.Cfg.Linter = pkg.Linter(selected.value)
+		}
+	}
+
+	for _, g := range m.libraries.groups {
+		selected := g.options[g.selected]
+		switch g.name {
+		case "Validation":
+			m.Cfg.Validation = pkg.ValidationLib(selected.value)
+		case "Form":
+			m.Cfg.Form = pkg.FormLib(selected.value)
+		case "Query":
+			m.Cfg.Query = pkg.QueryLib(selected.value)
 		case "CMS":
 			m.Cfg.CMS = pkg.CMS(selected.value)
 		}
@@ -413,7 +471,7 @@ func (m WizardModel) View() tea.View {
 
 	var s strings.Builder
 
-	lists := lipgloss.JoinHorizontal(lipgloss.Top, m.baseOptionsView(), m.addOnsView())
+	lists := m.middleRow()
 	layout := lipgloss.JoinVertical(lipgloss.Top, m.projectNameInputView(), lists, m.pmView(), m.footerView())
 
 	s.Write([]byte(layout))
@@ -439,6 +497,9 @@ func (m WizardModel) summaryPopup() string {
 	title := AccentStyle.Render("  Confirm Project") + "\n\n"
 
 	row := func(label, value string) string {
+		if value == "none" {
+			return ""
+		}
 		return MutedStyle.Render("  "+label) + PrimaryStyle.Render(value) + "\n"
 	}
 
@@ -447,6 +508,9 @@ func (m WizardModel) summaryPopup() string {
 		row("CSS:        ", string(m.Cfg.CSS)) +
 		row("Formatter:  ", string(m.Cfg.Fmt)) +
 		row("Linter:     ", string(m.Cfg.Linter)) +
+		row("Validation: ", string(m.Cfg.Validation)) +
+		row("Form:       ", string(m.Cfg.Form)) +
+		row("Query:      ", string(m.Cfg.Query)) +
 		row("CMS:        ", string(m.Cfg.CMS)) +
 		row("PM:         ", string(m.Cfg.PM))
 
@@ -472,23 +536,40 @@ func (m WizardModel) summaryPopup() string {
 
 func (m WizardModel) projectNameInputView() string {
 	label := AccentStyle.Render("Project Name:")
-	box := m.borderFor(focusProjectName).Width(100)
+	box := m.borderFor(focusProjectName).Width(fullRowWidth)
 	return box.Render(label + "\n" + m.projectName.View())
 }
 
-func (m WizardModel) baseOptionsView() string {
-	box := m.borderFor(focusBase).Width(panelBoxWidth)
-	return box.Render(m.BaseList.View())
-}
+func (m WizardModel) middleRow() string {
+	baseContent := m.BaseList.View()
+	toolingContent := PanelTitleStyle.Render("TOOLING") + "\n" + m.tooling.View(m.focus == focusTooling, panelInnerWidth)
+	librariesContent := PanelTitleStyle.Render("LIBRARIES") + "\n" + m.libraries.View(m.focus == focusLibraries, panelInnerWidth)
 
-func (m WizardModel) addOnsView() string {
-	box := m.borderFor(focusExtra).Width(panelBoxWidth)
-	return box.Render(m.addOns.View(m.focus == focusExtra, panelInnerWidth))
+	// Trim trailing newlines so lipgloss.Height counts consistently
+	baseContent = strings.TrimRight(baseContent, "\n")
+	toolingContent = strings.TrimRight(toolingContent, "\n")
+	librariesContent = strings.TrimRight(librariesContent, "\n")
+
+	h := max(
+		lipgloss.Height(baseContent),
+		lipgloss.Height(toolingContent),
+		lipgloss.Height(librariesContent),
+	)
+
+	box := func(focus uint) lipgloss.Style {
+		return m.borderFor(focus).Width(panelBoxWidth).Height(h)
+	}
+
+	return lipgloss.JoinHorizontal(lipgloss.Top,
+		box(focusBase).Render(baseContent),
+		box(focusTooling).Render(toolingContent),
+		box(focusLibraries).Render(librariesContent),
+	)
 }
 
 func (m WizardModel) pmView() string {
 	label := AccentStyle.Render("Package Manager:")
-	box := m.borderFor(focusPM).Width(100)
+	box := m.borderFor(focusPM).Width(fullRowWidth)
 	return box.Render(label + "\n" + m.pm.View(m.focus == focusPM))
 }
 
@@ -500,7 +581,7 @@ func (m *WizardModel) rebuildAddOns() {
 	reg := pkg.GetRegistry()
 	base := reg.GetBase(sel.value)
 	if base != nil {
-		m.addOns = buildAddOns(reg, base.Group)
+		m.tooling, m.libraries = buildAddOnPanels(reg, base.Group, base.Integration)
 	}
 }
 
@@ -523,12 +604,12 @@ func (m WizardModel) footerView() string {
 	}
 
 	switch m.focus {
-	case focusBase, focusExtra:
+	case focusBase, focusTooling, focusLibraries:
 		bindings = append(bindings, key("↑/↓", "move"))
 	case focusPM:
 		bindings = append(bindings, key("←/→/↑/↓", "move"))
 	}
-	if m.focus == focusExtra || m.focus == focusPM {
+	if m.focus == focusTooling || m.focus == focusLibraries || m.focus == focusPM {
 		bindings = append(bindings, key("space", "select"))
 	}
 
