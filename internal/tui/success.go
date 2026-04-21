@@ -7,6 +7,20 @@ import (
 	"github.com/spencer-osbrjp/bungkus-cli/pkg"
 )
 
+// PrintSkippedIntegration prints a styled warning that a library is skipped
+// because it's not compatible with the chosen base framework.
+func PrintSkippedIntegration(lib, base string) {
+	tag := WarnStyle.Render(" WARN ")
+	msg := fmt.Sprintf(
+		"%s %s is not supported on %s — skipping %s",
+		tag,
+		AccentStyle.Render(lib),
+		AccentStyle.Render(base),
+		SkipStyle.Render(lib),
+	)
+	fmt.Println(msg)
+}
+
 // PrintSuccess prints a styled success box with get-started instructions.
 func PrintSuccess(cfg pkg.ProjectConfig) {
 	header := PrimaryStyle.Render("✔ ") + "Project scaffolded at " + AccentStyle.Render(cfg.ProjectName)

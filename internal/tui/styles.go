@@ -20,6 +20,8 @@ var (
 	AccentStyle  = lipgloss.NewStyle().Foreground(ColorOrange).Bold(true)
 	MutedStyle   = lipgloss.NewStyle().Foreground(ColorDim)
 	ErrorStyle   = lipgloss.NewStyle().Foreground(ColorError).Bold(true)
+	WarnStyle    = lipgloss.NewStyle().Foreground(ColorYellow).Bold(true)
+	SkipStyle    = lipgloss.NewStyle().Foreground(ColorLack).Italic(true)
 	BoldStyle    = lipgloss.NewStyle().Bold(true).Foreground(ColorLuster)
 	BoxStyle     = lipgloss.NewStyle().
 			Border(lipgloss.ASCIIBorder()).

@@ -65,8 +65,7 @@ var createCmd = &cobra.Command{
 			return fmt.Errorf("invalid form library: %s", form)
 		}
 		if cfg.Form != "none" && !cfg.Form.IsValidIntegration(base) {
-			fmt.Printf("[WARN]: %s is currently not supported in %s base\n", form, base)
-			fmt.Printf("Skipped %s...\n", form)
+			tui.PrintSkippedIntegration(form, base)
 			cfg.Form = "none"
 		}
 
@@ -76,8 +75,7 @@ var createCmd = &cobra.Command{
 			return fmt.Errorf("invalid query library: %s", query)
 		}
 		if cfg.Query != "none" && !cfg.Query.IsValidIntegration(base) {
-			fmt.Printf("[WARN]: %s is currently not supported in %s base\n", query, base)
-			fmt.Printf("Skipped %s...\n", query)
+			tui.PrintSkippedIntegration(query, base)
 			cfg.Query = "none"
 		}
 
@@ -87,8 +85,7 @@ var createCmd = &cobra.Command{
 			return fmt.Errorf("invalid state library: %s", state)
 		}
 		if cfg.State != "none" && !cfg.State.IsValidIntegration(base) {
-			fmt.Printf("[WARN]: %s is currently not supported in %s base\n", state, base)
-			fmt.Printf("Skipped %s...\n", state)
+			tui.PrintSkippedIntegration(state, base)
 			cfg.State = "none"
 		}
 
