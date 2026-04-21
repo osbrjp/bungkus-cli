@@ -12,7 +12,7 @@ export default defineConfig([
     extends: [
       js.configs.recommended,
       tseslint.configs.recommended,
-      {{- if eq .IsReactInt}}
+      {{- if .Base.IsReactInt}}
       reactHooks.configs.flat.recommended,
       reactRefresh.configs.vite,
       {{- end}}

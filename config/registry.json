@@ -248,8 +248,8 @@
           "lint": "eslint ."
         },
         "devDependencies": {
-          "eslint": "^10.2.0",
-          "@eslint/js": "^10.2.0"
+          "eslint": "^10.0.0",
+          "@eslint/js": "^10.0.0"
         }
       }
     },
