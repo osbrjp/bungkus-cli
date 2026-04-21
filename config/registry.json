@@ -294,7 +294,7 @@
     {
       "value": "react-hook-form",
       "label": "React Hook Form",
-      "requiresIntegration": "react",
+      "requiresIntegration": ["react"],
       "packages": {
         "dependencies": {
           "react-hook-form": "^7.72.1"
@@ -304,7 +304,7 @@
     {
       "value": "tanstack-form",
       "label": "TanStack Form",
-      "requiresIntegration": "any",
+      "requiresIntegration": ["react", "vue"],
       "packages": {},
       "integrationPackages": {
         "react": {
@@ -322,7 +322,7 @@
     {
       "value": "veevalidate",
       "label": "VeeValidate",
-      "requiresIntegration": "vue",
+      "requiresIntegration": ["vue"],
       "packages": {},
       "integrationPackages": {
         "vue": {
@@ -347,7 +347,7 @@
     {
       "value": "tanstack-query",
       "label": "TanStack Query",
-      "requiresIntegration": "any",
+      "requiresIntegration": ["react", "vue"],
       "packages": {},
       "integrationPackages": {
         "react": {
@@ -358,6 +358,72 @@
         "vue": {
           "dependencies": {
             "@tanstack/vue-query": "^5.80.7"
+          }
+        }
+      }
+    }
+  ],
+  "state": [
+    {
+      "value": "none",
+      "label": "None",
+      "packages": {}
+    },
+    {
+      "value": "jotai",
+      "label": "Jotai",
+      "requiresIntegration": ["react"],
+      "packages": {
+        "dependencies": {
+          "jotai": "^2.19.1"
+        }
+      }
+    },
+    {
+      "value": "zustand",
+      "label": "Zustand",
+      "requiresIntegration": ["react"],
+      "packages": {
+        "dependencies": {
+          "zustand": "^5.0.12"
+        }
+      }
+    },
+    {
+      "value": "pinia",
+      "label": "Pinia",
+      "requiresIntegration": ["vue"],
+      "packages": {
+        "dependencies": {
+          "pinia": "^3.0.4"
+        }
+      },
+      "integrationPackages": {
+        "nuxt": {
+          "dependencies": {
+            "@pinia/nuxt": "^0.11.3"
+          }
+        }
+      }
+    },
+    {
+      "value": "nanostores",
+      "label": "Nano Stores",
+      "requiresIntegration": ["react", "vue"],
+      "packages": {
+        "dependencies": {
+          "nanostores": "^1.3.0"
+        }
+      },
+      "integrationPackages": {
+        "react": {
+          "dependencies": {
+            "@nanostores/react": "^1.1.0"
+          }
+        },
+        "vue": {
+          "dependencies": {
+            "@nanostores/vue": "^1.1.0"
           }
         }
       }

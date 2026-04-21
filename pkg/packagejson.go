@@ -73,17 +73,24 @@ func BuildPackageJSON(cfg ProjectConfig) ([]byte, error) {
 		integration = "nuxt"
 	}
 
-	if cfg.Form != "none" {
+	if cfg.Form != "none" && cfg.Form.IsValidIntegration(string(cfg.Base)) {
 		if form := reg.GetForm(string(cfg.Form)); form != nil {
 			mergePackages(&pkg, form.Packages)
 			mergeIntegrationPackages(&pkg, form, integration)
 		}
 	}
 
-	if cfg.Query != "none" {
+	if cfg.Query != "none" && cfg.Query.IsValidIntegration(string(cfg.Base)) {
 		if query := reg.GetQuery(string(cfg.Query)); query != nil {
 			mergePackages(&pkg, query.Packages)
 			mergeIntegrationPackages(&pkg, query, integration)
+		}
+	}
+
+	if cfg.State != "none" && cfg.State.IsValidIntegration(string(cfg.Base)) {
+		if state := reg.GetState(string(cfg.State)); state != nil {
+			mergePackages(&pkg, state.Packages)
+			mergeIntegrationPackages(&pkg, state, integration)
 		}
 	}
 
@@ -148,8 +155,13 @@ func applyCrossCuttingRules(pkg *packageJSON, cfg ProjectConfig) {
 	}
 
 	// veevalidate + zod → @vee-validate/zod adapter
-	if cfg.Form == "veevalidate" && cfg.Validation == "zod" {
+	if cfg.Form == "veevalidate" && cfg.Validation == "zod" && cfg.Form.IsValidIntegration(string(cfg.Base)) {
 		pkg.Dependencies["@vee-validate/zod"] = "^4.15.1"
+	}
+
+	// react-hook-form + zod → @hookform/resolvers
+	if cfg.Form == "react-hook-form" && cfg.Validation == "zod" && cfg.Form.IsValidIntegration(string(cfg.Base)) {
+		pkg.Dependencies["@hookform/resolvers"] = "^5.2.2"
 	}
 
 	// pnpm + astro → vite as devDep

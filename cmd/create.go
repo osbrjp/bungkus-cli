@@ -55,12 +55,39 @@ var createCmd = &cobra.Command{
 
 		validation, _ := cmd.Flags().GetString("validation")
 		cfg.Validation = pkg.ValidationLib(validation)
+		if !cfg.Validation.IsValid() {
+			return fmt.Errorf("invalid validation library: %s", validation)
+		}
 
 		form, _ := cmd.Flags().GetString("form")
 		cfg.Form = pkg.FormLib(form)
+		if !cfg.Form.IsValid() {
+			return fmt.Errorf("invalid form library: %s", form)
+		}
+		if cfg.Form != "none" && !cfg.Form.IsValidIntegration(base) {
+			tui.PrintSkippedIntegration(form, base)
+			cfg.Form = "none"
+		}
 
 		query, _ := cmd.Flags().GetString("query")
 		cfg.Query = pkg.QueryLib(query)
+		if !cfg.Query.IsValid() {
+			return fmt.Errorf("invalid query library: %s", query)
+		}
+		if cfg.Query != "none" && !cfg.Query.IsValidIntegration(base) {
+			tui.PrintSkippedIntegration(query, base)
+			cfg.Query = "none"
+		}
+
+		state, _ := cmd.Flags().GetString("state")
+		cfg.State = pkg.StateLib(state)
+		if !cfg.State.IsValid() {
+			return fmt.Errorf("invalid state library: %s", state)
+		}
+		if cfg.State != "none" && !cfg.State.IsValidIntegration(base) {
+			tui.PrintSkippedIntegration(state, base)
+			cfg.State = "none"
+		}
 
 		cms, _ := cmd.Flags().GetString("cms")
 		cfg.CMS = pkg.CMS(cms)
@@ -83,6 +110,7 @@ func init() {
 	createCmd.Flags().String("validation", "none", "Validation library (none, zod)")
 	createCmd.Flags().String("form", "none", "Form library (none, tanstack-form)")
 	createCmd.Flags().String("query", "none", "Query library (none, tanstack-query)")
+	createCmd.Flags().String("state", "none", "State management library (none, jotai, zustand, pinia, nanostores)")
 	createCmd.Flags().String("pm", "pnpm", "Package manager (bun, npm, yarn, pnpm)")
 	createCmd.Flags().String("cms", "none", "CMS (none, microcms)")
 }

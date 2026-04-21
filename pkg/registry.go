@@ -31,7 +31,7 @@ type OptionEntry struct {
 	Value               string              `json:"value"`
 	Label               string              `json:"label"`
 	ExcludeGroups       []string            `json:"excludeGroups,omitempty"`
-	RequiresIntegration string              `json:"requiresIntegration,omitempty"`
+	RequiresIntegration []string            `json:"requiresIntegration,omitempty"`
 	Packages            Packages            `json:"packages"`
 	IntegrationPackages map[string]Packages `json:"integrationPackages,omitempty"`
 }
@@ -56,6 +56,7 @@ type Registry struct {
 	Validation      []OptionEntry `json:"validation"`
 	Form            []OptionEntry `json:"form"`
 	Query           []OptionEntry `json:"query"`
+	State           []OptionEntry `json:"state"`
 	CMS             []OptionEntry `json:"cms"`
 	PackageManagers []PMEntry     `json:"packageManagers"`
 	CommonPackages  Packages      `json:"commonPackages"`
@@ -206,4 +207,17 @@ func (r *Registry) GetQuery(value string) *OptionEntry {
 
 func (r *Registry) HasQuery(value string) bool {
 	return r.GetQuery(value) != nil
+}
+
+func (r *Registry) GetState(value string) *OptionEntry {
+	for i := range r.State {
+		if r.State[i].Value == value {
+			return &r.State[i]
+		}
+	}
+	return nil
+}
+
+func (r *Registry) HasState(value string) bool {
+	return r.GetState(value) != nil
 }
