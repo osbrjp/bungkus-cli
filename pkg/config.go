@@ -243,14 +243,15 @@ func NewProjectConfig() ProjectConfig {
 	return ProjectConfig{
 		ProjectName: "my-app",
 		Site:        "",
+		Base:        "astro",
 		CSS:         "vanilla",
-		Fmt:         "prettier",
-		Linter:      "eslint",
+		Fmt:         "biome",
+		Linter:      "biome",
 		Validation:  "none",
 		Form:        "none",
 		Query:       "none",
 		State:       "none",
 		CMS:         "none",
-		PM:          "bun",
+		PM:          "pnpm",
 	}
 }
