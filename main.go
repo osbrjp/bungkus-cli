@@ -18,5 +18,6 @@ func main() {
 		fmt.Fprintf(os.Stderr, "failed to load registry: %v\n", err)
 		os.Exit(1)
 	}
+	cmd.SetVersion(Version)
 	cmd.Execute()
 }
