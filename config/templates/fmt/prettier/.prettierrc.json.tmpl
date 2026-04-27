@@ -1,0 +1,19 @@
+{
+  "printWidth": 80,
+  "tabWidth": 2,
+  "useTabs": false,
+  "semi": true,
+  "singleQuote": false,
+  "trailingComma": "all",
+  "plugins": [
+    {{- if eq .CSS "tailwindcss"}}
+    "prettier-plugin-tailwindcss"
+    {{- end}}
+    {{- if .Base.IsAstro}},
+      "prettier-plugin-astro"
+    {{- end}}
+  ]
+  {{- if eq .CSS "tailwindcss"}},
+  "tailwindStylesheet": "{{- if eq .Base "nuxt"}}./app/assets/styles/main.css{{- else}}./src/styles/main.css{{- end}}"
+  {{- end }}
+}

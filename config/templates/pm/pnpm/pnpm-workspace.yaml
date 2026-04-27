@@ -1,0 +1,8 @@
+strictDepBuilds: true
+minimumReleaseAge: 1440
+trustPolicy: no-downgrade
+trustPolicyExclude:
+  - chokidar
+allowedBuildScripts:
+  esbuild: "*"
+  sharp: "*"

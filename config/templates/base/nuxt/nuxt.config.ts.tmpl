@@ -1,0 +1,45 @@
+// https://nuxt.com/docs/api/configuration/nuxt-config
+{{- if eq .CSS "tailwindcss"}}
+import tailwindcss from "@tailwindcss/vite";
+{{- end}}
+export default defineNuxtConfig({
+  compatibilityDate: '2025-07-15',
+  devtools: { enabled: true },
+  modules: [
+    {{- if eq .Form "veevalidate" }}
+    [
+      '@vee-validate/nuxt',
+      {
+      // disable or enable auto imports
+      autoImports: true,
+      // Use different names for components
+      componentNames: {
+      Form: 'VeeForm',
+      Field: 'VeeField',
+      FieldArray: 'VeeFieldArray',
+      ErrorMessage: 'VeeErrorMessage',
+      },
+      },
+    ],
+    {{- end}}
+    {{- if eq .State "pinia" }}
+    '@pinia/nuxt',
+    {{- end}}
+  ],
+  runtimeConfig: {
+    {{- if eq .CMS "microcms"}}
+    microCMS: {
+      serviceDomain: process.env.MICROCMS_SERVICE_DOMAIN,
+      apiKey: process.env.MICROCMS_API_KEY,
+    },
+    {{- end}}
+  },
+  css: ['./app/assets/styles/main.css']
+  {{- if eq .CSS "tailwindcss"}},
+  vite: {
+    plugins: [
+      tailwindcss(),
+    ],
+  }
+  {{- end}}
+})

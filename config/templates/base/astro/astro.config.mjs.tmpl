@@ -1,0 +1,31 @@
+// @ts-check
+import { defineConfig {{if eq .CMS "microcms"}}, envField{{end}} } from 'astro/config';
+{{- if eq .Base "astro-vue"}}
+import vue from '@astrojs/vue';
+{{- end}}
+{{- if eq .Base "astro-react"}}
+import react from '@astrojs/react';
+{{- end}}
+{{- if eq .CSS "tailwindcss"}}
+import tailwindcss from "@tailwindcss/vite";
+{{- end}}
+
+// https://astro.build/config
+export default defineConfig({
+  env: {
+    schema: {
+      {{- if eq .CMS "microcms"}}
+      MICROCMS_API_KEY: envField.string({ context: 'server', access: 'secret'}),
+      MICROCMS_SERVICE_DOMAIN: envField.string({ context: 'server', access: 'secret'}),
+      {{- end}}
+    }
+  }
+{{- if or (eq .Base "astro-vue") (eq .Base "astro-react")}}
+  integrations: [{{if eq .Base "astro-vue"}}vue(){{end}}{{if eq .Base "astro-react"}}react(){{end}}],
+{{- end}}
+{{- if eq .CSS "tailwindcss"}},
+  vite: {
+    plugins: [tailwindcss()],
+  },
+{{- end}}
+});

@@ -1,0 +1,33 @@
+---
+import MainLayout from '@/layouts/main.astro';
+{{- if eq .Base "astro-react" }}
+import Comp from "@/components/react/button.tsx";
+{{- end }}
+{{- if eq .Base "astro-vue" }}
+import Comp from "@/components/vue/button.vue";
+{{- end }}
+---
+
+<MainLayout>
+  <main>
+    <h1 class="bg-black text-white">
+      Welcome to Project {{ .ProjectName }}
+    </h1>
+
+    {{- if eq .Base "astro-react" }}
+    <!-- React Integration -->
+    <div>
+      Integration: React
+    </div>
+    <Comp client:load />
+    {{- end }}
+
+    {{- if eq .Base "astro-vue" }}
+    <!-- Vue Integration -->
+    <div>
+      Integration: Vue
+    </div>
+    <Comp client:load />
+    {{- end }}
+  </main>
+</MainLayout>

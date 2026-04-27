@@ -1,0 +1,24 @@
+import { defineConfig } from 'vite'
+{{- if eq .CSS "tailwindcss"}}
+import tailwindcss from '@tailwindcss/vite'
+{{- end}}
+{{- if eq .Base "vite-react"}}
+import react from '@vitejs/plugin-react'
+{{- end}}
+{{- if eq .Base "vite-vue"}}
+import vue from '@vitejs/plugin-vue'
+{{- end}}
+
+export default defineConfig({
+  plugins: [
+  {{- if eq .CSS "tailwindcss"}}
+    tailwindcss(),
+  {{- end}}
+  {{- if eq .Base "vite-react"}}
+    react(),
+  {{- end}}
+  {{- if eq .Base "vite-vue"}}
+    vue(),
+  {{- end}}
+  ],
+})

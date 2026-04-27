@@ -1,0 +1,25 @@
+import { useState } from 'react';
+
+const App = () => {
+  const [count, setCount] = useState<number>(0);
+
+  const handleClick = () => {
+    setCount((state) => state += 1);
+  }
+
+  return (
+    <main>
+      <h1 class="bg-black text-white">
+        Welcome to Project {{ .ProjectName }}
+      </h1>
+      <div>
+        <span>
+          Count: {{ "{ count }" }}
+        </span>
+        <button onClick={handleClick}>Click me</button>
+      </div>
+    </main>
+  );
+}
+
+export default App

@@ -1,0 +1,1 @@
+{{if eq .Fmt "prettier"}}{{.PM.Exec}} prettier --write .{{end}}{{if eq .Fmt "biome"}}{{.PM.Exec}} @biomejs/biome format . --write{{end}}{{if eq .Fmt "oxfmt"}}{{.PM.Exec}} oxfmt --check . --write{{end}}
