@@ -29,6 +29,32 @@ Add-ons are integration-aware: forms, queries, and state libraries are filtered 
 
 ### Install
 
+Download the latest release binary for your platform (`darwin`/`linux` × `arm64`/`amd64`) and verify its SHA256:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/spencer-osbrjp/bungkus-cli/main/install.sh | bash
+```
+
+Defaults to `/usr/local/bin/bungkus-cli` (uses `sudo` if needed). Override with `BUNGKUS_INSTALL_DIR`:
+
+```bash
+BUNGKUS_INSTALL_DIR=$HOME/.local/bin curl -fsSL https://raw.githubusercontent.com/spencer-osbrjp/bungkus-cli/main/install.sh | bash
+```
+
+Update to the latest release:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/spencer-osbrjp/bungkus-cli/main/update.sh | bash
+```
+
+Confirm:
+
+```bash
+bungkus-cli --version
+```
+
+If you have Go installed and prefer to build from source:
+
 ```bash
 go install github.com/spencer-osbrjp/bungkus-cli@latest
 ```

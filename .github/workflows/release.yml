@@ -76,7 +76,7 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
-          go build -o bungkus-cli-${{ matrix.goos }}-${{ matrix.goarch }} .
+          go build -ldflags "-X main.Version=${{ needs.semantic-release.outputs.new_release_git_tag }}" -o bungkus-cli-${{ matrix.goos }}-${{ matrix.goarch }} .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
