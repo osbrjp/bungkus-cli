@@ -1,13 +1,12 @@
 name: Release
 on:
-  pull_request:
-    types: [closed]
+  push:
     branches:
       - release
+
 jobs:
   deployment:
     name: Deploy
-    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -19,7 +18,6 @@ jobs:
 
   semantic-release:
     name: Semantic Release
-    if: github.event.pull_request.merged == true
     needs: deployment
     permissions:
       contents: write
