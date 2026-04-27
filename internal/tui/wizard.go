@@ -284,7 +284,8 @@ func buildAddOnPanels(reg *pkg.Registry, group string, integration string) (AddO
 	build := func(cats []struct {
 		name    string
 		entries []pkg.OptionEntry
-	}) AddOnsModel {
+	},
+	) AddOnsModel {
 		var groups []RadioGroup
 		for _, cat := range cats {
 			var opts []RadioOption
@@ -310,7 +311,6 @@ func buildAddOnPanels(reg *pkg.Registry, group string, integration string) (AddO
 }
 
 func (m WizardModel) Init() tea.Cmd {
-	m.focus = focusProjectName
 	return textinput.Blink
 }
 
@@ -594,8 +594,6 @@ func (m WizardModel) borderFor(section uint) lipgloss.Style {
 	return InactiveBorder
 }
 
-func (m WizardModel) headerView() string { return "Bungkus-cli" }
-
 func (m WizardModel) footerView() string {
 	key := func(k, desc string) string {
 		return FooterKeyStyle.Render(k) + FooterDescStyle.Render(" "+desc)
@@ -637,21 +635,4 @@ func (m WizardModel) focusPrev() uint {
 	}
 
 	return m.focus - 1
-}
-
-// Helper functions
-func cursorNext(current, total uint) uint {
-	if current == total-1 {
-		return 0
-	}
-
-	return current + 1
-}
-
-func cursorPrev(current, total uint) uint {
-	if current == 0 {
-		return total - 1
-	}
-
-	return current - 1
 }
