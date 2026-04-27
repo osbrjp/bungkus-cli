@@ -1,4 +1,5 @@
 name: Refactoring
+type: Refactoring
 labels: ["refactoring"]
 title: Refactor ***
 description: A change made to existing code to improve its structure, readability, or maintainability without altering its behavior.

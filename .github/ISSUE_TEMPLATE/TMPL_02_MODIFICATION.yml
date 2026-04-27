@@ -1,4 +1,5 @@
 name: Modification
+type: Modification
 labels: ["modification"]
 title: Modify ***
 description: A change made to existing code to alter its behavior or add new functionality.

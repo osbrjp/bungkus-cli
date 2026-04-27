@@ -1,29 +1,6 @@
-# bungkus-cli
-```
-88""Yb 88   88 88b 88  dP""b8 88  dP 88   88 .dP"Y8      dP""b8 88     88
-88__dP 88   88 88Yb88 dP   `" 88odP  88   88 `Ybo."     dP   `" 88     88
-88""Yb Y8   8P 88 Y88 Yb  "88 88"Yb  Y8   8P o.`Y8b     Yb      88  .o 88
-88oodP `YbodP' 88  Y8  YboodP 88  Yb `YbodP' 8bodP'      YboodP 88ood8 88
-```
+# The OSBR Standard Repository
 
-A Go CLI tool that scaffolds and configures modern frontend projects with common tooling. Single binary, no external runtime dependencies.
-
-## Features
-
-- **Frameworks** — Astro (vanilla, +Vue, +React), Nuxt, Vite (vanilla, +Vue, +React)
-- **CSS** — Vanilla, Tailwind CSS
-- **Formatters** — Biome, Prettier, OxFmt
-- **Linters** — Biome, ESLint, OxLint
-- **Validation** — Zod
-- **Forms** — React Hook Form, TanStack Form, VeeValidate
-- **Data Fetching** — TanStack Query
-- **State Management** — Jotai, Zustand, Pinia, Nano Stores
-- **CMS** — microCMS
-- **Package Managers** — pnpm, bun, npm, yarn
-- **Templates** — Named presets for common stacks (`-t astro-react`, `-t nuxt`, …)
-- **Interactive TUI** — Guided wizard when run without arguments
-
-Add-ons are integration-aware: forms, queries, and state libraries are filtered to compatible bases (e.g. VeeValidate is only offered on Vue-flavored bases; Jotai on React-flavored bases). Mismatched combinations passed via flags print a styled warning and fall back to `none`.
+A template repository for creating standardized repositories over organization.
 
 ## Getting Started
 
