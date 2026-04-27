@@ -25,14 +25,6 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Build patcher
-        run: |
-          cd patcher && npm ci && npx bun run build.ts
-
       - name: Build binary
         env:
           GOOS: ${{ matrix.goos }}
