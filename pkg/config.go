@@ -6,18 +6,19 @@ import (
 )
 
 type (
-	BaseFramework   string
-	CSSFramework    string
-	Formatter       string
-	Linter          string
-	ValidationLib   string
-	FormLib         string
-	QueryLib        string
-	StateLib        string
-	CMS             string
-	PackageManager  string
-	BaseGroup       string
-	BaseIntegration string
+	BaseFramework    string
+	CSSFramework     string
+	Formatter        string
+	Linter           string
+	ValidationLib    string
+	FormLib          string
+	QueryLib         string
+	StateLib         string
+	CMS              string
+	PackageManager   string
+	BaseGroup        string
+	BaseIntegration  string
+	TestingFramework string
 )
 
 func (b BaseFramework) IsValid() bool {
@@ -91,6 +92,10 @@ func (l Linter) IsValid() bool {
 
 func (f FormLib) IsValid() bool {
 	return globalRegistry != nil && globalRegistry.HasForm(string(f))
+}
+
+func (t TestingFramework) IsValid() bool {
+	return globalRegistry != nil && globalRegistry.HasTestingFramework(string(t))
 }
 
 func (f FormLib) IsValidIntegration(base string) bool {
@@ -237,6 +242,7 @@ type ProjectConfig struct {
 	State       StateLib
 	CMS         CMS
 	PM          PackageManager
+	Test        TestingFramework
 }
 
 func NewProjectConfig() ProjectConfig {
@@ -253,5 +259,6 @@ func NewProjectConfig() ProjectConfig {
 		State:       "none",
 		CMS:         "none",
 		PM:          "pnpm",
+		Test:        "none",
 	}
 }
