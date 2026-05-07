@@ -1,6 +1,6 @@
-# The OSBR Standard Repository
+# Bungkus-cli
 
-A template repository for creating standardized repositories over organization.
+A scaffolding cli tool for building frontend project.
 
 ## Getting Started
 
@@ -68,6 +68,7 @@ bungkus-cli create my-app -t nuxt --pm bun
 | `--form`       | `none`    | `none`, `react-hook-form`, `tanstack-form`, `veevalidate`        |
 | `--query`      | `none`    | `none`, `tanstack-query`                                         |
 | `--state`      | `none`    | `none`, `jotai`, `zustand`, `pinia`, `nanostores`                |
+| `--test`       | `none`    | `none`, `playwright`                                             |
 | `--cms`        | `none`    | `none`, `microcms`                                               |
 | `--pm`         | `pnpm`    | `pnpm`, `bun`, `npm`, `yarn`                                     |
 | `-t, --template` | —       | `astro`, `astro-react`, `astro-vue`, `nuxt`, `vite`, `vite-react`, `vite-vue` |
