@@ -9,10 +9,15 @@ import (
 // This is the single source of truth — adding a new framework only
 // requires a JSON entry and template files, no Go code changes.
 
+type (
+	Dependencies    map[string]string
+	DevDependencies map[string]string
+)
+
 type Packages struct {
 	Scripts         map[string]string `json:"scripts,omitempty"`
-	Dependencies    map[string]string `json:"dependencies,omitempty"`
-	DevDependencies map[string]string `json:"devDependencies,omitempty"`
+	Dependencies    Dependencies      `json:"dependencies,omitempty"`
+	DevDependencies DevDependencies   `json:"devDependencies,omitempty"`
 }
 
 type BaseEntry struct {
