@@ -21,7 +21,7 @@ const (
 const (
 	focusProjectName = iota // 0 (Top input text field)
 	focusBase               // 1 (Left panel: base framework list)
-	focusTooling            // 2 (Middle panel: CSS, Formatter, Linter)
+	focusTooling            // 2 (Middle panel: CSS, Formatter, Linter, Test)
 	focusLibraries          // 3 (Right panel: Validation, Form, Query, CMS)
 	focusPM                 // 4 (Package manager horizontal selector)
 	focusLen
@@ -268,6 +268,7 @@ func buildAddOnPanels(reg *pkg.Registry, group string, integration string) (AddO
 		{"CSS", reg.CSS},
 		{"Formatter", reg.Formatters},
 		{"Linter", reg.Linters},
+		{"Test", reg.Test},
 	}
 
 	libraryCats := []struct {
@@ -441,6 +442,8 @@ func (m *WizardModel) collectConfig() {
 			m.Cfg.Fmt = pkg.Formatter(selected.value)
 		case "Linter":
 			m.Cfg.Linter = pkg.Linter(selected.value)
+		case "Test":
+			m.Cfg.Test = pkg.TestingFramework(selected.value)
 		}
 	}
 
@@ -509,6 +512,7 @@ func (m WizardModel) summaryPopup() string {
 		row("CSS:        ", string(m.Cfg.CSS)) +
 		row("Formatter:  ", string(m.Cfg.Fmt)) +
 		row("Linter:     ", string(m.Cfg.Linter)) +
+		row("Test:       ", string(m.Cfg.Test)) +
 		row("Validation: ", string(m.Cfg.Validation)) +
 		row("Form:       ", string(m.Cfg.Form)) +
 		row("Query:      ", string(m.Cfg.Query)) +

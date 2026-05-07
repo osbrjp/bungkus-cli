@@ -58,6 +58,7 @@ type Registry struct {
 	Query           []OptionEntry `json:"query"`
 	State           []OptionEntry `json:"state"`
 	CMS             []OptionEntry `json:"cms"`
+	Test            []OptionEntry `json:"test"`
 	PackageManagers []PMEntry     `json:"packageManagers"`
 	CommonPackages  Packages      `json:"commonPackages"`
 }
@@ -220,4 +221,18 @@ func (r *Registry) GetState(value string) *OptionEntry {
 
 func (r *Registry) HasState(value string) bool {
 	return r.GetState(value) != nil
+}
+
+func (r *Registry) GetTestingFramework(value string) *OptionEntry {
+	for i := range r.Test {
+		if r.Test[i].Value == value {
+			return &r.Test[i]
+		}
+	}
+
+	return nil
+}
+
+func (r *Registry) HasTestingFramework(value string) bool {
+	return r.GetTestingFramework(value) != nil
 }
