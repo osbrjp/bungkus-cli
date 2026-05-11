@@ -25,3 +25,17 @@ https://docs.npmjs.com/cli/v10/configuring-npm/install
 {{- range .Stack }}
 | {{ .Tech }} | {{ .Name }} | {{ .Version }} |
 {{- end }}
+
+{{ if eq .Audit "lhci" }}
+## Lighthouse CI Notes
+
+With the `bungkus-cli` setup, Lighthouse CI runs on every `Pull Request` targeting the `main`, `dev`, `staging`, or `test` branches.
+By default, the performance assertion requires a minimum score of 50 — anything below that will fail the GitHub Action.
+
+To enable the Lighthouse CI GitHub App, follow the official instructions [here](https://github.com/treosh/lighthouse-ci-action). `bungkus-cli` already wires up `LHCI_GITHUB_APP_TOKEN` in `workspace.yml` for you.
+
+Edit `lighthouserc.json` to tune the assertions, URLs, and collection settings to your liking. See the [Lighthouse CI configuration docs](https://github.com/GoogleChrome/lighthouse-ci/blob/main/docs/configuration.md) for the full list of options.
+
+For more information about `lhci`, visit [the Lighthouse CI repository](https://github.com/GoogleChrome/lighthouse-ci/).
+
+{{ end}}

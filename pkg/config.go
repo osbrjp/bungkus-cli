@@ -20,6 +20,7 @@ type (
 	BaseGroup        string
 	BaseIntegration  string
 	TestingFramework string
+	AuditTool        string
 )
 
 type AllDependencies struct {
@@ -222,6 +223,24 @@ func (t TestingFramework) GetDependencies() AllDependencies {
 	}
 }
 
+func (a AuditTool) IsValid() bool {
+	return globalRegistry != nil && globalRegistry.HasAudit(string(a))
+}
+
+func (a AuditTool) GetDependencies() AllDependencies {
+	if globalRegistry == nil {
+		return AllDependencies{}
+	}
+	entry := globalRegistry.GetAudit(string(a))
+	if entry == nil {
+		return AllDependencies{}
+	}
+	return AllDependencies{
+		Dependencies:    entry.Packages.Dependencies,
+		DevDependencies: entry.Packages.DevDependencies,
+	}
+}
+
 func (v ValidationLib) IsValid() bool {
 	return globalRegistry != nil && globalRegistry.HasValidation(string(v))
 }
@@ -389,6 +408,7 @@ type ProjectConfig struct {
 	CMS         CMS
 	PM          PackageManager
 	Test        TestingFramework
+	Audit       AuditTool
 }
 
 // StackEntry is one row in the project's tech-stack table: the category
@@ -435,6 +455,7 @@ func (c ProjectConfig) Stack() []StackEntry {
 	add("State", c.State.GetDependencies())
 	add("CMS", c.CMS.GetDependencies())
 	add("Testing", c.Test.GetDependencies())
+	add("Audit", c.Audit.GetDependencies())
 	return rows
 }
 
@@ -453,5 +474,6 @@ func NewProjectConfig() ProjectConfig {
 		CMS:         "none",
 		PM:          "pnpm",
 		Test:        "none",
+		Audit:       "none",
 	}
 }

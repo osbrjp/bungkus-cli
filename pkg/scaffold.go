@@ -107,6 +107,32 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		}
 	}
 
+	if cfg.Test != "none" {
+		testDir := "templates/test/" + string(cfg.Test)
+		if _, err := fs.Stat(templates, testDir); err == nil {
+			testFS, err := fs.Sub(templates, testDir)
+			if err != nil {
+				return fmt.Errorf("failed to read test templates: %w", err)
+			}
+			if err := copyDir(testFS, destDir, cfg, ""); err != nil {
+				return err
+			}
+		}
+	}
+
+	if cfg.Audit != "none" {
+		auditDir := "templates/audit/" + string(cfg.Audit)
+		if _, err := fs.Stat(templates, auditDir); err == nil {
+			auditFS, err := fs.Sub(templates, auditDir)
+			if err != nil {
+				return fmt.Errorf("failed to read audit templates: %w", err)
+			}
+			if err := copyDir(auditFS, destDir, cfg, ""); err != nil {
+				return err
+			}
+		}
+	}
+
 	if cfg.CMS != "none" {
 		if cfg.Base.IsVite() {
 			return fmt.Errorf("cms integration is currently not supported in vite project")
