@@ -149,6 +149,10 @@ var createCmd = &cobra.Command{
 			v, _ := cmd.Flags().GetString("test")
 			cfg.Test = pkg.TestingFramework(v)
 		}
+		if cmd.Flags().Changed("audit") {
+			v, _ := cmd.Flags().GetString("audit")
+			cfg.Audit = pkg.AuditTool(v)
+		}
 
 		if !cfg.Base.IsValid() {
 			return fmt.Errorf("invalid base framework: %s", cfg.Base)
@@ -212,6 +216,7 @@ func init() {
 	createCmd.Flags().String("state", "none", "State management library (none, jotai, zustand, pinia, nanostores)")
 	createCmd.Flags().String("pm", "pnpm", "Package manager (bun, npm, yarn, pnpm)")
 	createCmd.Flags().String("cms", "none", "CMS (none, microcms)")
-	createCmd.Flags().String("test", "none", "Testing Library (none, playwright)")
+	createCmd.Flags().String("test", "none", "Testing library (none, playwright)")
+	createCmd.Flags().String("audit", "none", "Audit / performance tool (none, lhci)")
 	createCmd.Flags().StringP("template", "t", "", "Predefined template (astro, astro-react, astro-vue, nuxt, vite, vite-react, vite-vue)")
 }
