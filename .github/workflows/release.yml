@@ -2,17 +2,31 @@ name: Release
 on:
   push:
     branches:
-      - main
-
-permissions:
-  contents: write
-  issues: write
-  pull-requests: write
+      - release
 
 jobs:
-  release:
-    name: Semantic Release
+  deployment:
+    name: Deploy
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deployment
+        run: |
+          echo "Deployment pipeline here"
+
+  semantic-release:
+    name: Semantic Release
+    needs: deployment
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    outputs:
+      new_release_published: ${{ steps.semrel.outputs.new_release_published }}
+      new_release_git_tag: ${{ steps.semrel.outputs.new_release_git_tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -22,8 +36,80 @@ jobs:
         with:
           node-version: 22
 
-      - run: npm install -g semantic-release @semantic-release/commit-analyzer @semantic-release/release-notes-generator @semantic-release/github
-
-      - run: npx semantic-release
+      - id: semrel
+        uses: cycjimmy/semantic-release-action@v4
+        with:
+          extra_plugins: |
+            @semantic-release/commit-analyzer
+            @semantic-release/release-notes-generator
+            @semantic-release/github
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build:
+    name: Build binary (${{ matrix.goos }}/${{ matrix.goarch }})
+    needs: semantic-release
+    if: needs.semantic-release.outputs.new_release_published == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: darwin
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.semantic-release.outputs.new_release_git_tag }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          go build -ldflags "-s -w -X main.Version=${{ needs.semantic-release.outputs.new_release_git_tag }}" -o bungkus-cli-${{ matrix.goos }}-${{ matrix.goarch }} .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bungkus-cli-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: bungkus-cli-${{ matrix.goos }}-${{ matrix.goarch }}
+
+  upload-assets:
+    name: Attach binaries to release
+    needs: [semantic-release, build]
+    if: needs.semantic-release.outputs.new_release_published == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Stage binaries and generate checksums
+        run: |
+          mkdir -p assets
+          for dir in artifacts/*/; do
+            for file in "$dir"*; do
+              cp "$file" assets/
+            done
+          done
+          cd assets
+          sha256sum * > checksums.txt
+          cat checksums.txt
+
+      - name: Upload assets to release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ needs.semantic-release.outputs.new_release_git_tag }}" assets/* --repo "${{ github.repository }}"

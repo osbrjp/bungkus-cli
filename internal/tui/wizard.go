@@ -21,7 +21,7 @@ const (
 const (
 	focusProjectName = iota // 0 (Top input text field)
 	focusBase               // 1 (Left panel: base framework list)
-	focusTooling            // 2 (Middle panel: CSS, Formatter, Linter)
+	focusTooling            // 2 (Middle panel: CSS, Formatter, Linter, Test)
 	focusLibraries          // 3 (Right panel: Validation, Form, Query, CMS)
 	focusPM                 // 4 (Package manager horizontal selector)
 	focusLen
@@ -268,6 +268,7 @@ func buildAddOnPanels(reg *pkg.Registry, group string, integration string) (AddO
 		{"CSS", reg.CSS},
 		{"Formatter", reg.Formatters},
 		{"Linter", reg.Linters},
+		{"Test", reg.Test},
 	}
 
 	libraryCats := []struct {
@@ -284,7 +285,8 @@ func buildAddOnPanels(reg *pkg.Registry, group string, integration string) (AddO
 	build := func(cats []struct {
 		name    string
 		entries []pkg.OptionEntry
-	}) AddOnsModel {
+	},
+	) AddOnsModel {
 		var groups []RadioGroup
 		for _, cat := range cats {
 			var opts []RadioOption
@@ -310,7 +312,6 @@ func buildAddOnPanels(reg *pkg.Registry, group string, integration string) (AddO
 }
 
 func (m WizardModel) Init() tea.Cmd {
-	m.focus = focusProjectName
 	return textinput.Blink
 }
 
@@ -441,6 +442,8 @@ func (m *WizardModel) collectConfig() {
 			m.Cfg.Fmt = pkg.Formatter(selected.value)
 		case "Linter":
 			m.Cfg.Linter = pkg.Linter(selected.value)
+		case "Test":
+			m.Cfg.Test = pkg.TestingFramework(selected.value)
 		}
 	}
 
@@ -509,6 +512,7 @@ func (m WizardModel) summaryPopup() string {
 		row("CSS:        ", string(m.Cfg.CSS)) +
 		row("Formatter:  ", string(m.Cfg.Fmt)) +
 		row("Linter:     ", string(m.Cfg.Linter)) +
+		row("Test:       ", string(m.Cfg.Test)) +
 		row("Validation: ", string(m.Cfg.Validation)) +
 		row("Form:       ", string(m.Cfg.Form)) +
 		row("Query:      ", string(m.Cfg.Query)) +
@@ -594,8 +598,6 @@ func (m WizardModel) borderFor(section uint) lipgloss.Style {
 	return InactiveBorder
 }
 
-func (m WizardModel) headerView() string { return "Bungkus-cli" }
-
 func (m WizardModel) footerView() string {
 	key := func(k, desc string) string {
 		return FooterKeyStyle.Render(k) + FooterDescStyle.Render(" "+desc)
@@ -637,21 +639,4 @@ func (m WizardModel) focusPrev() uint {
 	}
 
 	return m.focus - 1
-}
-
-// Helper functions
-func cursorNext(current, total uint) uint {
-	if current == total-1 {
-		return 0
-	}
-
-	return current + 1
-}
-
-func cursorPrev(current, total uint) uint {
-	if current == 0 {
-		return total - 1
-	}
-
-	return current - 1
 }

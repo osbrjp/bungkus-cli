@@ -9,10 +9,15 @@ import (
 // This is the single source of truth — adding a new framework only
 // requires a JSON entry and template files, no Go code changes.
 
+type (
+	Dependencies    map[string]string
+	DevDependencies map[string]string
+)
+
 type Packages struct {
 	Scripts         map[string]string `json:"scripts,omitempty"`
-	Dependencies    map[string]string `json:"dependencies,omitempty"`
-	DevDependencies map[string]string `json:"devDependencies,omitempty"`
+	Dependencies    Dependencies      `json:"dependencies,omitempty"`
+	DevDependencies DevDependencies   `json:"devDependencies,omitempty"`
 }
 
 type BaseEntry struct {
@@ -58,6 +63,7 @@ type Registry struct {
 	Query           []OptionEntry `json:"query"`
 	State           []OptionEntry `json:"state"`
 	CMS             []OptionEntry `json:"cms"`
+	Test            []OptionEntry `json:"test"`
 	PackageManagers []PMEntry     `json:"packageManagers"`
 	CommonPackages  Packages      `json:"commonPackages"`
 }
@@ -220,4 +226,18 @@ func (r *Registry) GetState(value string) *OptionEntry {
 
 func (r *Registry) HasState(value string) bool {
 	return r.GetState(value) != nil
+}
+
+func (r *Registry) GetTestingFramework(value string) *OptionEntry {
+	for i := range r.Test {
+		if r.Test[i].Value == value {
+			return &r.Test[i]
+		}
+	}
+
+	return nil
+}
+
+func (r *Registry) HasTestingFramework(value string) bool {
+	return r.GetTestingFramework(value) != nil
 }

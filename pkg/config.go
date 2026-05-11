@@ -2,26 +2,56 @@ package pkg
 
 import (
 	"errors"
+	"maps"
 	"slices"
 )
 
 type (
-	BaseFramework   string
-	CSSFramework    string
-	Formatter       string
-	Linter          string
-	ValidationLib   string
-	FormLib         string
-	QueryLib        string
-	StateLib        string
-	CMS             string
-	PackageManager  string
-	BaseGroup       string
-	BaseIntegration string
+	BaseFramework    string
+	CSSFramework     string
+	Formatter        string
+	Linter           string
+	ValidationLib    string
+	FormLib          string
+	QueryLib         string
+	StateLib         string
+	CMS              string
+	PackageManager   string
+	BaseGroup        string
+	BaseIntegration  string
+	TestingFramework string
 )
+
+type AllDependencies struct {
+	Dependencies
+	DevDependencies
+}
 
 func (b BaseFramework) IsValid() bool {
 	return globalRegistry != nil && globalRegistry.HasBase(string(b))
+}
+
+func (b BaseFramework) GetGroup(base string) (BaseGroup, error) {
+	if globalRegistry == nil {
+		return "", errors.New("unable to read registry")
+	}
+
+	entry := globalRegistry.GetBase(base)
+	return BaseGroup(entry.Group), nil
+}
+
+func (b BaseFramework) GetDependencies() AllDependencies {
+	if globalRegistry == nil {
+		return AllDependencies{}
+	}
+	entry := globalRegistry.GetBase(string(b))
+	if entry == nil {
+		return AllDependencies{}
+	}
+	return AllDependencies{
+		Dependencies:    entry.Packages.Dependencies,
+		DevDependencies: entry.Packages.DevDependencies,
+	}
 }
 
 func (b BaseFramework) IsAstro() bool {
@@ -81,16 +111,72 @@ func (c CSSFramework) IsValid() bool {
 	return globalRegistry != nil && globalRegistry.HasCSS(string(c))
 }
 
+func (c CSSFramework) GetDependencies() AllDependencies {
+	if globalRegistry == nil {
+		return AllDependencies{}
+	}
+	entry := globalRegistry.GetCSS(string(c))
+	if entry == nil {
+		return AllDependencies{}
+	}
+	return AllDependencies{
+		Dependencies:    entry.Packages.Dependencies,
+		DevDependencies: entry.Packages.DevDependencies,
+	}
+}
+
 func (f Formatter) IsValid() bool {
 	return globalRegistry != nil && globalRegistry.HasFormatter(string(f))
+}
+
+func (f Formatter) GetDependencies() AllDependencies {
+	if globalRegistry == nil {
+		return AllDependencies{}
+	}
+	entry := globalRegistry.GetFormatter(string(f))
+	if entry == nil {
+		return AllDependencies{}
+	}
+	return AllDependencies{
+		Dependencies:    entry.Packages.Dependencies,
+		DevDependencies: entry.Packages.DevDependencies,
+	}
 }
 
 func (l Linter) IsValid() bool {
 	return globalRegistry != nil && globalRegistry.HasLinter(string(l))
 }
 
+func (l Linter) GetDependencies() AllDependencies {
+	if globalRegistry == nil {
+		return AllDependencies{}
+	}
+	entry := globalRegistry.GetLinter(string(l))
+	if entry == nil {
+		return AllDependencies{}
+	}
+	return AllDependencies{
+		Dependencies:    entry.Packages.Dependencies,
+		DevDependencies: entry.Packages.DevDependencies,
+	}
+}
+
 func (f FormLib) IsValid() bool {
 	return globalRegistry != nil && globalRegistry.HasForm(string(f))
+}
+
+func (f FormLib) GetDependencies() AllDependencies {
+	if globalRegistry == nil {
+		return AllDependencies{}
+	}
+	entry := globalRegistry.GetForm(string(f))
+	if entry == nil {
+		return AllDependencies{}
+	}
+	return AllDependencies{
+		Dependencies:    entry.Packages.Dependencies,
+		DevDependencies: entry.Packages.DevDependencies,
+	}
 }
 
 func (f FormLib) IsValidIntegration(base string) bool {
@@ -118,21 +204,58 @@ func (f FormLib) IsValidIntegration(base string) bool {
 	return slices.Contains(form.RequiresIntegration, effective)
 }
 
-func (b BaseFramework) GetGroup(base string) (BaseGroup, error) {
-	if globalRegistry == nil {
-		return "", errors.New("unable to read registry")
-	}
+func (t TestingFramework) IsValid() bool {
+	return globalRegistry != nil && globalRegistry.HasTestingFramework(string(t))
+}
 
-	entry := globalRegistry.GetBase(base)
-	return BaseGroup(entry.Group), nil
+func (t TestingFramework) GetDependencies() AllDependencies {
+	if globalRegistry == nil {
+		return AllDependencies{}
+	}
+	entry := globalRegistry.GetTestingFramework(string(t))
+	if entry == nil {
+		return AllDependencies{}
+	}
+	return AllDependencies{
+		Dependencies:    entry.Packages.Dependencies,
+		DevDependencies: entry.Packages.DevDependencies,
+	}
 }
 
 func (v ValidationLib) IsValid() bool {
 	return globalRegistry != nil && globalRegistry.HasValidation(string(v))
 }
 
+func (v ValidationLib) GetDependencies() AllDependencies {
+	if globalRegistry == nil {
+		return AllDependencies{}
+	}
+	entry := globalRegistry.GetValidation(string(v))
+	if entry == nil {
+		return AllDependencies{}
+	}
+	return AllDependencies{
+		Dependencies:    entry.Packages.Dependencies,
+		DevDependencies: entry.Packages.DevDependencies,
+	}
+}
+
 func (q QueryLib) IsValid() bool {
 	return globalRegistry != nil && globalRegistry.HasQuery(string(q))
+}
+
+func (q QueryLib) GetDependencies() AllDependencies {
+	if globalRegistry == nil {
+		return AllDependencies{}
+	}
+	entry := globalRegistry.GetQuery(string(q))
+	if entry == nil {
+		return AllDependencies{}
+	}
+	return AllDependencies{
+		Dependencies:    entry.Packages.Dependencies,
+		DevDependencies: entry.Packages.DevDependencies,
+	}
 }
 
 func (q QueryLib) IsValidIntegration(base string) bool {
@@ -164,6 +287,20 @@ func (s StateLib) IsValid() bool {
 	return globalRegistry != nil && globalRegistry.HasState(string(s))
 }
 
+func (s StateLib) GetDependencies() AllDependencies {
+	if globalRegistry == nil {
+		return AllDependencies{}
+	}
+	entry := globalRegistry.GetState(string(s))
+	if entry == nil {
+		return AllDependencies{}
+	}
+	return AllDependencies{
+		Dependencies:    entry.Packages.Dependencies,
+		DevDependencies: entry.Packages.DevDependencies,
+	}
+}
+
 func (s StateLib) IsValidIntegration(base string) bool {
 	if globalRegistry == nil {
 		return false
@@ -191,6 +328,20 @@ func (s StateLib) IsValidIntegration(base string) bool {
 
 func (c CMS) IsValid() bool {
 	return globalRegistry != nil && globalRegistry.HasCMS(string(c))
+}
+
+func (c CMS) GetDependencies() AllDependencies {
+	if globalRegistry == nil {
+		return AllDependencies{}
+	}
+	entry := globalRegistry.GetCMS(string(c))
+	if entry == nil {
+		return AllDependencies{}
+	}
+	return AllDependencies{
+		Dependencies:    entry.Packages.Dependencies,
+		DevDependencies: entry.Packages.DevDependencies,
+	}
 }
 
 func (p PackageManager) IsValid() bool {
@@ -237,6 +388,54 @@ type ProjectConfig struct {
 	State       StateLib
 	CMS         CMS
 	PM          PackageManager
+	Test        TestingFramework
+}
+
+// StackEntry is one row in the project's tech-stack table: the category
+// (Framework, CSS, Linter, ...), the package name, and the resolved version.
+type StackEntry struct {
+	Tech    string
+	Name    string
+	Version string
+}
+
+// Stack returns a flattened, deterministic list of every package the selected
+// options will install, grouped by tech category. Within each group, packages
+// are sorted by name and dependencies/devDependencies are merged. Templates
+// can render the README stacks table with a single range over the result.
+func (c ProjectConfig) Stack() []StackEntry {
+	var rows []StackEntry
+	add := func(tech string, deps AllDependencies) {
+		merged := make(map[string]string, len(deps.Dependencies)+len(deps.DevDependencies))
+		maps.Copy(merged, deps.Dependencies)
+		for n, v := range deps.DevDependencies {
+			if _, ok := merged[n]; !ok {
+				merged[n] = v
+			}
+		}
+		names := make([]string, 0, len(merged))
+		for n := range merged {
+			names = append(names, n)
+		}
+		slices.Sort(names)
+		for _, n := range names {
+			rows = append(rows, StackEntry{Tech: tech, Name: n, Version: merged[n]})
+		}
+	}
+
+	add("Framework", c.Base.GetDependencies())
+	add("CSS", c.CSS.GetDependencies())
+	add("Formatter", c.Fmt.GetDependencies())
+	if string(c.Linter) != string(c.Fmt) {
+		add("Linter", c.Linter.GetDependencies())
+	}
+	add("Validation", c.Validation.GetDependencies())
+	add("Form", c.Form.GetDependencies())
+	add("Query", c.Query.GetDependencies())
+	add("State", c.State.GetDependencies())
+	add("CMS", c.CMS.GetDependencies())
+	add("Testing", c.Test.GetDependencies())
+	return rows
 }
 
 func NewProjectConfig() ProjectConfig {
@@ -253,5 +452,6 @@ func NewProjectConfig() ProjectConfig {
 		State:       "none",
 		CMS:         "none",
 		PM:          "pnpm",
+		Test:        "none",
 	}
 }
