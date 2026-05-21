@@ -145,6 +145,10 @@ var createCmd = &cobra.Command{
 			v, _ := cmd.Flags().GetString("cms")
 			cfg.CMS = pkg.CMS(v)
 		}
+		if cmd.Flags().Changed("deploy") {
+			v, _ := cmd.Flags().GetString("deploy")
+			cfg.Deployment = pkg.DeployTarget(v)
+		}
 		if cmd.Flags().Changed("test") {
 			v, _ := cmd.Flags().GetString("test")
 			cfg.Test = pkg.TestingFramework(v)
@@ -176,6 +180,9 @@ var createCmd = &cobra.Command{
 		}
 		if !cfg.State.IsValid() {
 			return fmt.Errorf("invalid state library: %s", cfg.State)
+		}
+		if !cfg.Deployment.IsValid() {
+			return fmt.Errorf("invalid deployment target: %s", cfg.Deployment)
 		}
 
 		if cfg.Form != "none" && !cfg.Form.IsValidIntegration(string(cfg.Base)) {
@@ -214,4 +221,5 @@ func init() {
 	createCmd.Flags().String("cms", "none", "CMS (none, microcms)")
 	createCmd.Flags().String("test", "none", "Testing Library (none, playwright)")
 	createCmd.Flags().StringP("template", "t", "", "Predefined template (astro, astro-react, astro-vue, nuxt, vite, vite-react, vite-vue)")
+	createCmd.Flags().String("deploy", "none", "Deployment target (none, cloudflare=Pages)")
 }

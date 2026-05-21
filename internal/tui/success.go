@@ -31,5 +31,16 @@ func PrintSuccess(cfg pkg.ProjectConfig) {
 		lipgloss.NewStyle().Foreground(ColorOrange).Render(cfg.PM.InstallCmd()),
 		lipgloss.NewStyle().Foreground(ColorOrange).Render(cfg.PM.RunCmd()),
 	)
+
+	if cfg.Deployment == "cloudflare" {
+		cmds += fmt.Sprintf(
+			"\n\n  %s\n\n    %s\n    %s\n    %s",
+			AccentStyle.Render("Deploy to Cloudflare Pages:"),
+			MutedStyle.Render("1. Push repo to GitHub"),
+			MutedStyle.Render("2. dash.cloudflare.com → Workers & Pages → Create → Pages"),
+			MutedStyle.Render("3. Build: "+string(cfg.PM)+" run build  |  Output: "+cfg.Base.OutputDir()),
+		)
+	}
+
 	fmt.Println(BoxStyle.Render(header + cmds))
 }

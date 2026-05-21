@@ -251,6 +251,7 @@ func NewWizardModel() WizardModel {
 		tooling:     tooling,
 		libraries:   libraries,
 		pm:          pm,
+		Cfg:         pkg.NewProjectConfig(),
 	}
 }
 
@@ -280,6 +281,7 @@ func buildAddOnPanels(reg *pkg.Registry, group string, integration string) (AddO
 		{"Query", reg.Query},
 		{"State", reg.State},
 		{"CMS", reg.CMS},
+		{"Deploy", reg.Deployment},
 	}
 
 	build := func(cats []struct {
@@ -460,6 +462,8 @@ func (m *WizardModel) collectConfig() {
 			m.Cfg.State = pkg.StateLib(selected.value)
 		case "CMS":
 			m.Cfg.CMS = pkg.CMS(selected.value)
+		case "Deploy":
+			m.Cfg.Deployment = pkg.DeployTarget(selected.value)
 		}
 	}
 
@@ -518,6 +522,7 @@ func (m WizardModel) summaryPopup() string {
 		row("Query:      ", string(m.Cfg.Query)) +
 		row("State:      ", string(m.Cfg.State)) +
 		row("CMS:        ", string(m.Cfg.CMS)) +
+		row("Deploy:     ", string(m.Cfg.Deployment)) +
 		row("PM:         ", string(m.Cfg.PM))
 
 	key := func(k, desc string) string {

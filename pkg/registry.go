@@ -66,6 +66,7 @@ type Registry struct {
 	Test            []OptionEntry `json:"test"`
 	PackageManagers []PMEntry     `json:"packageManagers"`
 	CommonPackages  Packages      `json:"commonPackages"`
+	Deployment      []OptionEntry `json:"deployment"`
 }
 
 var globalRegistry *Registry
@@ -240,4 +241,17 @@ func (r *Registry) GetTestingFramework(value string) *OptionEntry {
 
 func (r *Registry) HasTestingFramework(value string) bool {
 	return r.GetTestingFramework(value) != nil
+}
+
+func (r *Registry) GetDeployment(value string) *OptionEntry {
+	for i := range r.Deployment {
+		if r.Deployment[i].Value == value {
+			return &r.Deployment[i]
+		}
+	}
+	return nil
+}
+
+func (r *Registry) HasDeployment(value string) bool {
+	return r.GetDeployment(value) != nil
 }

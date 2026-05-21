@@ -478,6 +478,25 @@
       }
     }
   ],
+  "deployment": [
+    {
+      "value": "none",
+      "label": "None",
+      "packages": {}
+    },
+    {
+      "value": "cloudflare",
+      "label": "Cloudflare (Pages)",
+      "packages": {
+        "devDependencies": {
+          "wrangler": "^4.93.0"
+        },
+        "scripts": {
+          "deploy": "wrangler pages deploy dist"
+        }
+      }
+    }
+  ],
   "packageManagers": [
     {
       "value": "pnpm",
