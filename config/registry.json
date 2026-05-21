@@ -469,9 +469,16 @@
   ],
   "test": [
     {
+      "value": "none",
+      "label": "None"
+    },
+    {
       "value": "playwright",
       "label": "Playwright",
       "packages": {
+        "scripts": {
+          "test:e2e": "playwright test"
+        },
         "devDependencies": {
           "@playwright/test": "^1.5.9"
         }
@@ -493,6 +500,24 @@
         },
         "scripts": {
           "deploy": "wrangler pages deploy dist"
+        }
+      }
+    }
+  ],
+  "audit": [
+    {
+      "value": "none",
+      "label": "None"
+    },
+    {
+      "value": "lhci",
+      "label": "Lighthouse CI",
+      "packages": {
+        "scripts": {
+          "lhci": "lhci autorun"
+        },
+        "devDependencies": {
+          "@lhci/cli": "^0.14.0"
         }
       }
     }

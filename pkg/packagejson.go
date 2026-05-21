@@ -44,7 +44,8 @@ func BuildPackageJSON(cfg ProjectConfig) ([]byte, error) {
 		DevDependencies: make(map[string]string),
 	}
 
-	// Merge in order: common → base → css → formatter → linter → cms
+	// Merge in order: common → base → css → formatter → linter → validation
+	// → form → query → state → cms → test → audit
 	mergePackages(&pkg, reg.CommonPackages)
 	mergePackages(&pkg, base.Packages)
 
@@ -95,6 +96,18 @@ func BuildPackageJSON(cfg ProjectConfig) ([]byte, error) {
 	if cfg.CMS != "none" {
 		if cms := reg.GetCMS(string(cfg.CMS)); cms != nil {
 			mergePackages(&pkg, cms.Packages)
+		}
+	}
+
+	if cfg.Test != "none" {
+		if test := reg.GetTestingFramework(string(cfg.Test)); test != nil {
+			mergePackages(&pkg, test.Packages)
+		}
+	}
+
+	if cfg.Audit != "none" {
+		if audit := reg.GetAudit(string(cfg.Audit)); audit != nil {
+			mergePackages(&pkg, audit.Packages)
 		}
 	}
 

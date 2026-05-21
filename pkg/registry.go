@@ -64,6 +64,7 @@ type Registry struct {
 	State           []OptionEntry `json:"state"`
 	CMS             []OptionEntry `json:"cms"`
 	Test            []OptionEntry `json:"test"`
+	Audit           []OptionEntry `json:"audit"`
 	PackageManagers []PMEntry     `json:"packageManagers"`
 	CommonPackages  Packages      `json:"commonPackages"`
 	Deployment      []OptionEntry `json:"deployment"`
@@ -241,6 +242,19 @@ func (r *Registry) GetTestingFramework(value string) *OptionEntry {
 
 func (r *Registry) HasTestingFramework(value string) bool {
 	return r.GetTestingFramework(value) != nil
+}
+
+func (r *Registry) GetAudit(value string) *OptionEntry {
+	for i := range r.Audit {
+		if r.Audit[i].Value == value {
+			return &r.Audit[i]
+		}
+	}
+	return nil
+}
+
+func (r *Registry) HasAudit(value string) bool {
+	return r.GetAudit(value) != nil
 }
 
 func (r *Registry) GetDeployment(value string) *OptionEntry {
