@@ -4,7 +4,7 @@ trustPolicy: no-downgrade
 trustPolicyExclude:
   - chokidar
 overrides:
-  semver@6.3.1: "^7.7.1"
+  semver: "^7.7.1"
 allowBuilds:
   "@parcel/watcher": true
   esbuild: true
