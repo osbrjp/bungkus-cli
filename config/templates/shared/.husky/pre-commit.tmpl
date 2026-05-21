@@ -1,1 +1,1 @@
-{{if eq .Fmt "prettier"}}{{.PM.Exec}} prettier --write .{{end}}{{if eq .Fmt "biome"}}{{.PM.Exec}} @biomejs/biome format . --write{{end}}{{if eq .Fmt "oxfmt"}}{{.PM.Exec}} oxfmt --check . --write{{end}}
+{{if eq .Fmt "prettier"}}{{.PM.Exec}} prettier --write . && git add -u{{end}}{{if eq .Fmt "biome"}}{{.PM.Exec}} @biomejs/biome format . --write && git add -u{{end}}{{if eq .Fmt "oxfmt"}}{{.PM.Exec}} oxfmt --check . --write && git add -u{{end}}
