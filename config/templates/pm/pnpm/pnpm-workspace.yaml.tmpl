@@ -6,7 +6,11 @@ trustPolicyExclude:
 overrides:
   semver: "^7.7.1"
 allowBuilds:
-  "@parcel/watcher": true
+  {{- if .Base.IsNuxt}}
+    "@parcel/watcher": true
+  {{- end}}
   esbuild: true
   sharp: true
-  workerd: true
+  {{- if eq .Deployment "cloudflare"}}
+    workerd: true
+  {{- end}}
