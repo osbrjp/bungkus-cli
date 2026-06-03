@@ -5,10 +5,15 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  {{- if eq .Deployment "cloudflare"}}
+  {{- if eq .Deployment "cloudflare-pages"}}
   nitro: {
-    preset: 'cloudflare-pages',
+    preset: 'cloudflare_pages',
   },
+  {{- else if eq .Deployment "cloudflare-workers"}}
+    nitro: {
+      preset: 'cloudflare',
+      compatibilityDate: '2024-09-19',
+    },
   {{- end}}
   modules: [
     {{- if eq .Form "veevalidate" }}

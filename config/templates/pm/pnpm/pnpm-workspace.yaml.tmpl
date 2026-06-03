@@ -3,14 +3,17 @@ minimumReleaseAge: 1440
 trustPolicy: no-downgrade
 trustPolicyExclude:
   - chokidar
+  {{- if .Base.IsNuxt}}
+  - tinyclip
+  {{- end}}
 overrides:
   semver: "^7.7.1"
 allowBuilds:
   {{- if .Base.IsNuxt}}
-    "@parcel/watcher": true
+  "@parcel/watcher": true
   {{- end}}
   esbuild: true
   sharp: true
-  {{- if eq .Deployment "cloudflare"}}
-    workerd: true
+  {{- if or (eq .Deployment "cloudflare-pages") (eq .Deployment "cloudflare-workers")}}
+  workerd: true
   {{- end}}

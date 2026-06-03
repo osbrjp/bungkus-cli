@@ -226,5 +226,5 @@ func init() {
 	createCmd.Flags().String("test", "none", "Testing library (none, playwright)")
 	createCmd.Flags().String("audit", "none", "Audit / performance tool (none, lhci)")
 	createCmd.Flags().StringP("template", "t", "", "Predefined template (astro, astro-react, astro-vue, nuxt, vite, vite-react, vite-vue)")
-	createCmd.Flags().String("deploy", "none", "Deployment target (none, cloudflare=Pages)")
+	createCmd.Flags().String("deploy", "none", "Deployment target (none, cloudflare-pages, cloudflare-workers)")
 }

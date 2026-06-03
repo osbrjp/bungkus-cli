@@ -492,14 +492,26 @@
       "packages": {}
     },
     {
-      "value": "cloudflare",
-      "label": "Cloudflare (Pages)",
+      "value": "cloudflare-pages",
+      "label": "Cloudflare Pages",
       "packages": {
         "devDependencies": {
           "wrangler": "^4.93.0"
         },
         "scripts": {
           "deploy": "wrangler pages deploy dist"
+        }
+      }
+    },
+    {
+      "value": "cloudflare-workers",
+      "label": "Cloudflare Workers",
+      "packages": {
+        "devDependencies": {
+          "wrangler": "^4.93.0"
+        },
+        "scripts": {
+          "deploy": "wrangler deploy"
         }
       }
     }
