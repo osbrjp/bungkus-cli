@@ -420,6 +420,7 @@ func (p PackageManager) RunCmd() string {
 
 type ProjectConfig struct {
 	ProjectName string
+	DestDir     string
 	Date        string
 	Site        string
 	Base        BaseFramework

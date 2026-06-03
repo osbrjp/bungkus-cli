@@ -5,6 +5,8 @@ import (
 	"io"
 	"slices"
 	"strings"
+	"os"
+	"path/filepath"
 
 	"charm.land/bubbles/v2/list"
 	"charm.land/bubbles/v2/textinput"
@@ -429,6 +431,11 @@ func (m *WizardModel) collectConfig() {
 	name := m.projectName.Value()
 	if name == "" {
 		name = "my-app"
+	}
+	if name == "." {
+		cwd, _ := os.Getwd()
+		m.Cfg.DestDir = "."
+		name = filepath.Base(cwd)
 	}
 	m.Cfg.ProjectName = name
 

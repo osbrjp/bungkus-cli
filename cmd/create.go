@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/spencer-osbrjp/bungkus-cli/config"
 	"github.com/spencer-osbrjp/bungkus-cli/internal/tui"
@@ -102,7 +104,16 @@ var createCmd = &cobra.Command{
 		}
 
 		if len(args) > 0 {
-			cfg.ProjectName = args[0]
+			if args[0] == "." {
+				cwd, err := os.Getwd()
+				if err != nil {
+					return fmt.Errorf("failed to get current working directory: %w", err)
+				}
+				cfg.ProjectName = filepath.Base(cwd)
+				cfg.DestDir = "."
+			} else {
+				cfg.ProjectName = args[0]
+			}
 		}
 
 		if cmd.Flags().Changed("base") {
@@ -201,8 +212,12 @@ var createCmd = &cobra.Command{
 			tui.PrintSkippedIntegration(string(cfg.State), string(cfg.Base))
 			cfg.State = "none"
 		}
+		destDir := cfg.ProjectName
+		if cfg.DestDir != "" {
+			destDir = cfg.DestDir
+		}
 
-		if err := pkg.Scaffold(cfg.ProjectName, config.Templates, cfg); err != nil {
+		if err := pkg.Scaffold(destDir, config.Templates, cfg); err != nil {
 			return fmt.Errorf("scaffold failed: %w", err)
 		}
 

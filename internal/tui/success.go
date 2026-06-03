@@ -24,10 +24,17 @@ func PrintSkippedIntegration(lib, base string) {
 // PrintSuccess prints a styled success box with get-started instructions.
 func PrintSuccess(cfg pkg.ProjectConfig) {
 	header := PrimaryStyle.Render("✔ ") + "Project scaffolded at " + AccentStyle.Render(cfg.ProjectName)
+
+	// Only show "cd <name>" when scaffolded into a new subfolder, not when using ".".
+	var cdLine string
+	if cfg.DestDir != "." {
+		cdLine = "\n    " + lipgloss.NewStyle().Foreground(ColorOrange).Render("cd "+cfg.ProjectName)
+	}
+
 	cmds := fmt.Sprintf(
-		"\n\n  %s\n\n    %s\n    %s\n    %s",
+		"\n\n  %s%s\n    %s\n    %s",
 		AccentStyle.Render("Get started:"),
-		lipgloss.NewStyle().Foreground(ColorOrange).Render("cd "+cfg.ProjectName),
+		cdLine,
 		lipgloss.NewStyle().Foreground(ColorOrange).Render(cfg.PM.InstallCmd()),
 		lipgloss.NewStyle().Foreground(ColorOrange).Render(cfg.PM.RunCmd()),
 	)
@@ -44,8 +51,9 @@ func PrintSuccess(cfg pkg.ProjectConfig) {
 		cmds += fmt.Sprintf(
 			"\n\n  %s\n\n    %s\n    %s\n    %s",
 			AccentStyle.Render("Deploy to Cloudflare Workers:"),
-			MutedStyle.Render("Local:  wrangler login → "+string(cfg.PM)+" run deploy"),
-			MutedStyle.Render("CI/CD:  add CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID to GitHub Secrets"),
+			MutedStyle.Render("Local:  wrangler login (once) → "+string(cfg.PM)+" run deploy"),
+			MutedStyle.Render("CI/CD:  gh secret set CLOUDFLARE_API_TOKEN"),
+			MutedStyle.Render("        gh secret set CLOUDFLARE_ACCOUNT_ID  ← wrangler whoami"),
 		)
 	}
 

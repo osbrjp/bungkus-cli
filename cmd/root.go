@@ -30,8 +30,13 @@ var rootCmd = &cobra.Command{
 		}
 		cfg := wm.Cfg
 
+		destDir := cfg.ProjectName
+		if cfg.DestDir != "" {
+			destDir = cfg.DestDir
+		}
+
 		// Scaffold project files.
-		if err := pkg.Scaffold(cfg.ProjectName, config.Templates, cfg); err != nil {
+		if err := pkg.Scaffold(destDir, config.Templates, cfg); err != nil {
 			return fmt.Errorf("scaffold failed: %w", err)
 		}
 
@@ -42,7 +47,7 @@ var rootCmd = &cobra.Command{
 			{"git", "commit", "--no-verify", "-m", "initial commit"},
 		} {
 			c := exec.Command(args[0], args[1:]...)
-			c.Dir = cfg.ProjectName
+			c.Dir = destDir
 			if err := c.Run(); err != nil {
 				return fmt.Errorf("git init failed: %w", err)
 			}
