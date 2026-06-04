@@ -81,7 +81,7 @@
           "postinstall": "nuxt prepare"
         },
         "dependencies": {
-          "nuxt": "^4.4.2",
+          "nuxt": "4.4.6",
           "vue": "^3.5.32",
           "vue-router": "^5.0.4"
         },
@@ -540,14 +540,14 @@
       "label": "pnpm *",
       "installCmd": "pnpm install",
       "execCmd": "pnpx",
-      "runCmd": "pnpm dev"
+      "runCmd": "pnpm run dev"
     },
     {
       "value": "bun",
       "label": "bun",
       "installCmd": "bun install",
       "execCmd": "bunx",
-      "runCmd": "bun dev"
+      "runCmd": "bun run dev"
     },
     {
       "value": "npm",

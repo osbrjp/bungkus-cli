@@ -7,6 +7,9 @@
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": ".output/public"
+  },
+  "observability": {
+    "enabled": true
   }
 }
 {{- else}}
@@ -17,6 +20,9 @@
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": "./dist"
+  },
+  "observability": {
+    "enabled": true
   }
 }
 {{- end}}

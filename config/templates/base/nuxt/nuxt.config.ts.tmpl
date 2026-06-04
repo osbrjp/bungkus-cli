@@ -3,7 +3,7 @@
 import tailwindcss from "@tailwindcss/vite";
 {{- end}}
 export default defineNuxtConfig({
-  compatibilityDate: '2025-07-15',
+  compatibilityDate: '{{.Date}}',
   devtools: { enabled: true },
   {{- if eq .Deployment "cloudflare-pages"}}
   nitro: {
