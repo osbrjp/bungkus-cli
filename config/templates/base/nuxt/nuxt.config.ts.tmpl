@@ -10,10 +10,12 @@ export default defineNuxtConfig({
     preset: 'cloudflare_pages',
   },
   {{- else if eq .Deployment "cloudflare-workers"}}
-    nitro: {
-      preset: 'cloudflare',
-      compatibilityDate: '2024-09-19',
+  nitro: {
+    preset: 'cloudflare_module',
+    cloudflare: {
+      nodeCompat: true,
     },
+  },
   {{- end}}
   modules: [
     {{- if eq .Form "veevalidate" }}
