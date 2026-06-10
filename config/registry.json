@@ -485,6 +485,18 @@
       }
     }
   ],
+  "cicd": [
+    {
+      "value": "none",
+      "label": "None",
+      "packages": {}
+    },
+    {
+      "value": "github-actions",
+      "label": "GitHub Actions",
+      "packages": {}
+    }
+  ],
   "deployment": [
     {
       "value": "none",

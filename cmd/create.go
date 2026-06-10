@@ -160,6 +160,10 @@ var createCmd = &cobra.Command{
 			v, _ := cmd.Flags().GetString("deploy")
 			cfg.Deployment = pkg.DeployTarget(v)
 		}
+		if cmd.Flags().Changed("cicd") {
+			v, _ := cmd.Flags().GetString("cicd")
+			cfg.CICD = pkg.CICDProvider(v)
+		}
 		if cmd.Flags().Changed("test") {
 			v, _ := cmd.Flags().GetString("test")
 			cfg.Test = pkg.TestingFramework(v)
@@ -198,6 +202,12 @@ var createCmd = &cobra.Command{
 		}
 		if !cfg.Deployment.IsValid() {
 			return fmt.Errorf("invalid deployment target: %s", cfg.Deployment)
+		}
+		if !cfg.CICD.IsValid() {
+			return fmt.Errorf("invalid cicd provider: %s", cfg.CICD)
+		}
+		if cfg.CICD != "none" && cfg.Deployment == "none" {
+			return fmt.Errorf("--cicd requires a deploy target (--deploy cloudflare-pages or --deploy cloudflare-workers)")
 		}
 
 		if cfg.Form != "none" && !cfg.Form.IsValidIntegration(string(cfg.Base)) {
@@ -242,4 +252,5 @@ func init() {
 	createCmd.Flags().String("audit", "none", "Audit / performance tool (none, lhci)")
 	createCmd.Flags().StringP("template", "t", "", "Predefined template (astro, astro-react, astro-vue, nuxt, vite, vite-react, vite-vue)")
 	createCmd.Flags().String("deploy", "none", "Deployment target (none, cloudflare-pages, cloudflare-workers)")
+	createCmd.Flags().String("cicd", "none", "CI/CD provider (none, github-actions)")
 }

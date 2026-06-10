@@ -68,6 +68,7 @@ type Registry struct {
 	PackageManagers []PMEntry     `json:"packageManagers"`
 	CommonPackages  Packages      `json:"commonPackages"`
 	Deployment      []OptionEntry `json:"deployment"`
+	CICD            []OptionEntry `json:"cicd"`
 }
 
 var globalRegistry *Registry
@@ -268,4 +269,17 @@ func (r *Registry) GetDeployment(value string) *OptionEntry {
 
 func (r *Registry) HasDeployment(value string) bool {
 	return r.GetDeployment(value) != nil
+}
+
+func (r *Registry) GetCICD(value string) *OptionEntry {
+	for i := range r.CICD {
+		if r.CICD[i].Value == value {
+			return &r.CICD[i]
+		}
+	}
+	return nil
+}
+
+func (r *Registry) HasCICD(value string) bool {
+	return r.GetCICD(value) != nil
 }

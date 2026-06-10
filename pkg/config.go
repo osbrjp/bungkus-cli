@@ -23,6 +23,7 @@ type (
 	TestingFramework string
 	DeployTarget     string
 	AuditTool        string
+	CICDProvider     string
 )
 
 type AllDependencies struct {
@@ -369,6 +370,24 @@ func (c CMS) GetDependencies() AllDependencies {
 	}
 }
 
+func (c CICDProvider) IsValid() bool {
+	return globalRegistry != nil && globalRegistry.HasCICD(string(c))
+}
+
+func (c CICDProvider) GetDependencies() AllDependencies {
+	if globalRegistry == nil {
+		return AllDependencies{}
+	}
+	entry := globalRegistry.GetCICD(string(c))
+	if entry == nil {
+		return AllDependencies{}
+	}
+	return AllDependencies{
+		Dependencies:    entry.Packages.Dependencies,
+		DevDependencies: entry.Packages.DevDependencies,
+	}
+}
+
 func (d DeployTarget) IsValid() bool {
 	return globalRegistry != nil && globalRegistry.HasDeployment(string(d))
 }
@@ -433,6 +452,7 @@ type ProjectConfig struct {
 	State       StateLib
 	CMS         CMS
 	Deployment  DeployTarget
+	CICD        CICDProvider
 	PM          PackageManager
 	Test        TestingFramework
 	Audit       AuditTool
@@ -503,6 +523,7 @@ func NewProjectConfig() ProjectConfig {
 		PM:          "pnpm",
 		Test:        "none",
 		Deployment:  "none",
+		CICD:        "none",
 		Audit:       "none",
 		Date:        time.Now().Format("2006-01-02"),
 	}

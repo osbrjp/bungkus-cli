@@ -128,6 +128,7 @@ type RadioGroup struct {
 	name     string
 	options  []RadioOption
 	selected int
+	disabled bool
 }
 
 type RadioOption struct {
@@ -155,12 +156,27 @@ func (a *AddOnsModel) cursorPos() (int, int) {
 	return 0, 0
 }
 
+func (a *AddOnsModel) groupIndex(name string) int {
+	for i, g := range a.groups {
+		if g.name == name {
+			return i
+		}
+	}
+	return -1
+}
+
 func (a *AddOnsModel) CursorDown() {
 	total := a.totalItems()
 	if total == 0 {
 		return
 	}
-	a.cursor = (a.cursor + 1) % total
+	for range total {
+		a.cursor = (a.cursor + 1) % total
+		gi, _ := a.cursorPos()
+		if !a.groups[gi].disabled {
+			return
+		}
+	}
 }
 
 func (a *AddOnsModel) CursorUp() {
@@ -168,11 +184,20 @@ func (a *AddOnsModel) CursorUp() {
 	if total == 0 {
 		return
 	}
-	a.cursor = (a.cursor - 1 + total) % total
+	for range total {
+		a.cursor = (a.cursor - 1 + total) % total
+		gi, _ := a.cursorPos()
+		if !a.groups[gi].disabled {
+			return
+		}
+	}
 }
 
 func (a *AddOnsModel) Select() {
 	gi, ii := a.cursorPos()
+	if a.groups[gi].disabled {
+		return
+	}
 	a.groups[gi].selected = ii
 }
 
@@ -184,6 +209,17 @@ func (a *AddOnsModel) View(active bool, width int) string {
 		if i > 0 {
 			s.WriteString("\n")
 		}
+
+		if g.disabled {
+			s.WriteString(MutedStyle.Render(g.name) + "\n")
+			for _, opt := range g.options {
+				text := " ◦ " + opt.label
+				s.WriteString(lipgloss.NewStyle().Width(width).Foreground(ColorGray3).Render(text) + "\n")
+				flatIdx++
+			}
+			continue
+		}
+
 		s.WriteString(AccentStyle.Render(g.name) + "\n")
 
 		for j, opt := range g.options {
@@ -247,13 +283,33 @@ func NewWizardModel() WizardModel {
 
 	pm := PMModel{options: registry.PackageManagers}
 
-	return WizardModel{
+	m := WizardModel{
 		projectName: ti,
 		BaseList:    baseList,
 		tooling:     tooling,
 		libraries:   libraries,
 		pm:          pm,
 		Cfg:         pkg.NewProjectConfig(),
+	}
+	m.syncLibraryConstraints()
+	return m
+}
+
+// syncLibraryConstraints disables the CI/CD group when no deploy target is selected.
+func (m *WizardModel) syncLibraryConstraints() {
+	deployIdx := m.libraries.groupIndex("Deploy")
+	cicdIdx := m.libraries.groupIndex("CI/CD")
+	if deployIdx < 0 || cicdIdx < 0 {
+		return
+	}
+	deploy := &m.libraries.groups[deployIdx]
+	cicd := &m.libraries.groups[cicdIdx]
+	noDeploySelected := deploy.options[deploy.selected].value == "none"
+	if noDeploySelected {
+		cicd.disabled = true
+		cicd.selected = 0
+	} else {
+		cicd.disabled = false
 	}
 }
 
@@ -285,6 +341,7 @@ func buildAddOnPanels(reg *pkg.Registry, group string, integration string) (AddO
 		{"State", reg.State},
 		{"CMS", reg.CMS},
 		{"Deploy", reg.Deployment},
+		{"CI/CD", reg.CICD},
 	}
 
 	build := func(cats []struct {
@@ -405,6 +462,7 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if m.focus == focusLibraries {
 				m.libraries.Select()
+				m.syncLibraryConstraints()
 				return m, nil
 			}
 			if m.focus == focusPM {
@@ -474,6 +532,8 @@ func (m *WizardModel) collectConfig() {
 			m.Cfg.CMS = pkg.CMS(selected.value)
 		case "Deploy":
 			m.Cfg.Deployment = pkg.DeployTarget(selected.value)
+		case "CI/CD":
+			m.Cfg.CICD = pkg.CICDProvider(selected.value)
 		}
 	}
 
@@ -534,6 +594,7 @@ func (m WizardModel) summaryPopup() string {
 		row("State:      ", string(m.Cfg.State)) +
 		row("CMS:        ", string(m.Cfg.CMS)) +
 		row("Deploy:     ", string(m.Cfg.Deployment)) +
+		row("CI/CD:      ", string(m.Cfg.CICD)) +
 		row("PM:         ", string(m.Cfg.PM))
 
 	key := func(k, desc string) string {
@@ -604,6 +665,7 @@ func (m *WizardModel) rebuildAddOns() {
 	base := reg.GetBase(sel.value)
 	if base != nil {
 		m.tooling, m.libraries = buildAddOnPanels(reg, base.Group, base.Integration)
+		m.syncLibraryConstraints()
 	}
 }
 

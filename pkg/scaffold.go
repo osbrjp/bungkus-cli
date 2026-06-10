@@ -166,6 +166,19 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		}
 	}
 
+	if cfg.CICD != "none" && cfg.Deployment != "none" {
+		cicdDir := "templates/cicd/" + string(cfg.CICD) + "/" + string(cfg.Deployment)
+		if _, err := fs.Stat(templates, cicdDir); err == nil {
+			cicdFS, err := fs.Sub(templates, cicdDir)
+			if err != nil {
+				return fmt.Errorf("failed to read cicd templates: %w", err)
+			}
+			if err := copyDir(cicdFS, destDir, cfg, ""); err != nil {
+				return err
+			}
+		}
+	}
+
 	// Copy shared templates (husky, etc.)
 	sharedFS, err := fs.Sub(templates, "templates/shared")
 	if err != nil {
