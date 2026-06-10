@@ -30,6 +30,11 @@ var rootCmd = &cobra.Command{
 		}
 		cfg := wm.Cfg
 
+		if cfg.CICD != "none" && cfg.Deployment == "none" {
+			tui.PrintCICDSkipped()
+			cfg.CICD = "none"
+		}
+
 		destDir := cfg.ProjectName
 		if cfg.DestDir != "" {
 			destDir = cfg.DestDir

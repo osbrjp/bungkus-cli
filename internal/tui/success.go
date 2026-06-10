@@ -7,6 +7,18 @@ import (
 	"github.com/spencer-osbrjp/bungkus-cli/pkg"
 )
 
+// PrintCICDSkipped prints a styled warning that CI/CD was skipped because no
+// deploy target was selected.
+func PrintCICDSkipped() {
+	tag := WarnStyle.Render(" WARN ")
+	msg := fmt.Sprintf(
+		"%s %s requires a deploy target — skipping CI/CD workflow",
+		tag,
+		AccentStyle.Render("CI/CD"),
+	)
+	fmt.Println(msg)
+}
+
 // PrintSkippedIntegration prints a styled warning that a library is skipped
 // because it's not compatible with the chosen base framework.
 func PrintSkippedIntegration(lib, base string) {
@@ -39,22 +51,45 @@ func PrintSuccess(cfg pkg.ProjectConfig) {
 		lipgloss.NewStyle().Foreground(ColorOrange).Render(cfg.PM.RunCmd()),
 	)
 
+	cicdSecrets := fmt.Sprintf("%s\n    %s\n    %s",
+		MutedStyle.Render("1. Set GitHub secrets (once):"),
+		MutedStyle.Render("   gh secret set CLOUDFLARE_API_TOKEN"),
+		MutedStyle.Render("   gh secret set CLOUDFLARE_ACCOUNT_ID  ← wrangler whoami"),
+	)
+
 	if cfg.Deployment == "cloudflare-pages" {
-		cmds += fmt.Sprintf(
-			"\n\n  %s\n\n    %s\n    %s\n    %s",
-			AccentStyle.Render("Deploy to Cloudflare Pages:"),
-			MutedStyle.Render("1. Push repo to GitHub"),
-			MutedStyle.Render("2. dash.cloudflare.com → Workers & Pages → Create → Pages"),
-			MutedStyle.Render("3. Build: "+string(cfg.PM)+" run build  |  Output: "+cfg.Base.OutputDir()),
-		)
+		if cfg.CICD == "github-actions" {
+			cmds += fmt.Sprintf(
+				"\n\n  %s\n\n    %s\n    %s",
+				AccentStyle.Render("Deploy to Cloudflare Pages (CI/CD):"),
+				cicdSecrets,
+				MutedStyle.Render("2. git push"),
+			)
+		} else {
+			cmds += fmt.Sprintf(
+				"\n\n  %s\n\n    %s\n    %s\n    %s",
+				AccentStyle.Render("Deploy to Cloudflare Pages:"),
+				MutedStyle.Render("1. wrangler login (once)"),
+				MutedStyle.Render("2. wrangler pages project create "+cfg.ProjectName+" (once)"),
+				MutedStyle.Render("3. "+string(cfg.PM)+" run deploy"),
+			)
+		}
 	} else if cfg.Deployment == "cloudflare-workers" {
-		cmds += fmt.Sprintf(
-			"\n\n  %s\n\n    %s\n    %s\n    %s",
-			AccentStyle.Render("Deploy to Cloudflare Workers:"),
-			MutedStyle.Render("Local:  wrangler login (once) → "+string(cfg.PM)+" run deploy"),
-			MutedStyle.Render("CI/CD:  gh secret set CLOUDFLARE_API_TOKEN"),
-			MutedStyle.Render("        gh secret set CLOUDFLARE_ACCOUNT_ID  ← wrangler whoami"),
-		)
+		if cfg.CICD == "github-actions" {
+			cmds += fmt.Sprintf(
+				"\n\n  %s\n\n    %s\n    %s",
+				AccentStyle.Render("Deploy to Cloudflare Workers (CI/CD):"),
+				cicdSecrets,
+				MutedStyle.Render("2. git push"),
+			)
+		} else {
+			cmds += fmt.Sprintf(
+				"\n\n  %s\n\n    %s\n    %s",
+				AccentStyle.Render("Deploy to Cloudflare Workers:"),
+				MutedStyle.Render("1. wrangler login (once)"),
+				MutedStyle.Render("2. "+string(cfg.PM)+" run deploy"),
+			)
+		}
 	}
 
 	fmt.Println(BoxStyle.Render(header + cmds))
