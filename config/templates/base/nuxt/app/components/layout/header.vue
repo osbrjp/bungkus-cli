@@ -1,4 +1,4 @@
-<script setip lang="ts">
+<script setup lang="ts">
 /**
  * Layout: Header
  *

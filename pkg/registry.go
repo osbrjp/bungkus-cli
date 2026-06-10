@@ -67,6 +67,7 @@ type Registry struct {
 	Audit           []OptionEntry `json:"audit"`
 	PackageManagers []PMEntry     `json:"packageManagers"`
 	CommonPackages  Packages      `json:"commonPackages"`
+	Deployment      []OptionEntry `json:"deployment"`
 }
 
 var globalRegistry *Registry
@@ -249,10 +250,22 @@ func (r *Registry) GetAudit(value string) *OptionEntry {
 			return &r.Audit[i]
 		}
 	}
-
 	return nil
 }
 
 func (r *Registry) HasAudit(value string) bool {
 	return r.GetAudit(value) != nil
+}
+
+func (r *Registry) GetDeployment(value string) *OptionEntry {
+	for i := range r.Deployment {
+		if r.Deployment[i].Value == value {
+			return &r.Deployment[i]
+		}
+	}
+	return nil
+}
+
+func (r *Registry) HasDeployment(value string) bool {
+	return r.GetDeployment(value) != nil
 }

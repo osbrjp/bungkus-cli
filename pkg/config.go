@@ -4,6 +4,7 @@ import (
 	"errors"
 	"maps"
 	"slices"
+	"time"
 )
 
 type (
@@ -20,6 +21,7 @@ type (
 	BaseGroup        string
 	BaseIntegration  string
 	TestingFramework string
+	DeployTarget     string
 	AuditTool        string
 )
 
@@ -69,6 +71,10 @@ func (b BaseFramework) IsNuxt() bool {
 	}
 	entry := globalRegistry.GetBase(string(b))
 	return entry != nil && entry.Group == "nuxt"
+}
+
+func (b BaseFramework) OutputDir() string {
+	return "dist"
 }
 
 func (b BaseFramework) IsVite() bool {
@@ -363,6 +369,24 @@ func (c CMS) GetDependencies() AllDependencies {
 	}
 }
 
+func (d DeployTarget) IsValid() bool {
+	return globalRegistry != nil && globalRegistry.HasDeployment(string(d))
+}
+
+func (d DeployTarget) GetDependencies() AllDependencies {
+	if globalRegistry == nil {
+		return AllDependencies{}
+	}
+	entry := globalRegistry.GetDeployment(string(d))
+	if entry == nil {
+		return AllDependencies{}
+	}
+	return AllDependencies{
+		Dependencies:    entry.Packages.Dependencies,
+		DevDependencies: entry.Packages.DevDependencies,
+	}
+}
+
 func (p PackageManager) IsValid() bool {
 	return globalRegistry != nil && globalRegistry.HasPM(string(p))
 }
@@ -396,6 +420,8 @@ func (p PackageManager) RunCmd() string {
 
 type ProjectConfig struct {
 	ProjectName string
+	DestDir     string
+	Date        string
 	Site        string
 	Base        BaseFramework
 	CSS         CSSFramework
@@ -406,6 +432,7 @@ type ProjectConfig struct {
 	Query       QueryLib
 	State       StateLib
 	CMS         CMS
+	Deployment  DeployTarget
 	PM          PackageManager
 	Test        TestingFramework
 	Audit       AuditTool
@@ -454,6 +481,7 @@ func (c ProjectConfig) Stack() []StackEntry {
 	add("Query", c.Query.GetDependencies())
 	add("State", c.State.GetDependencies())
 	add("CMS", c.CMS.GetDependencies())
+	add("Deployment", c.Deployment.GetDependencies())
 	add("Testing", c.Test.GetDependencies())
 	add("Audit", c.Audit.GetDependencies())
 	return rows
@@ -474,6 +502,8 @@ func NewProjectConfig() ProjectConfig {
 		CMS:         "none",
 		PM:          "pnpm",
 		Test:        "none",
+		Deployment:  "none",
 		Audit:       "none",
+		Date:        time.Now().Format("2006-01-02"),
 	}
 }

@@ -153,6 +153,19 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		}
 	}
 
+	if cfg.Deployment != "none" {
+		deployDir := "templates/deploy/" + string(cfg.Deployment)
+		if _, err := fs.Stat(templates, deployDir); err == nil {
+			deployFS, err := fs.Sub(templates, deployDir)
+			if err != nil {
+				return fmt.Errorf("failed to read deployment templates: %w", err)
+			}
+			if err := copyDir(deployFS, destDir, cfg, ""); err != nil {
+				return err
+			}
+		}
+	}
+
 	// Copy shared templates (husky, etc.)
 	sharedFS, err := fs.Sub(templates, "templates/shared")
 	if err != nil {
