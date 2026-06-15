@@ -3,8 +3,20 @@
 import tailwindcss from "@tailwindcss/vite";
 {{- end}}
 export default defineNuxtConfig({
-  compatibilityDate: '2025-07-15',
+  compatibilityDate: '{{.Date}}',
   devtools: { enabled: true },
+  {{- if eq .Deployment "cloudflare-pages"}}
+  nitro: {
+    preset: 'cloudflare_pages',
+  },
+  {{- else if eq .Deployment "cloudflare-workers"}}
+  nitro: {
+    preset: 'cloudflare_module',
+    cloudflare: {
+      nodeCompat: true,
+    },
+  },
+  {{- end}}
   modules: [
     {{- if eq .Form "veevalidate" }}
     [

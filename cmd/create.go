@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/spencer-osbrjp/bungkus-cli/config"
 	"github.com/spencer-osbrjp/bungkus-cli/internal/tui"
@@ -102,7 +104,16 @@ var createCmd = &cobra.Command{
 		}
 
 		if len(args) > 0 {
-			cfg.ProjectName = args[0]
+			if args[0] == "." {
+				cwd, err := os.Getwd()
+				if err != nil {
+					return fmt.Errorf("failed to get current working directory: %w", err)
+				}
+				cfg.ProjectName = filepath.Base(cwd)
+				cfg.DestDir = "."
+			} else {
+				cfg.ProjectName = args[0]
+			}
 		}
 
 		if cmd.Flags().Changed("base") {
@@ -145,6 +156,14 @@ var createCmd = &cobra.Command{
 			v, _ := cmd.Flags().GetString("cms")
 			cfg.CMS = pkg.CMS(v)
 		}
+		if cmd.Flags().Changed("deploy") {
+			v, _ := cmd.Flags().GetString("deploy")
+			cfg.Deployment = pkg.DeployTarget(v)
+		}
+		if cmd.Flags().Changed("cicd") {
+			v, _ := cmd.Flags().GetString("cicd")
+			cfg.CICD = pkg.CICDProvider(v)
+		}
 		if cmd.Flags().Changed("test") {
 			v, _ := cmd.Flags().GetString("test")
 			cfg.Test = pkg.TestingFramework(v)
@@ -181,6 +200,15 @@ var createCmd = &cobra.Command{
 		if !cfg.State.IsValid() {
 			return fmt.Errorf("invalid state library: %s", cfg.State)
 		}
+		if !cfg.Deployment.IsValid() {
+			return fmt.Errorf("invalid deployment target: %s", cfg.Deployment)
+		}
+		if !cfg.CICD.IsValid() {
+			return fmt.Errorf("invalid cicd provider: %s", cfg.CICD)
+		}
+		if cfg.CICD != "none" && cfg.Deployment == "none" {
+			return fmt.Errorf("--cicd requires a deploy target (--deploy cloudflare-pages or --deploy cloudflare-workers)")
+		}
 
 		if cfg.Form != "none" && !cfg.Form.IsValidIntegration(string(cfg.Base)) {
 			tui.PrintSkippedIntegration(string(cfg.Form), string(cfg.Base))
@@ -194,8 +222,12 @@ var createCmd = &cobra.Command{
 			tui.PrintSkippedIntegration(string(cfg.State), string(cfg.Base))
 			cfg.State = "none"
 		}
+		destDir := cfg.ProjectName
+		if cfg.DestDir != "" {
+			destDir = cfg.DestDir
+		}
 
-		if err := pkg.Scaffold(cfg.ProjectName, config.Templates, cfg); err != nil {
+		if err := pkg.Scaffold(destDir, config.Templates, cfg); err != nil {
 			return fmt.Errorf("scaffold failed: %w", err)
 		}
 
@@ -219,4 +251,6 @@ func init() {
 	createCmd.Flags().String("test", "none", "Testing library (none, playwright)")
 	createCmd.Flags().String("audit", "none", "Audit / performance tool (none, lhci)")
 	createCmd.Flags().StringP("template", "t", "", "Predefined template (astro, astro-react, astro-vue, nuxt, vite, vite-react, vite-vue)")
+	createCmd.Flags().String("deploy", "none", "Deployment target (none, cloudflare-pages, cloudflare-workers)")
+	createCmd.Flags().String("cicd", "none", "CI/CD provider (none, github-actions)")
 }
