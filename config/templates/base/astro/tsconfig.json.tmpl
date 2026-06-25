@@ -7,7 +7,7 @@
     "paths": {
       "@/*": ["src/*"]
     }
-    {{- if eq .Base "astro-react" -}}
+    {{- if or (eq .Base "astro-react") (eq .CMS "keystatic") -}}
     , "jsx": "react-jsx",
     "jsxImportSource": "react"
     {{- end -}}
