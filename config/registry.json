@@ -474,12 +474,20 @@
         "vite"
       ],
       "packages": {
+        "scripts": {
+          "build": "cross-env SKIP_KEYSTATIC=true astro build"
+        },
         "dependencies": {
           "@keystatic/core": "0.5.50",
-          "@keystatic/astro": "5.1.0"
+          "@keystatic/astro": "5.1.0",
+          "@astrojs/react": "^5.0.3",
+          "react": "^19.2.4",
+          "react-dom": "^19.2.4"
         },
         "devDependencies": {
-          "cross-env": "^10.1.0"
+          "cross-env": "^10.1.0",
+          "@types/react": "^19.2.14",
+          "@types/react-dom": "^19.2.3"
         }
       }
     }
