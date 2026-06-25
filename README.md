@@ -70,7 +70,7 @@ bungkus-cli create my-app -t nuxt --pm bun
 | `--state`      | `none`    | `none`, `jotai`, `zustand`, `pinia`, `nanostores`                |
 | `--test`       | `none`    | `none`, `playwright`                                             |
 | `--audit`      | `none`    | `none`, `lhci`                                                   |
-| `--cms`        | `none`    | `none`, `microcms`                                               |
+| `--cms`        | `none`    | `none`, `microcms`, `keystatic` (Astro only)                    |
 | `--deploy`     | `none`    | `none`, `cloudflare-pages`, `cloudflare-workers`                 |
 | `--cicd`       | `none`    | `none`, `github-actions`                                         |
 | `--pm`         | `pnpm`    | `pnpm`, `bun`, `npm`, `yarn`                                     |
@@ -79,6 +79,12 @@ bungkus-cli create my-app -t nuxt --pm bun
 `--cicd` requires `--deploy` to be set — using `--cicd github-actions` without a deploy target is an error.
 
 Flags take precedence over template presets, so `-t nuxt --pm bun` uses the Nuxt preset but overrides the package manager.
+
+### Keystatic
+
+`--cms keystatic` is available on Astro bases only (`astro`, `astro-react`, `astro-vue`); it is skipped on Nuxt/Vite. It generates a `keystatic.config.ts` using local storage — content is stored as files in the repo and the admin UI is served at `/keystatic` while running `dev`. The React renderer is added automatically (Keystatic's admin UI is React-based).
+
+The production build (`build`) sets `SKIP_KEYSTATIC=true`, which leaves the admin out of the bundle so the site stays fully static and deploys anywhere — no server adapter required. To edit content from a deployed site instead, switch the `storage` block in `keystatic.config.ts` to GitHub mode (see the commented example in that file).
 
 ## Project Structure
 
@@ -97,7 +103,7 @@ config/
     linter/                     # Linter configs (biome, eslint, oxlint)
     form/                       # Form-library snippets
     integration/                # Per-integration snippets (react, vue)
-    cms/                        # CMS integration snippets (microcms)
+    cms/                        # CMS integration snippets (<cms>/<group>: microcms, keystatic)
     deploy/                     # Deploy configs (wrangler.jsonc per target)
     cicd/                       # CI/CD workflows (github-actions/<target>/)
     pm/                         # Package manager config (npmrc, etc.)

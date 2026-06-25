@@ -1,0 +1,28 @@
+import { config, fields, collection } from '@keystatic/core';
+
+export default config({
+  // Local storage keeps content as files in this repo — works offline with
+  // zero setup. The admin UI is available at /keystatic while running `dev`.
+  storage: {
+    kind: 'local',
+  },
+  // To edit content through GitHub instead (e.g. from a deployed site), swap
+  // the storage above for the block below and follow the GitHub App setup at
+  // https://keystatic.com/docs/github-mode
+  // storage: {
+  //   kind: 'github',
+  //   repo: 'your-org/{{.ProjectName}}',
+  // },
+  collections: {
+    posts: collection({
+      label: 'Posts',
+      slugField: 'title',
+      path: 'src/content/posts/*',
+      format: { contentField: 'content' },
+      schema: {
+        title: fields.slug({ name: { label: 'Title' } }),
+        content: fields.markdoc({ label: 'Content' }),
+      },
+    }),
+  },
+});

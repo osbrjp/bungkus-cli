@@ -200,6 +200,9 @@ var createCmd = &cobra.Command{
 		if !cfg.State.IsValid() {
 			return fmt.Errorf("invalid state library: %s", cfg.State)
 		}
+		if !cfg.CMS.IsValid() {
+			return fmt.Errorf("invalid cms: %s", cfg.CMS)
+		}
 		if !cfg.Deployment.IsValid() {
 			return fmt.Errorf("invalid deployment target: %s", cfg.Deployment)
 		}
@@ -221,6 +224,10 @@ var createCmd = &cobra.Command{
 		if cfg.State != "none" && !cfg.State.IsValidIntegration(string(cfg.Base)) {
 			tui.PrintSkippedIntegration(string(cfg.State), string(cfg.Base))
 			cfg.State = "none"
+		}
+		if cfg.CMS != "none" && !cfg.CMS.IsValidForBase(string(cfg.Base)) {
+			tui.PrintSkippedIntegration(string(cfg.CMS), string(cfg.Base))
+			cfg.CMS = "none"
 		}
 		destDir := cfg.ProjectName
 		if cfg.DestDir != "" {
@@ -247,7 +254,7 @@ func init() {
 	createCmd.Flags().String("query", "none", "Query library (none, tanstack-query)")
 	createCmd.Flags().String("state", "none", "State management library (none, jotai, zustand, pinia, nanostores)")
 	createCmd.Flags().String("pm", "pnpm", "Package manager (bun, npm, yarn, pnpm)")
-	createCmd.Flags().String("cms", "none", "CMS (none, microcms)")
+	createCmd.Flags().String("cms", "none", "CMS (none, microcms, keystatic)")
 	createCmd.Flags().String("test", "none", "Testing library (none, playwright)")
 	createCmd.Flags().String("audit", "none", "Audit / performance tool (none, lhci)")
 	createCmd.Flags().StringP("template", "t", "", "Predefined template (astro, astro-react, astro-vue, nuxt, vite, vite-react, vite-vue)")

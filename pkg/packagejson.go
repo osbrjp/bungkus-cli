@@ -198,4 +198,16 @@ func applyCrossCuttingRules(pkg *packageJSON, cfg ProjectConfig) {
 		pkg.DevDependencies["vite"] = "^6.3.5"
 	}
 
+	// keystatic (astro) → React renderer for the admin UI (even on non-React
+	// bases), and a production build that skips the server-rendered admin so
+	// the site stays fully static.
+	if cfg.CMS == "keystatic" && cfg.Base.IsAstro() {
+		pkg.Dependencies["@astrojs/react"] = "^5.0.3"
+		pkg.Dependencies["react"] = "^19.2.4"
+		pkg.Dependencies["react-dom"] = "^19.2.4"
+		pkg.DevDependencies["@types/react"] = "^19.2.14"
+		pkg.DevDependencies["@types/react-dom"] = "^19.2.3"
+		pkg.Scripts["build"] = "cross-env SKIP_KEYSTATIC=true astro build"
+	}
+
 }

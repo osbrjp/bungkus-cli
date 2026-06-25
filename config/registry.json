@@ -465,6 +465,23 @@
           "microcms-js-sdk": "^3.2.0"
         }
       }
+    },
+    {
+      "value": "keystatic",
+      "label": "Keystatic",
+      "excludeGroups": [
+        "nuxt",
+        "vite"
+      ],
+      "packages": {
+        "dependencies": {
+          "@keystatic/core": "0.5.50",
+          "@keystatic/astro": "5.1.0"
+        },
+        "devDependencies": {
+          "cross-env": "^10.1.0"
+        }
+      }
     }
   ],
   "test": [
