@@ -41,6 +41,9 @@ func (b BaseFramework) GetGroup(base string) (BaseGroup, error) {
 	}
 
 	entry := globalRegistry.GetBase(base)
+	if entry == nil {
+		return "", errors.New("unknown base framework: " + base)
+	}
 	return BaseGroup(entry.Group), nil
 }
 
