@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"os/exec"
+	"strings"
 )
 
 // packageJSON defines the structure and field order for generated package.json files.
@@ -14,15 +16,11 @@ type packageJSON struct {
 	Private         bool              `json:"private,omitempty"`
 	Version         string            `json:"version"`
 	Type            string            `json:"type"`
+	PackageManager  string            `json:"packageManager,omitempty"`
 	Engines         map[string]string `json:"engines"`
 	Scripts         map[string]string `json:"scripts"`
 	Dependencies    map[string]string `json:"dependencies"`
 	DevDependencies map[string]string `json:"devDependencies"`
-	PNPM            *pnpmSection      `json:"pnpm,omitempty"`
-}
-
-type pnpmSection struct {
-	Overrides map[string]string `json:"overrides"`
 }
 
 // BuildPackageJSON constructs a package.json by merging packages from the
@@ -46,7 +44,8 @@ func BuildPackageJSON(cfg ProjectConfig) ([]byte, error) {
 		DevDependencies: make(map[string]string),
 	}
 
-	// Merge in order: common → base → css → formatter → linter → cms
+	// Merge in order: common → base → css → formatter → linter → validation
+	// → form → query → state → cms → test → audit
 	mergePackages(&pkg, reg.CommonPackages)
 	mergePackages(&pkg, base.Packages)
 
@@ -100,6 +99,28 @@ func BuildPackageJSON(cfg ProjectConfig) ([]byte, error) {
 		}
 	}
 
+	if cfg.Test != "none" {
+		if test := reg.GetTestingFramework(string(cfg.Test)); test != nil {
+			mergePackages(&pkg, test.Packages)
+		}
+	}
+
+	if cfg.Audit != "none" {
+		if audit := reg.GetAudit(string(cfg.Audit)); audit != nil {
+			mergePackages(&pkg, audit.Packages)
+		}
+	}
+
+	if cfg.Deployment != "none" {
+		if dt := reg.GetDeployment(string(cfg.Deployment)); dt != nil {
+			mergePackages(&pkg, dt.Packages)
+		}
+	}
+
+	if v, err := pmVersion(string(cfg.PM)); err == nil {
+		pkg.PackageManager = string(cfg.PM) + "@" + v
+	}
+
 	applyCrossCuttingRules(&pkg, cfg)
 
 	var buf bytes.Buffer
@@ -111,6 +132,14 @@ func BuildPackageJSON(cfg ProjectConfig) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+func pmVersion(pm string) (string, error) {
+	out, err := exec.Command(pm, "--version").Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(out)), nil
 }
 
 func mergeIntegrationPackages(pkg *packageJSON, entry *OptionEntry, integration string) {
@@ -169,16 +198,4 @@ func applyCrossCuttingRules(pkg *packageJSON, cfg ProjectConfig) {
 		pkg.DevDependencies["vite"] = "^6.3.5"
 	}
 
-	// pnpm + (astro integration or nuxt) → pnpm overrides
-	if cfg.PM == "pnpm" {
-		base := GetRegistry().GetBase(string(cfg.Base))
-		needsOverrides := cfg.Base.IsNuxt() || (cfg.Base.IsAstro() && base != nil && base.Integration != "")
-		if needsOverrides {
-			pkg.PNPM = &pnpmSection{
-				Overrides: map[string]string{
-					"semver@6.3.1": "^7.7.1",
-				},
-			}
-		}
-	}
 }

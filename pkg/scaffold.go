@@ -107,6 +107,32 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		}
 	}
 
+	if cfg.Test != "none" {
+		testDir := "templates/test/" + string(cfg.Test)
+		if _, err := fs.Stat(templates, testDir); err == nil {
+			testFS, err := fs.Sub(templates, testDir)
+			if err != nil {
+				return fmt.Errorf("failed to read test templates: %w", err)
+			}
+			if err := copyDir(testFS, destDir, cfg, ""); err != nil {
+				return err
+			}
+		}
+	}
+
+	if cfg.Audit != "none" {
+		auditDir := "templates/audit/" + string(cfg.Audit)
+		if _, err := fs.Stat(templates, auditDir); err == nil {
+			auditFS, err := fs.Sub(templates, auditDir)
+			if err != nil {
+				return fmt.Errorf("failed to read audit templates: %w", err)
+			}
+			if err := copyDir(auditFS, destDir, cfg, ""); err != nil {
+				return err
+			}
+		}
+	}
+
 	if cfg.CMS != "none" {
 		if cfg.Base.IsVite() {
 			return fmt.Errorf("cms integration is currently not supported in vite project")
@@ -124,6 +150,32 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		}
 		if err := copyDir(cmsFS, destDir, cfg, ""); err != nil {
 			return err
+		}
+	}
+
+	if cfg.Deployment != "none" {
+		deployDir := "templates/deploy/" + string(cfg.Deployment)
+		if _, err := fs.Stat(templates, deployDir); err == nil {
+			deployFS, err := fs.Sub(templates, deployDir)
+			if err != nil {
+				return fmt.Errorf("failed to read deployment templates: %w", err)
+			}
+			if err := copyDir(deployFS, destDir, cfg, ""); err != nil {
+				return err
+			}
+		}
+	}
+
+	if cfg.CICD != "none" && cfg.Deployment != "none" {
+		cicdDir := "templates/cicd/" + string(cfg.CICD) + "/" + string(cfg.Deployment)
+		if _, err := fs.Stat(templates, cicdDir); err == nil {
+			cicdFS, err := fs.Sub(templates, cicdDir)
+			if err != nil {
+				return fmt.Errorf("failed to read cicd templates: %w", err)
+			}
+			if err := copyDir(cicdFS, destDir, cfg, ""); err != nil {
+				return err
+			}
 		}
 	}
 
