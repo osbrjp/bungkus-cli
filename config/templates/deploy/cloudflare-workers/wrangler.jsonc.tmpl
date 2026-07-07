@@ -12,6 +12,21 @@
     "enabled": true
   }
 }
+{{- else if .Base.IsAstro}}
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "{{.ProjectName}}",
+  "main": "@astrojs/cloudflare/entrypoints/server",
+  "compatibility_date": "{{.Date}}",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  }
+}
 {{- else}}
 {
   "$schema": "./node_modules/wrangler/config-schema.json",

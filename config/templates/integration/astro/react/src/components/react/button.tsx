@@ -10,7 +10,7 @@ const Button = () => {
     <span>
       Count: {count}
     </span>
-    <button onClick={handleClick}>
+    <button type="button" onClick={handleClick}>
       Click me
     </button>
   </>

@@ -9,6 +9,9 @@ import react from '@astrojs/react';
 {{- if eq .CSS "tailwindcss"}}
 import tailwindcss from "@tailwindcss/vite";
 {{- end}}
+{{- if or (eq .Deployment "cloudflare-pages") (eq .Deployment "cloudflare-workers")}}
+import cloudflare from '@astrojs/cloudflare';
+{{- end}}
 
 // https://astro.build/config
 export default defineConfig({
@@ -19,13 +22,16 @@ export default defineConfig({
       MICROCMS_SERVICE_DOMAIN: envField.string({ context: 'server', access: 'secret'}),
       {{- end}}
     }
-  }
-{{- if or (eq .Base "astro-vue") (eq .Base "astro-react")}}
+  },
+  {{- if or (eq .Deployment "cloudflare-pages") (eq .Deployment "cloudflare-workers")}}
+  adapter: cloudflare(),
+  {{- end}}
+  {{- if or (eq .Base "astro-vue") (eq .Base "astro-react")}}
   integrations: [{{if eq .Base "astro-vue"}}vue(){{end}}{{if eq .Base "astro-react"}}react(){{end}}],
-{{- end}}
-{{- if eq .CSS "tailwindcss"}},
+  {{- end}}
+  {{- if eq .CSS "tailwindcss"}}
   vite: {
     plugins: [tailwindcss()],
   },
-{{- end}}
+  {{- end}}
 });
