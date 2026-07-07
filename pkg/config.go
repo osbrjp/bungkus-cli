@@ -87,11 +87,14 @@ func (b BaseFramework) IsVite() bool {
 }
 
 func (b BaseFramework) GetIntegration() (BaseIntegration, error) {
-	if globalRegistry != nil {
+	if globalRegistry == nil {
 		return BaseIntegration(""), errors.New("unable to read registry")
 	}
 
 	entry := globalRegistry.GetBase(string(b))
+	if entry == nil {
+		return BaseIntegration(""), errors.New("unknown base framework")
+	}
 	return BaseIntegration(entry.Integration), nil
 }
 
