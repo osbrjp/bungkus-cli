@@ -31,6 +31,14 @@ Use the information below as the standard workflow and criteria check-point:
 - Always ensure no errors show after code changes (can run `build`)
 - Always ensure the test pass if test cases are provided (can run `test`)
 
+## Memory
+
+**Always keep memory up to date as you work.** Record decisions, conventions, gotchas, and project state in `.claude/memories/memory-*.md` (one topic per file, e.g. `.claude/memories/memory-auth.md`). Read existing memory files at the start of a task and update or add to them as you go — don't wait until the end.
+
+## Wiki (Knowledge Base)
+
+The `.wiki/` directory is the project's knowledge base and contains all project knowledge — specs, design docs, notes, reference PDFs, images, diagrams, and any other supporting material. Treat it as the source of truth for context: read relevant files there before starting a task, and add new knowledge to it as the project evolves.
+
 ## Secrets and sensitive data
 - Never print secrets (tokens, private keys, credentials) to terminal output.
 - Do not request users paste secrets.
