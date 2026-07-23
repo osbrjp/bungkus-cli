@@ -7,7 +7,7 @@
     "strict": true,
     "skipLibCheck": true,
     "esModuleInterop": true{{if eq (printf "%s" .Database) "d1"}},
-    "types": ["@cloudflare/workers-types"]{{end}}
+    "types": ["node", "@cloudflare/workers-types"]{{end}}
   },
   "include": ["server", "db"]
 }

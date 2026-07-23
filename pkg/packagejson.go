@@ -229,6 +229,7 @@ func BuildAPIPackageJSON(cfg ProjectConfig) ([]byte, error) {
 	}
 	pkg.Scripts["build"] = "tsc"
 	pkg.DevDependencies["typescript"] = "^5.7.2"
+	pkg.DevDependencies["@types/node"] = "^22.10.2"
 	pkg.Dependencies["domain"] = "workspace:*"
 
 	return marshalPkg(pkg)
