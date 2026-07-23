@@ -43,13 +43,59 @@ func PrintSuccess(cfg pkg.ProjectConfig) {
 		cdLine = "\n    " + lipgloss.NewStyle().Foreground(ColorOrange).Render("cd "+cfg.ProjectName)
 	}
 
+	orange := lipgloss.NewStyle().Foreground(ColorOrange)
+
+	// In a monorepo the deploy script lives in apps/web, so target it directly.
+	deployRun := string(cfg.PM) + " run deploy"
+	if cfg.Layout.IsMonorepo() {
+		deployRun = "pnpm --filter web run deploy"
+	}
+
+	runLine := orange.Render(cfg.PM.RunCmd())
+	if cfg.Layout.IsMonorepo() && cfg.Backend != "none" {
+		runLine += MutedStyle.Render("   # runs apps/web + apps/api")
+	}
+
 	cmds := fmt.Sprintf(
 		"\n\n  %s%s\n    %s\n    %s",
 		AccentStyle.Render("Get started:"),
 		cdLine,
-		lipgloss.NewStyle().Foreground(ColorOrange).Render(cfg.PM.InstallCmd()),
-		lipgloss.NewStyle().Foreground(ColorOrange).Render(cfg.PM.RunCmd()),
+		orange.Render(cfg.PM.InstallCmd()),
+		runLine,
 	)
+
+	// Monorepo layout: explain the pnpm-workspace structure.
+	if cfg.Layout.IsMonorepo() {
+		ws := "\n\n  " + AccentStyle.Render("Workspace (pnpm):") +
+			"\n    " + MutedStyle.Render("apps/web         frontend")
+		if cfg.Backend != "none" {
+			ws += "\n    " + MutedStyle.Render("apps/api         backend ("+string(cfg.Backend)+")")
+		}
+		ws += "\n    " + MutedStyle.Render("packages/domain  shared types/schemas")
+		cmds += ws
+	}
+
+	// Database setup steps (ORM selected). A server DB (postgres/mysql) ships a
+	// docker-compose.yml at the root, so include `docker compose up -d`.
+	if cfg.ORM != "none" {
+		title := "Set up the database:"
+		envSrc, envDst := ".env.example", ".env"
+		gen := string(cfg.PM) + " run db:generate"
+		migrate := string(cfg.PM) + " run db:migrate"
+		if cfg.Layout.IsMonorepo() {
+			title = "Set up the database (apps/api):"
+			envSrc, envDst = "apps/api/.env.example", "apps/api/.env"
+			gen, migrate = "pnpm --filter api db:generate", "pnpm --filter api db:migrate"
+		}
+		db := "\n\n  " + AccentStyle.Render(title) +
+			"\n    " + orange.Render("cp "+envSrc+" "+envDst)
+		if cfg.Database == "postgres" || cfg.Database == "mysql" {
+			db += "\n    " + orange.Render("docker compose up -d")
+		}
+		db += "\n    " + orange.Render(gen) +
+			"\n    " + orange.Render(migrate)
+		cmds += db
+	}
 
 	cicdSecrets := fmt.Sprintf("%s\n    %s\n    %s",
 		MutedStyle.Render("1. Set GitHub secrets (once):"),
@@ -71,7 +117,7 @@ func PrintSuccess(cfg pkg.ProjectConfig) {
 				AccentStyle.Render("Deploy to Cloudflare Pages:"),
 				MutedStyle.Render("1. wrangler login (once)"),
 				MutedStyle.Render("2. wrangler pages project create "+cfg.ProjectName+" (once)"),
-				MutedStyle.Render("3. "+string(cfg.PM)+" run deploy"),
+				MutedStyle.Render("3. "+deployRun),
 			)
 		}
 	} else if cfg.Deployment == "cloudflare-workers" {
@@ -87,7 +133,7 @@ func PrintSuccess(cfg pkg.ProjectConfig) {
 				"\n\n  %s\n\n    %s\n    %s",
 				AccentStyle.Render("Deploy to Cloudflare Workers:"),
 				MutedStyle.Render("1. wrangler login (once)"),
-				MutedStyle.Render("2. "+string(cfg.PM)+" run deploy"),
+				MutedStyle.Render("2. "+deployRun),
 			)
 		}
 	}

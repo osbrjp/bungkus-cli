@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Deployment
         run: |
@@ -29,7 +29,7 @@ jobs:
       new_release_published: ${{ steps.semrel.outputs.new_release_published }}
       new_release_git_tag: ${{ steps.semrel.outputs.new_release_git_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -38,7 +38,7 @@ jobs:
           node-version: 22
 
       - id: semrel
-        uses: cycjimmy/semantic-release-action@v4
+        uses: cycjimmy/semantic-release-action@v6
         with:
           extra_plugins: |
             @semantic-release/commit-analyzer
@@ -64,7 +64,7 @@ jobs:
           - goos: linux
             goarch: arm64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.semantic-release.outputs.new_release_git_tag }}
 
@@ -80,7 +80,7 @@ jobs:
           go build -ldflags "-s -w -X main.Version=${{ needs.semantic-release.outputs.new_release_git_tag }}" -o bungkus-cli-${{ matrix.goos }}-${{ matrix.goarch }} .
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bungkus-cli-${{ matrix.goos }}-${{ matrix.goarch }}
           path: bungkus-cli-${{ matrix.goos }}-${{ matrix.goarch }}
@@ -93,7 +93,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: artifacts
 

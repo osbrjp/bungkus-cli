@@ -30,12 +30,25 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		return fmt.Errorf("failed to create directory %s: %w", destDir, err)
 	}
 
-	// Generate package.json from registry data
+	// Layout-aware roots. Flat keeps everything at destDir. Monorepo splits the
+	// frontend into apps/web and the backend into apps/api, leaving shared
+	// tooling and the workspace manifest at destDir (the root).
+	webDir := destDir
+	apiDir := destDir
+	if cfg.Layout.IsMonorepo() {
+		webDir = filepath.Join(destDir, "apps", "web")
+		apiDir = filepath.Join(destDir, "apps", "api")
+		if err := os.MkdirAll(webDir, 0o755); err != nil {
+			return fmt.Errorf("failed to create directory %s: %w", webDir, err)
+		}
+	}
+
+	// Frontend package.json (in monorepo mode this omits backend/orm deps)
 	pkgJSON, err := BuildPackageJSON(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to build package.json: %w", err)
 	}
-	if err := os.WriteFile(filepath.Join(destDir, "package.json"), pkgJSON, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(webDir, "package.json"), pkgJSON, 0o644); err != nil {
 		return fmt.Errorf("failed to write package.json: %w", err)
 	}
 
@@ -44,7 +57,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 	if entry.Group == "vite" && entry.EntryPoint != "" {
 		skip = "main.ts"
 	}
-	if err := copyDir(baseFS, destDir, cfg, skip); err != nil {
+	if err := copyDir(baseFS, webDir, cfg, skip); err != nil {
 		return err
 	}
 
@@ -56,7 +69,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		if err != nil {
 			return fmt.Errorf("failed to read %v integration templates: %w", entry.Integration, err)
 		}
-		if err := copyDir(integrationFS, destDir, cfg, ""); err != nil {
+		if err := copyDir(integrationFS, webDir, cfg, ""); err != nil {
 			return err
 		}
 	}
@@ -68,7 +81,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		return fmt.Errorf("failed to read css templates: %w", err)
 	}
 
-	stylesDir := filepath.Join(destDir, entry.StylesDir)
+	stylesDir := filepath.Join(webDir, entry.StylesDir)
 	if err := copyDir(cssFS, stylesDir, cfg, ""); err != nil {
 		return err
 	}
@@ -80,7 +93,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		return fmt.Errorf("failed to read formatter templates: %w", err)
 	}
 
-	if err := copyDir(fmtFS, destDir, cfg, ""); err != nil {
+	if err := copyDir(fmtFS, webDir, cfg, ""); err != nil {
 		return err
 	}
 
@@ -91,12 +104,12 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		if err != nil {
 			return fmt.Errorf("failed to read linter templates: %w", err)
 		}
-		if err := copyDir(linterFS, destDir, cfg, ""); err != nil {
+		if err := copyDir(linterFS, webDir, cfg, ""); err != nil {
 			return err
 		}
 	}
 
-	// Copy Package Manager templates (some PMs like bun/npm have no templates)
+	// Copy Package Manager templates to the root (pnpm-workspace.yaml, .npmrc)
 	pmDir := "templates/pm/" + string(cfg.PM)
 	if _, err := fs.Stat(templates, pmDir); err == nil {
 		pmFS, err := fs.Sub(templates, pmDir)
@@ -115,7 +128,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 			if err != nil {
 				return fmt.Errorf("failed to read test templates: %w", err)
 			}
-			if err := copyDir(testFS, destDir, cfg, ""); err != nil {
+			if err := copyDir(testFS, webDir, cfg, ""); err != nil {
 				return err
 			}
 		}
@@ -128,7 +141,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 			if err != nil {
 				return fmt.Errorf("failed to read audit templates: %w", err)
 			}
-			if err := copyDir(auditFS, destDir, cfg, ""); err != nil {
+			if err := copyDir(auditFS, webDir, cfg, ""); err != nil {
 				return err
 			}
 		}
@@ -149,7 +162,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		if err != nil {
 			return fmt.Errorf("failed to read CMS templates: %w", err)
 		}
-		if err := copyDir(cmsFS, destDir, cfg, ""); err != nil {
+		if err := copyDir(cmsFS, webDir, cfg, ""); err != nil {
 			return err
 		}
 	}
@@ -161,7 +174,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 			if err != nil {
 				return fmt.Errorf("failed to read deployment templates: %w", err)
 			}
-			if err := copyDir(deployFS, destDir, cfg, ""); err != nil {
+			if err := copyDir(deployFS, webDir, cfg, ""); err != nil {
 				return err
 			}
 		}
@@ -174,19 +187,132 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 			if err != nil {
 				return fmt.Errorf("failed to read cicd templates: %w", err)
 			}
-			if err := copyDir(cicdFS, destDir, cfg, ""); err != nil {
+			if err := copyDir(cicdFS, webDir, cfg, ""); err != nil {
 				return err
 			}
 		}
 	}
 
-	// Copy shared templates (husky, etc.)
+	if cfg.Backend != "none" {
+		backendDir := "templates/backend/" + string(cfg.Backend)
+		if _, err := fs.Stat(templates, backendDir); err == nil {
+			backendFS, err := fs.Sub(templates, backendDir)
+			if err != nil {
+				return fmt.Errorf("failed to read backend templates: %w", err)
+			}
+			if err := copyDir(backendFS, apiDir, cfg, ""); err != nil {
+				return err
+			}
+		}
+	}
+
+	if cfg.ORM != "none" {
+		ormDir := "templates/orm/" + string(cfg.ORM)
+		if _, err := fs.Stat(templates, ormDir); err == nil {
+			ormFS, err := fs.Sub(templates, ormDir)
+			if err != nil {
+				return fmt.Errorf("failed to read orm templates: %w", err)
+			}
+			if err := copyDir(ormFS, apiDir, cfg, ""); err != nil {
+				return err
+			}
+		}
+	}
+
+	// A server database (postgres/mysql) gets a local docker-compose.yml at the
+	// project/workspace root so the DATABASE_URL in .env.example resolves out of
+	// the box. sqlite/d1 need no local service.
+	if cfg.ORM != "none" {
+		dbDir := "templates/database/" + string(cfg.Database)
+		if _, err := fs.Stat(templates, dbDir); err == nil {
+			dbFS, err := fs.Sub(templates, dbDir)
+			if err != nil {
+				return fmt.Errorf("failed to read database templates: %w", err)
+			}
+			if err := copyDir(dbFS, destDir, cfg, ""); err != nil {
+				return err
+			}
+		}
+	}
+
+	// Copy shared templates (husky, etc.) to the root
 	sharedFS, err := fs.Sub(templates, "templates/shared")
 	if err != nil {
 		return fmt.Errorf("failed to read shared templates: %w", err)
 	}
+	if err := copyDir(sharedFS, destDir, cfg, ""); err != nil {
+		return err
+	}
 
-	return copyDir(sharedFS, destDir, cfg, "")
+	if cfg.Layout.IsMonorepo() {
+		return scaffoldMonorepo(destDir, apiDir, templates, cfg)
+	}
+	return nil
+}
+
+// scaffoldMonorepo writes the workspace-only pieces: the private root
+// package.json, the shared packages/domain contract, and (when a backend or orm
+// is selected) apps/api's package.json + tsconfig. The web and api source have
+// already been rendered by Scaffold into their app directories.
+func scaffoldMonorepo(destDir, apiDir string, templates fs.FS, cfg ProjectConfig) error {
+	rootPkg, err := BuildRootPackageJSON(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to build root package.json: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(destDir, "package.json"), rootPkg, 0o644); err != nil {
+		return fmt.Errorf("failed to write root package.json: %w", err)
+	}
+
+	// Root-level files (workspace .gitignore for the hoisted node_modules)
+	rootFS, err := fs.Sub(templates, "templates/monorepo/root")
+	if err != nil {
+		return fmt.Errorf("failed to read monorepo root templates: %w", err)
+	}
+	if err := copyDir(rootFS, destDir, cfg, ""); err != nil {
+		return err
+	}
+
+	// Shared domain contract
+	domainDir := filepath.Join(destDir, "packages", "domain")
+	if err := os.MkdirAll(domainDir, 0o755); err != nil {
+		return fmt.Errorf("failed to create %s: %w", domainDir, err)
+	}
+	domainPkg, err := BuildDomainPackageJSON(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to build domain package.json: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(domainDir, "package.json"), domainPkg, 0o644); err != nil {
+		return fmt.Errorf("failed to write domain package.json: %w", err)
+	}
+	domainFS, err := fs.Sub(templates, "templates/monorepo/domain")
+	if err != nil {
+		return fmt.Errorf("failed to read domain templates: %w", err)
+	}
+	if err := copyDir(domainFS, domainDir, cfg, ""); err != nil {
+		return err
+	}
+
+	// apps/api scaffolding (package.json + tsconfig) when a backend/orm exists
+	if cfg.Backend != "none" || cfg.ORM != "none" {
+		if err := os.MkdirAll(apiDir, 0o755); err != nil {
+			return fmt.Errorf("failed to create %s: %w", apiDir, err)
+		}
+		apiPkg, err := BuildAPIPackageJSON(cfg)
+		if err != nil {
+			return fmt.Errorf("failed to build api package.json: %w", err)
+		}
+		if err := os.WriteFile(filepath.Join(apiDir, "package.json"), apiPkg, 0o644); err != nil {
+			return fmt.Errorf("failed to write api package.json: %w", err)
+		}
+		apiFS, err := fs.Sub(templates, "templates/monorepo/api")
+		if err != nil {
+			return fmt.Errorf("failed to read api templates: %w", err)
+		}
+		if err := copyDir(apiFS, apiDir, cfg, ""); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // PostScaffold runs optional post-generation steps: installing dependencies

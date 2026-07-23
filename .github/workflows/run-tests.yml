@@ -20,7 +20,7 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -35,6 +35,16 @@ jobs:
               repo: context.repo.repo,
               labels: ["ci-testing"]
             })
+      - uses: actions/setup-go@v5
+        with:
+          # Use the latest 1.25 patch so the toolchain's standard library carries
+          # stdlib security fixes. govulncheck flags stdlib advisories against the
+          # exact toolchain version, and go.mod's `go 1.25.0` would pin an
+          # unpatched stdlib (crypto/tls, net/textproto, crypto/x509 advisories).
+          go-version: "1.25.x"
       - name: Build and run tests
         run: |
-          echo "Build and run tests here"
+          go build -o /dev/null .
+          go test ./...
+      - name: Vulnerability scan
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...

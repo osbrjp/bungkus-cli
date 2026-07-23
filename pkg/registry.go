@@ -69,6 +69,9 @@ type Registry struct {
 	CommonPackages  Packages      `json:"commonPackages"`
 	Deployment      []OptionEntry `json:"deployment"`
 	CICD            []OptionEntry `json:"cicd"`
+	Backend         []OptionEntry `json:"backend"`
+	ORM             []OptionEntry `json:"orm"`
+	Database        []OptionEntry `json:"database"`
 }
 
 var globalRegistry *Registry
@@ -282,4 +285,43 @@ func (r *Registry) GetCICD(value string) *OptionEntry {
 
 func (r *Registry) HasCICD(value string) bool {
 	return r.GetCICD(value) != nil
+}
+
+func (r *Registry) GetBackend(value string) *OptionEntry {
+	for i := range r.Backend {
+		if r.Backend[i].Value == value {
+			return &r.Backend[i]
+		}
+	}
+	return nil
+}
+
+func (r *Registry) HasBackend(value string) bool {
+	return r.GetBackend(value) != nil
+}
+
+func (r *Registry) GetORM(value string) *OptionEntry {
+	for i := range r.ORM {
+		if r.ORM[i].Value == value {
+			return &r.ORM[i]
+		}
+	}
+	return nil
+}
+
+func (r *Registry) HasORM(value string) bool {
+	return r.GetORM(value) != nil
+}
+
+func (r *Registry) GetDatabase(value string) *OptionEntry {
+	for i := range r.Database {
+		if r.Database[i].Value == value {
+			return &r.Database[i]
+		}
+	}
+	return nil
+}
+
+func (r *Registry) HasDatabase(value string) bool {
+	return r.GetDatabase(value) != nil
 }
