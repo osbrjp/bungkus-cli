@@ -133,6 +133,10 @@ func BuildPackageJSON(cfg ProjectConfig) ([]byte, error) {
 	if cfg.Layout.IsMonorepo() {
 		pkg.Name = "web"
 		pkg.Dependencies["domain"] = "workspace:*"
+		// husky lives at the workspace root (where the .husky hooks and .git
+		// are), not in the web app — see BuildRootPackageJSON.
+		delete(pkg.Scripts, "prepare")
+		delete(pkg.DevDependencies, "husky")
 	} else {
 		if cfg.Backend != "none" {
 			if be := reg.GetBackend(string(cfg.Backend)); be != nil {
@@ -253,6 +257,9 @@ func BuildDomainPackageJSON(cfg ProjectConfig) ([]byte, error) {
 // BuildRootPackageJSON builds the private workspace root package.json.
 func BuildRootPackageJSON(cfg ProjectConfig) ([]byte, error) {
 	pkg := newWorkspacePkg(cfg.ProjectName)
+	// husky (prepare script + devDep) belongs at the workspace root, where the
+	// .husky hooks and .git live.
+	mergePackages(&pkg, GetRegistry().CommonPackages)
 	pkg.Scripts["dev"] = "pnpm --recursive --parallel run dev"
 	pkg.Scripts["build"] = "pnpm --recursive run build"
 	if v, err := pmVersion(string(cfg.PM)); err == nil {
