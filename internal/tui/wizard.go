@@ -930,7 +930,7 @@ func (m WizardModel) footerView() string {
 
 	if m.screen == screenBackend {
 		line := strings.Join([]string{
-			key("[", "frontend tab"),
+			key("[ / ]", "switch tab"),
 			key("↑/↓", "move"),
 			key("space", "select"),
 			key("enter", "confirm"),
@@ -940,6 +940,7 @@ func (m WizardModel) footerView() string {
 	}
 
 	bindings := []string{
+		key("[ / ]", "switch tab"),
 		key("tab/shift+tab", "navigate"),
 	}
 
@@ -960,7 +961,7 @@ func (m WizardModel) footerView() string {
 		}
 	}
 
-	bindings = append(bindings, key("]", "backend tab"), key("enter", "confirm"), key("q/esc", "quit"))
+	bindings = append(bindings, key("enter", "confirm"), key("q/esc", "quit"))
 
 	line := strings.Join(bindings, FooterSepStyle.Render("  •  "))
 	line += "\n" + FooterDescStyle.Render("* recommended")
