@@ -7,7 +7,7 @@ require (
 	charm.land/bubbletea/v2 v2.0.2
 	charm.land/lipgloss/v2 v2.0.2
 	github.com/spf13/cobra v1.10.2
-	golang.org/x/mod v0.14.0
+	golang.org/x/mod v0.38.0
 )
 
 require (
