@@ -219,6 +219,22 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		}
 	}
 
+	// A server database (postgres/mysql) gets a local docker-compose.yml at the
+	// project/workspace root so the DATABASE_URL in .env.example resolves out of
+	// the box. sqlite/d1 need no local service.
+	if cfg.ORM != "none" {
+		dbDir := "templates/database/" + string(cfg.Database)
+		if _, err := fs.Stat(templates, dbDir); err == nil {
+			dbFS, err := fs.Sub(templates, dbDir)
+			if err != nil {
+				return fmt.Errorf("failed to read database templates: %w", err)
+			}
+			if err := copyDir(dbFS, destDir, cfg, ""); err != nil {
+				return err
+			}
+		}
+	}
+
 	// Copy shared templates (husky, etc.) to the root
 	sharedFS, err := fs.Sub(templates, "templates/shared")
 	if err != nil {

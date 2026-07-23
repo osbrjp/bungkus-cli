@@ -64,8 +64,7 @@ func PrintSuccess(cfg pkg.ProjectConfig) {
 		runLine,
 	)
 
-	// Monorepo layout: explain the workspace and the API's DB setup so the
-	// pnpm-workspace structure isn't a surprise after scaffolding.
+	// Monorepo layout: explain the pnpm-workspace structure.
 	if cfg.Layout.IsMonorepo() {
 		ws := "\n\n  " + AccentStyle.Render("Workspace (pnpm):") +
 			"\n    " + MutedStyle.Render("apps/web         frontend")
@@ -74,13 +73,28 @@ func PrintSuccess(cfg pkg.ProjectConfig) {
 		}
 		ws += "\n    " + MutedStyle.Render("packages/domain  shared types/schemas")
 		cmds += ws
+	}
 
-		if cfg.ORM != "none" {
-			cmds += "\n\n  " + AccentStyle.Render("Set up the database (apps/api):") +
-				"\n    " + orange.Render("cp apps/api/.env.example apps/api/.env") +
-				"\n    " + orange.Render("pnpm --filter api db:generate") +
-				"\n    " + orange.Render("pnpm --filter api db:migrate")
+	// Database setup steps (ORM selected). A server DB (postgres/mysql) ships a
+	// docker-compose.yml at the root, so include `docker compose up -d`.
+	if cfg.ORM != "none" {
+		title := "Set up the database:"
+		envSrc, envDst := ".env.example", ".env"
+		gen := string(cfg.PM) + " run db:generate"
+		migrate := string(cfg.PM) + " run db:migrate"
+		if cfg.Layout.IsMonorepo() {
+			title = "Set up the database (apps/api):"
+			envSrc, envDst = "apps/api/.env.example", "apps/api/.env"
+			gen, migrate = "pnpm --filter api db:generate", "pnpm --filter api db:migrate"
 		}
+		db := "\n\n  " + AccentStyle.Render(title) +
+			"\n    " + orange.Render("cp "+envSrc+" "+envDst)
+		if cfg.Database == "postgres" || cfg.Database == "mysql" {
+			db += "\n    " + orange.Render("docker compose up -d")
+		}
+		db += "\n    " + orange.Render(gen) +
+			"\n    " + orange.Render(migrate)
+		cmds += db
 	}
 
 	cicdSecrets := fmt.Sprintf("%s\n    %s\n    %s",
