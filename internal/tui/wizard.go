@@ -3,10 +3,10 @@ package tui
 import (
 	"fmt"
 	"io"
-	"slices"
-	"strings"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 
 	"charm.land/bubbles/v2/list"
 	"charm.land/bubbles/v2/textinput"
@@ -26,6 +26,7 @@ const (
 	focusTooling            // 2 (Middle panel: CSS, Formatter, Linter, Test, Audit)
 	focusLibraries          // 3 (Right panel: Validation, Form, Query, State, CMS)
 	focusPM                 // 4 (Package manager horizontal selector)
+	focusAdvanced           // 5 (Advanced options dropdown row)
 	focusLen
 )
 
@@ -75,6 +76,106 @@ func (p *PMModel) View(active bool) string {
 	return lipgloss.JoinHorizontal(lipgloss.Center, parts...)
 }
 
+// advItem is one row in the advanced fold: a labeled horizontal value picker.
+type advItem struct {
+	name    string
+	options []Option // label/value pairs
+	cursor  int      // selected option index
+}
+
+// AdvancedModel is a collapsible set of low-frequency settings (version
+// channel, pin strategy, install, git, node engine). It renders as a single
+// muted line unless focused, keeping the common path uncluttered.
+type AdvancedModel struct {
+	items    []advItem
+	row      int
+	expanded bool
+}
+
+func (a *AdvancedModel) Toggle()  { a.expanded = !a.expanded }
+func (a *AdvancedModel) RowDown() { a.row = (a.row + 1) % len(a.items) }
+func (a *AdvancedModel) RowUp()   { a.row = (a.row - 1 + len(a.items)) % len(a.items) }
+func (a *AdvancedModel) ValueRight() {
+	it := &a.items[a.row]
+	it.cursor = (it.cursor + 1) % len(it.options)
+}
+func (a *AdvancedModel) ValueLeft() {
+	it := &a.items[a.row]
+	it.cursor = (it.cursor - 1 + len(it.options)) % len(it.options)
+}
+
+// value returns the selected value for the named item.
+func (a *AdvancedModel) value(name string) string {
+	for _, it := range a.items {
+		if it.name == name {
+			return it.options[it.cursor].value
+		}
+	}
+	return ""
+}
+
+func (a AdvancedModel) View(active bool) string {
+	caret := "▸"
+	label := "Advanced options"
+	head := MutedStyle.Render(label)
+	if active {
+		head = AccentStyle.Render(label)
+	}
+	if !a.expanded {
+		hint := FooterDescStyle.Render("  (space to expand)")
+		if !active {
+			hint = ""
+		}
+		return caret + " " + head + hint
+	}
+
+	var b strings.Builder
+	b.WriteString("▾ " + head + "\n")
+	for i, it := range a.items {
+		if i > 0 {
+			b.WriteString("\n")
+		}
+		b.WriteString(MutedStyle.Render(fmt.Sprintf("  %-13s", it.name+":")))
+		for j, opt := range it.options {
+			style := lipgloss.NewStyle().Padding(0, 1)
+			selected := j == it.cursor
+			focused := active && i == a.row
+			switch {
+			case focused && selected:
+				style = style.Background(ColorGreen).Foreground(ColorGray1).Bold(true)
+			case selected:
+				style = style.Background(ColorGreen).Foreground(ColorGray1)
+			case focused:
+				style = style.Foreground(ColorLuster)
+			default:
+				style = style.Foreground(ColorLack)
+			}
+			b.WriteString(style.Render(opt.label))
+		}
+	}
+	return b.String()
+}
+
+// newAdvancedModel seeds the fold's selectors from the config defaults so the
+// highlighted option matches what scaffolding would use if left untouched.
+func newAdvancedModel(cfg pkg.ProjectConfig) AdvancedModel {
+	boolOpts := func(trueFirst bool) []Option {
+		yes := Option{label: "yes", value: "true"}
+		no := Option{label: "no", value: "false"}
+		if trueFirst {
+			return []Option{yes, no}
+		}
+		return []Option{no, yes}
+	}
+	return AdvancedModel{items: []advItem{
+		{name: "Channel", options: []Option{{"pinned", "pinned"}, {"latest", "latest"}}},
+		{name: "Pin", options: []Option{{"default", "default"}, {"caret", "caret"}, {"tilde", "tilde"}, {"exact", "exact"}}},
+		{name: "Install", options: boolOpts(cfg.Install)},
+		{name: "Git init", options: boolOpts(cfg.GitInit)},
+		{name: "Node", options: []Option{{cfg.NodeEngine, cfg.NodeEngine}, {">=20.11.0", ">=20.11.0"}, {">=18.18.0", ">=18.18.0"}}},
+	}}
+}
+
 type WizardModel struct {
 	Cfg         pkg.ProjectConfig
 	Canceled    bool
@@ -86,6 +187,7 @@ type WizardModel struct {
 	tooling     AddOnsModel
 	libraries   AddOnsModel
 	pm          PMModel
+	advanced    AdvancedModel
 	projectName textinput.Model
 }
 
@@ -283,13 +385,15 @@ func NewWizardModel() WizardModel {
 
 	pm := PMModel{options: registry.PackageManagers}
 
+	defaults := pkg.NewProjectConfig()
 	m := WizardModel{
 		projectName: ti,
 		BaseList:    baseList,
 		tooling:     tooling,
 		libraries:   libraries,
 		pm:          pm,
-		Cfg:         pkg.NewProjectConfig(),
+		advanced:    newAdvancedModel(defaults),
+		Cfg:         defaults,
 	}
 	m.syncLibraryConstraints()
 	return m
@@ -436,6 +540,14 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.pm.CursorRight()
 				return m, nil
 			}
+			if m.focus == focusAdvanced && m.advanced.expanded {
+				if k := msg.String(); k == "down" || k == "j" {
+					m.advanced.RowDown()
+				} else {
+					m.advanced.ValueRight()
+				}
+				return m, nil
+			}
 		case "up", "k", "left", "h":
 			if m.focus == focusBase {
 				var cmd tea.Cmd
@@ -455,6 +567,14 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.pm.CursorLeft()
 				return m, nil
 			}
+			if m.focus == focusAdvanced && m.advanced.expanded {
+				if k := msg.String(); k == "up" || k == "k" {
+					m.advanced.RowUp()
+				} else {
+					m.advanced.ValueLeft()
+				}
+				return m, nil
+			}
 		case "space":
 			if m.focus == focusTooling {
 				m.tooling.Select()
@@ -467,6 +587,10 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if m.focus == focusPM {
 				m.pm.Select()
+				return m, nil
+			}
+			if m.focus == focusAdvanced {
+				m.advanced.Toggle()
 				return m, nil
 			}
 		}
@@ -538,6 +662,12 @@ func (m *WizardModel) collectConfig() {
 	}
 
 	m.Cfg.PM = pkg.PackageManager(m.pm.options[m.pm.selected].Value)
+
+	m.Cfg.Channel = pkg.VersionChannel(m.advanced.value("Channel"))
+	m.Cfg.Pin = pkg.PinStrategy(m.advanced.value("Pin"))
+	m.Cfg.Install = m.advanced.value("Install") == "true"
+	m.Cfg.GitInit = m.advanced.value("Git init") == "true"
+	m.Cfg.NodeEngine = m.advanced.value("Node")
 }
 
 func (m WizardModel) View() tea.View {
@@ -550,25 +680,27 @@ func (m WizardModel) View() tea.View {
 	var s strings.Builder
 
 	lists := m.middleRow()
-	layout := lipgloss.JoinVertical(lipgloss.Top, m.projectNameInputView(), lists, m.pmView(), m.footerView())
+	layout := lipgloss.JoinVertical(lipgloss.Top, m.projectNameInputView(), lists, m.pmView(), m.advancedView(), m.footerView())
 
 	s.Write([]byte(layout))
 
 	if m.screen == screenSummary {
-		overlay := m.summaryPopup()
-		w := m.width
-		h := m.height
-		if w == 0 {
-			w = 80
-		}
-		if h == 0 {
-			h = 24
-		}
-		placed := lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center, overlay)
-		return tea.NewView(placed)
+		return tea.NewView(m.centered(m.summaryPopup()))
 	}
 
 	return tea.NewView(s.String())
+}
+
+// centered places an overlay in the middle of the terminal.
+func (m WizardModel) centered(overlay string) string {
+	w, h := m.width, m.height
+	if w == 0 {
+		w = 80
+	}
+	if h == 0 {
+		h = 24
+	}
+	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center, overlay)
 }
 
 func (m WizardModel) summaryPopup() string {
@@ -579,6 +711,13 @@ func (m WizardModel) summaryPopup() string {
 			return ""
 		}
 		return MutedStyle.Render("  "+label) + PrimaryStyle.Render(value) + "\n"
+	}
+
+	yesno := func(b bool) string {
+		if b {
+			return "yes"
+		}
+		return "no"
 	}
 
 	body := row("Project:    ", m.Cfg.ProjectName) +
@@ -595,7 +734,12 @@ func (m WizardModel) summaryPopup() string {
 		row("CMS:        ", string(m.Cfg.CMS)) +
 		row("Deploy:     ", string(m.Cfg.Deployment)) +
 		row("CI/CD:      ", string(m.Cfg.CICD)) +
-		row("PM:         ", string(m.Cfg.PM))
+		row("PM:         ", string(m.Cfg.PM)) +
+		row("Channel:    ", string(m.Cfg.Channel)) +
+		row("Pin:        ", string(m.Cfg.Pin)) +
+		row("Install:    ", yesno(m.Cfg.Install)) +
+		row("Git init:   ", yesno(m.Cfg.GitInit)) +
+		row("Node:       ", m.Cfg.NodeEngine)
 
 	key := func(k, desc string) string {
 		return FooterKeyStyle.Render(k) + FooterDescStyle.Render(" "+desc)
@@ -656,6 +800,11 @@ func (m WizardModel) pmView() string {
 	return box.Render(label + "\n" + m.pm.View(m.focus == focusPM))
 }
 
+func (m WizardModel) advancedView() string {
+	box := m.borderFor(focusAdvanced).Width(fullRowWidth)
+	return box.Render(m.advanced.View(m.focus == focusAdvanced))
+}
+
 func (m *WizardModel) rebuildAddOns() {
 	sel, ok := m.BaseList.SelectedItem().(Option)
 	if !ok {
@@ -693,6 +842,13 @@ func (m WizardModel) footerView() string {
 	}
 	if m.focus == focusTooling || m.focus == focusLibraries || m.focus == focusPM {
 		bindings = append(bindings, key("space", "select"))
+	}
+	if m.focus == focusAdvanced {
+		if m.advanced.expanded {
+			bindings = append(bindings, key("↑/↓", "row"), key("←/→", "change"), key("space", "collapse"))
+		} else {
+			bindings = append(bindings, key("space", "expand"))
+		}
 	}
 
 	bindings = append(bindings, key("enter", "confirm"), key("esc", "quit"))

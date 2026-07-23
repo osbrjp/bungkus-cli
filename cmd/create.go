@@ -172,6 +172,23 @@ var createCmd = &cobra.Command{
 			v, _ := cmd.Flags().GetString("audit")
 			cfg.Audit = pkg.AuditTool(v)
 		}
+		if cmd.Flags().Changed("channel") {
+			v, _ := cmd.Flags().GetString("channel")
+			cfg.Channel = pkg.VersionChannel(v)
+		}
+		if cmd.Flags().Changed("pin") {
+			v, _ := cmd.Flags().GetString("pin")
+			cfg.Pin = pkg.PinStrategy(v)
+		}
+		if cmd.Flags().Changed("install") {
+			cfg.Install, _ = cmd.Flags().GetBool("install")
+		}
+		if cmd.Flags().Changed("git") {
+			cfg.GitInit, _ = cmd.Flags().GetBool("git")
+		}
+		if cmd.Flags().Changed("node-engine") {
+			cfg.NodeEngine, _ = cmd.Flags().GetString("node-engine")
+		}
 
 		if !cfg.Base.IsValid() {
 			return fmt.Errorf("invalid base framework: %s", cfg.Base)
@@ -206,6 +223,12 @@ var createCmd = &cobra.Command{
 		if !cfg.CICD.IsValid() {
 			return fmt.Errorf("invalid cicd provider: %s", cfg.CICD)
 		}
+		if !cfg.Channel.IsValid() {
+			return fmt.Errorf("invalid version channel: %s (pinned, latest)", cfg.Channel)
+		}
+		if !cfg.Pin.IsValid() {
+			return fmt.Errorf("invalid pin strategy: %s (default, caret, tilde, exact)", cfg.Pin)
+		}
 		if cfg.CICD != "none" && cfg.Deployment == "none" {
 			return fmt.Errorf("--cicd requires a deploy target (--deploy cloudflare-pages or --deploy cloudflare-workers)")
 		}
@@ -231,6 +254,10 @@ var createCmd = &cobra.Command{
 			return fmt.Errorf("scaffold failed: %w", err)
 		}
 
+		if err := pkg.PostScaffold(destDir, cfg); err != nil {
+			return err
+		}
+
 		tui.PrintSuccess(cfg)
 		return nil
 	},
@@ -253,4 +280,9 @@ func init() {
 	createCmd.Flags().StringP("template", "t", "", "Predefined template (astro, astro-react, astro-vue, nuxt, vite, vite-react, vite-vue)")
 	createCmd.Flags().String("deploy", "none", "Deployment target (none, cloudflare-pages, cloudflare-workers)")
 	createCmd.Flags().String("cicd", "none", "CI/CD provider (none, github-actions)")
+	createCmd.Flags().String("channel", "pinned", "Dependency version channel: pinned (vetted, >=14d old & safe) or latest")
+	createCmd.Flags().String("pin", "default", "Pin strategy: default (as registry), caret, tilde, exact")
+	createCmd.Flags().Bool("install", false, "Run the package manager install after scaffolding")
+	createCmd.Flags().Bool("git", true, "Initialize a git repo with an initial commit")
+	createCmd.Flags().String("node-engine", pkg.DefaultNodeEngine, "package.json engines.node constraint")
 }
