@@ -31,7 +31,7 @@ jobs:
               --base release \
               --head main \
               --title "chore(release): promote main to release" \
-              --body "Automated promotion PR. Merge to cut a stable release from the latest RC."
+              --body "Automated promotion PR. **Merge with a merge commit (do NOT squash)** so the \`feat:\`/\`fix:\` commits reach \`release\` intact — semantic-release reads them to cut the stable version + tag. Squashing collapses them into one non-conventional commit and no release is cut."
           else
             echo "Promotion PR #$existing already open."
           fi
