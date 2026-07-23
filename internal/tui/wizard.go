@@ -342,6 +342,9 @@ func buildAddOnPanels(reg *pkg.Registry, group string, integration string) (AddO
 		{"CMS", reg.CMS},
 		{"Deploy", reg.Deployment},
 		{"CI/CD", reg.CICD},
+		{"Backend", reg.Backend},
+		{"ORM", reg.ORM},
+		{"Database", reg.Database},
 	}
 
 	build := func(cats []struct {
@@ -534,6 +537,12 @@ func (m *WizardModel) collectConfig() {
 			m.Cfg.Deployment = pkg.DeployTarget(selected.value)
 		case "CI/CD":
 			m.Cfg.CICD = pkg.CICDProvider(selected.value)
+		case "Backend":
+			m.Cfg.Backend = pkg.BackendLib(selected.value)
+		case "ORM":
+			m.Cfg.ORM = pkg.ORMLib(selected.value)
+		case "Database":
+			m.Cfg.Database = pkg.Database(selected.value)
 		}
 	}
 
@@ -595,6 +604,9 @@ func (m WizardModel) summaryPopup() string {
 		row("CMS:        ", string(m.Cfg.CMS)) +
 		row("Deploy:     ", string(m.Cfg.Deployment)) +
 		row("CI/CD:      ", string(m.Cfg.CICD)) +
+		row("Backend:    ", string(m.Cfg.Backend)) +
+		row("ORM:        ", string(m.Cfg.ORM)) +
+		row("Database:   ", string(m.Cfg.Database)) +
 		row("PM:         ", string(m.Cfg.PM))
 
 	key := func(k, desc string) string {

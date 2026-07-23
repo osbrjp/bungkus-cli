@@ -117,6 +117,18 @@ func BuildPackageJSON(cfg ProjectConfig) ([]byte, error) {
 		}
 	}
 
+	if cfg.Backend != "none" {
+		if be := reg.GetBackend(string(cfg.Backend)); be != nil {
+			mergePackages(&pkg, be.Packages)
+		}
+	}
+
+	if cfg.ORM != "none" {
+		if orm := reg.GetORM(string(cfg.ORM)); orm != nil {
+			mergePackages(&pkg, orm.Packages)
+		}
+	}
+
 	if v, err := pmVersion(string(cfg.PM)); err == nil {
 		pkg.PackageManager = string(cfg.PM) + "@" + v
 	}
@@ -198,4 +210,19 @@ func applyCrossCuttingRules(pkg *packageJSON, cfg ProjectConfig) {
 		pkg.DevDependencies["vite"] = "^6.3.5"
 	}
 
+	// drizzle needs a DB driver; prisma bundles its own engine. An empty/none
+	// DB defaults to sqlite so the generated drizzle.config/db client (which
+	// falls back to sqlite too) stays consistent.
+	if cfg.ORM == "drizzle" {
+		switch cfg.Database {
+		case "postgres":
+			pkg.Dependencies["pg"] = "^8.13.1"
+			pkg.DevDependencies["@types/pg"] = "^8.11.10"
+		case "mysql":
+			pkg.Dependencies["mysql2"] = "^3.11.4"
+		default: // sqlite / none
+			pkg.Dependencies["better-sqlite3"] = "^11.7.0"
+			pkg.DevDependencies["@types/better-sqlite3"] = "^7.6.12"
+		}
+	}
 }

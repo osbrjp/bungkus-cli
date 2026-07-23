@@ -179,6 +179,32 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		}
 	}
 
+	if cfg.Backend != "none" {
+		backendDir := "templates/backend/" + string(cfg.Backend)
+		if _, err := fs.Stat(templates, backendDir); err == nil {
+			backendFS, err := fs.Sub(templates, backendDir)
+			if err != nil {
+				return fmt.Errorf("failed to read backend templates: %w", err)
+			}
+			if err := copyDir(backendFS, destDir, cfg, ""); err != nil {
+				return err
+			}
+		}
+	}
+
+	if cfg.ORM != "none" {
+		ormDir := "templates/orm/" + string(cfg.ORM)
+		if _, err := fs.Stat(templates, ormDir); err == nil {
+			ormFS, err := fs.Sub(templates, ormDir)
+			if err != nil {
+				return fmt.Errorf("failed to read orm templates: %w", err)
+			}
+			if err := copyDir(ormFS, destDir, cfg, ""); err != nil {
+				return err
+			}
+		}
+	}
+
 	// Copy shared templates (husky, etc.)
 	sharedFS, err := fs.Sub(templates, "templates/shared")
 	if err != nil {

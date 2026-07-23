@@ -1,0 +1,16 @@
+import { defineConfig } from "drizzle-kit";
+
+export default defineConfig({
+  schema: "./db/schema.ts",
+  out: "./db/migrations",
+{{- if eq (printf "%s" .Database) "postgres" }}
+  dialect: "postgresql",
+{{- else if eq (printf "%s" .Database) "mysql" }}
+  dialect: "mysql",
+{{- else }}
+  dialect: "sqlite",
+{{- end }}
+  dbCredentials: {
+    url: process.env.DATABASE_URL!,
+  },
+});

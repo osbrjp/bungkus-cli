@@ -172,6 +172,18 @@ var createCmd = &cobra.Command{
 			v, _ := cmd.Flags().GetString("audit")
 			cfg.Audit = pkg.AuditTool(v)
 		}
+		if cmd.Flags().Changed("backend") {
+			v, _ := cmd.Flags().GetString("backend")
+			cfg.Backend = pkg.BackendLib(v)
+		}
+		if cmd.Flags().Changed("orm") {
+			v, _ := cmd.Flags().GetString("orm")
+			cfg.ORM = pkg.ORMLib(v)
+		}
+		if cmd.Flags().Changed("db") {
+			v, _ := cmd.Flags().GetString("db")
+			cfg.Database = pkg.Database(v)
+		}
 
 		if !cfg.Base.IsValid() {
 			return fmt.Errorf("invalid base framework: %s", cfg.Base)
@@ -208,6 +220,18 @@ var createCmd = &cobra.Command{
 		}
 		if cfg.CICD != "none" && cfg.Deployment == "none" {
 			return fmt.Errorf("--cicd requires a deploy target (--deploy cloudflare-pages or --deploy cloudflare-workers)")
+		}
+		if !cfg.Backend.IsValid() {
+			return fmt.Errorf("invalid backend: %s (none, hono, elysia)", cfg.Backend)
+		}
+		if !cfg.ORM.IsValid() {
+			return fmt.Errorf("invalid orm: %s (none, drizzle, prisma)", cfg.ORM)
+		}
+		if !cfg.Database.IsValid() {
+			return fmt.Errorf("invalid database: %s (none, sqlite, postgres, mysql)", cfg.Database)
+		}
+		if cfg.Database != "none" && cfg.ORM == "none" {
+			return fmt.Errorf("--db requires an --orm (drizzle or prisma)")
 		}
 
 		if cfg.Form != "none" && !cfg.Form.IsValidIntegration(string(cfg.Base)) {
@@ -253,4 +277,7 @@ func init() {
 	createCmd.Flags().StringP("template", "t", "", "Predefined template (astro, astro-react, astro-vue, nuxt, vite, vite-react, vite-vue)")
 	createCmd.Flags().String("deploy", "none", "Deployment target (none, cloudflare-pages, cloudflare-workers)")
 	createCmd.Flags().String("cicd", "none", "CI/CD provider (none, github-actions)")
+	createCmd.Flags().String("backend", "none", "Backend framework (none, hono, elysia)")
+	createCmd.Flags().String("orm", "none", "ORM / database toolkit (none, drizzle, prisma)")
+	createCmd.Flags().String("db", "none", "Database, requires --orm (none, sqlite, postgres, mysql)")
 }
