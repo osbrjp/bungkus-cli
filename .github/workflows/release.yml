@@ -38,7 +38,7 @@ jobs:
           node-version: 22
 
       - id: semrel
-        uses: cycjimmy/semantic-release-action@v4
+        uses: cycjimmy/semantic-release-action@v6
         with:
           extra_plugins: |
             @semantic-release/commit-analyzer
