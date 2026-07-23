@@ -16,6 +16,8 @@ type packageJSON struct {
 	Private         bool              `json:"private,omitempty"`
 	Version         string            `json:"version"`
 	Type            string            `json:"type"`
+	Main            string            `json:"main,omitempty"`
+	Types           string            `json:"types,omitempty"`
 	PackageManager  string            `json:"packageManager,omitempty"`
 	Engines         map[string]string `json:"engines"`
 	Scripts         map[string]string `json:"scripts"`
@@ -117,15 +119,22 @@ func BuildPackageJSON(cfg ProjectConfig) ([]byte, error) {
 		}
 	}
 
-	if cfg.Backend != "none" {
-		if be := reg.GetBackend(string(cfg.Backend)); be != nil {
-			mergePackages(&pkg, be.Packages)
+	// In a monorepo the backend/orm live in apps/api (see buildAPIPackageJSON),
+	// so the frontend package omits them and instead depends on the shared
+	// domain package. In the flat layout they are colocated here.
+	if cfg.Layout.IsMonorepo() {
+		pkg.Name = "web"
+		pkg.Dependencies["domain"] = "workspace:*"
+	} else {
+		if cfg.Backend != "none" {
+			if be := reg.GetBackend(string(cfg.Backend)); be != nil {
+				mergePackages(&pkg, be.Packages)
+			}
 		}
-	}
-
-	if cfg.ORM != "none" {
-		if orm := reg.GetORM(string(cfg.ORM)); orm != nil {
-			mergePackages(&pkg, orm.Packages)
+		if cfg.ORM != "none" {
+			if orm := reg.GetORM(string(cfg.ORM)); orm != nil {
+				mergePackages(&pkg, orm.Packages)
+			}
 		}
 	}
 
@@ -135,6 +144,10 @@ func BuildPackageJSON(cfg ProjectConfig) ([]byte, error) {
 
 	applyCrossCuttingRules(&pkg, cfg)
 
+	return marshalPkg(pkg)
+}
+
+func marshalPkg(pkg packageJSON) ([]byte, error) {
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
 	enc.SetIndent("", "  ")
@@ -142,8 +155,76 @@ func BuildPackageJSON(cfg ProjectConfig) ([]byte, error) {
 	if err := enc.Encode(pkg); err != nil {
 		return nil, fmt.Errorf("failed to marshal package.json: %w", err)
 	}
-
 	return buf.Bytes(), nil
+}
+
+func newWorkspacePkg(name string) packageJSON {
+	return packageJSON{
+		Name:            name,
+		Private:         true,
+		Version:         "0.0.1",
+		Type:            "module",
+		Engines:         map[string]string{"node": ">=22.12.0"},
+		Scripts:         make(map[string]string),
+		Dependencies:    make(map[string]string),
+		DevDependencies: make(map[string]string),
+	}
+}
+
+// BuildAPIPackageJSON builds apps/api/package.json for the monorepo layout:
+// the backend framework, orm, driver, and a workspace dep on the shared domain.
+func BuildAPIPackageJSON(cfg ProjectConfig) ([]byte, error) {
+	reg := GetRegistry()
+	pkg := newWorkspacePkg("api")
+
+	if cfg.Backend != "none" {
+		if be := reg.GetBackend(string(cfg.Backend)); be != nil {
+			mergePackages(&pkg, be.Packages)
+		}
+	}
+	if cfg.ORM != "none" {
+		if orm := reg.GetORM(string(cfg.ORM)); orm != nil {
+			mergePackages(&pkg, orm.Packages)
+		}
+	}
+	applyDrizzleDriver(&pkg, cfg)
+
+	// Alias the framework's watch script to "dev" so `pnpm -r run dev` starts
+	// the api alongside the web app.
+	if s, ok := pkg.Scripts["dev:server"]; ok {
+		pkg.Scripts["dev"] = s
+	}
+	pkg.Scripts["build"] = "tsc"
+	pkg.DevDependencies["typescript"] = "^5.7.2"
+	pkg.Dependencies["domain"] = "workspace:*"
+
+	return marshalPkg(pkg)
+}
+
+// BuildDomainPackageJSON builds packages/domain/package.json — the shared
+// contract. It carries zod only when zod validation is selected.
+func BuildDomainPackageJSON(cfg ProjectConfig) ([]byte, error) {
+	pkg := newWorkspacePkg("domain")
+	// point main/types at the source so consumers resolve without a build step
+	pkg.Main = "src/index.ts"
+	pkg.Types = "src/index.ts"
+	pkg.Scripts["build"] = "tsc"
+	pkg.DevDependencies["typescript"] = "^5.7.2"
+	if cfg.Validation == "zod" {
+		pkg.Dependencies["zod"] = "^3.24.1"
+	}
+	return marshalPkg(pkg)
+}
+
+// BuildRootPackageJSON builds the private workspace root package.json.
+func BuildRootPackageJSON(cfg ProjectConfig) ([]byte, error) {
+	pkg := newWorkspacePkg(cfg.ProjectName)
+	pkg.Scripts["dev"] = "pnpm --recursive --parallel run dev"
+	pkg.Scripts["build"] = "pnpm --recursive run build"
+	if v, err := pmVersion(string(cfg.PM)); err == nil {
+		pkg.PackageManager = string(cfg.PM) + "@" + v
+	}
+	return marshalPkg(pkg)
 }
 
 func pmVersion(pm string) (string, error) {
@@ -210,23 +291,31 @@ func applyCrossCuttingRules(pkg *packageJSON, cfg ProjectConfig) {
 		pkg.DevDependencies["vite"] = "^6.3.5"
 	}
 
-	// drizzle needs a DB driver; prisma bundles its own engine. An empty/none
-	// DB defaults to sqlite so the generated drizzle.config/db client (which
-	// falls back to sqlite too) stays consistent.
-	if cfg.ORM == "drizzle" {
-		switch cfg.Database {
-		case "postgres":
-			pkg.Dependencies["pg"] = "^8.13.1"
-			pkg.DevDependencies["@types/pg"] = "^8.11.10"
-		case "mysql":
-			pkg.Dependencies["mysql2"] = "^3.11.4"
-		case "d1":
-			// drizzle-orm/d1 is built in; the D1 binding is provided by the
-			// Workers runtime, so only the binding type is needed.
-			pkg.DevDependencies["@cloudflare/workers-types"] = "^4.20241205.0"
-		default: // sqlite / none
-			pkg.Dependencies["better-sqlite3"] = "^11.7.0"
-			pkg.DevDependencies["@types/better-sqlite3"] = "^7.6.12"
-		}
+	// In a monorepo the orm/driver belong to apps/api, not the frontend.
+	if !cfg.Layout.IsMonorepo() {
+		applyDrizzleDriver(pkg, cfg)
+	}
+}
+
+// applyDrizzleDriver adds the DB driver drizzle needs; prisma bundles its own
+// engine. An empty/none DB defaults to sqlite so the generated
+// drizzle.config/db client (which falls back to sqlite too) stays consistent.
+func applyDrizzleDriver(pkg *packageJSON, cfg ProjectConfig) {
+	if cfg.ORM != "drizzle" {
+		return
+	}
+	switch cfg.Database {
+	case "postgres":
+		pkg.Dependencies["pg"] = "^8.13.1"
+		pkg.DevDependencies["@types/pg"] = "^8.11.10"
+	case "mysql":
+		pkg.Dependencies["mysql2"] = "^3.11.4"
+	case "d1":
+		// drizzle-orm/d1 is built in; the D1 binding is provided by the
+		// Workers runtime, so only the binding type is needed.
+		pkg.DevDependencies["@cloudflare/workers-types"] = "^4.20241205.0"
+	default: // sqlite / none
+		pkg.Dependencies["better-sqlite3"] = "^11.7.0"
+		pkg.DevDependencies["@types/better-sqlite3"] = "^7.6.12"
 	}
 }

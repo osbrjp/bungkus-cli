@@ -1,0 +1,16 @@
+// Shared domain contract consumed by both apps/web and apps/api.
+{{- if eq (printf "%s" .Validation) "zod" }}
+import { z } from "zod";
+
+export const UserSchema = z.object({
+  id: z.number().int(),
+  name: z.string().min(1),
+});
+
+export type User = z.infer<typeof UserSchema>;
+{{- else }}
+export type User = {
+  id: number;
+  name: string;
+};
+{{- end }}

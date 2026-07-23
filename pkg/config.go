@@ -27,7 +27,25 @@ type (
 	BackendLib       string
 	ORMLib           string
 	Database         string
+	Layout           string
 )
+
+// Layouts control the on-disk shape of the generated project. "flat" (default)
+// is the original single-package layout. "monorepo" emits a pnpm-workspace with
+// apps/web (frontend), apps/api (backend, when selected) and packages/domain
+// (shared zod/type contract) — the org's DDD-friendly FE+BE structure.
+const (
+	LayoutFlat     Layout = "flat"
+	LayoutMonorepo Layout = "monorepo"
+)
+
+func (l Layout) IsValid() bool {
+	return l == LayoutFlat || l == LayoutMonorepo
+}
+
+func (l Layout) IsMonorepo() bool {
+	return l == LayoutMonorepo
+}
 
 type AllDependencies struct {
 	Dependencies
@@ -502,6 +520,7 @@ type ProjectConfig struct {
 	Backend     BackendLib
 	ORM         ORMLib
 	Database    Database
+	Layout      Layout
 }
 
 // StackEntry is one row in the project's tech-stack table: the category
@@ -576,6 +595,7 @@ func NewProjectConfig() ProjectConfig {
 		Backend:     "none",
 		ORM:         "none",
 		Database:    "none",
+		Layout:      LayoutFlat,
 		Date:        time.Now().Format("2006-01-02"),
 	}
 }

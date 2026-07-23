@@ -1,3 +1,8 @@
+{{- if .Layout.IsMonorepo}}
+packages:
+  - "apps/*"
+  - "packages/*"
+{{end}}
 strictDepBuilds: true
 minimumReleaseAge: 1440
 trustPolicy: no-downgrade

@@ -184,6 +184,10 @@ var createCmd = &cobra.Command{
 			v, _ := cmd.Flags().GetString("db")
 			cfg.Database = pkg.Database(v)
 		}
+		if cmd.Flags().Changed("layout") {
+			v, _ := cmd.Flags().GetString("layout")
+			cfg.Layout = pkg.Layout(v)
+		}
 
 		if !cfg.Base.IsValid() {
 			return fmt.Errorf("invalid base framework: %s", cfg.Base)
@@ -236,6 +240,12 @@ var createCmd = &cobra.Command{
 		if cfg.Database == "d1" && cfg.ORM == "prisma" {
 			return fmt.Errorf("--db d1 is only supported with --orm drizzle")
 		}
+		if !cfg.Layout.IsValid() {
+			return fmt.Errorf("invalid layout: %s (flat, monorepo)", cfg.Layout)
+		}
+		if cfg.Layout.IsMonorepo() && cfg.PM != "pnpm" {
+			return fmt.Errorf("--layout monorepo currently requires --pm pnpm")
+		}
 
 		if cfg.Form != "none" && !cfg.Form.IsValidIntegration(string(cfg.Base)) {
 			tui.PrintSkippedIntegration(string(cfg.Form), string(cfg.Base))
@@ -283,4 +293,5 @@ func init() {
 	createCmd.Flags().String("backend", "none", "Backend framework (none, hono, elysia)")
 	createCmd.Flags().String("orm", "none", "ORM / database toolkit (none, drizzle, prisma)")
 	createCmd.Flags().String("db", "none", "Database, requires --orm (none, sqlite, postgres, mysql, d1). d1 needs --orm drizzle")
+	createCmd.Flags().String("layout", "flat", "Project layout (flat, monorepo). monorepo splits apps/web + apps/api + packages/domain (pnpm only)")
 }
