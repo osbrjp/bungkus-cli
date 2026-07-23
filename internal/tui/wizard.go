@@ -16,7 +16,8 @@ import (
 )
 
 const (
-	screenWizard  = iota // (Main screen for project config)
+	screenWizard  = iota // (Frontend tab: base, tooling, libraries, PM, advanced)
+	screenBackend        // (Backend tab: backend framework, ORM, database)
 	screenSummary        // (Summary screen for scaffold confirmation)
 )
 
@@ -186,6 +187,7 @@ type WizardModel struct {
 	BaseList    list.Model
 	tooling     AddOnsModel
 	libraries   AddOnsModel
+	backend     AddOnsModel
 	pm          PMModel
 	advanced    AdvancedModel
 	projectName textinput.Model
@@ -381,7 +383,7 @@ func NewWizardModel() WizardModel {
 	baseList.SetShowPagination(false)
 
 	first := registry.Bases[0]
-	tooling, libraries := buildAddOnPanels(registry, first.Group, first.Integration)
+	tooling, libraries, backend := buildAddOnPanels(registry, first.Group, first.Integration)
 
 	pm := PMModel{options: registry.PackageManagers}
 
@@ -391,6 +393,7 @@ func NewWizardModel() WizardModel {
 		BaseList:    baseList,
 		tooling:     tooling,
 		libraries:   libraries,
+		backend:     backend,
 		pm:          pm,
 		advanced:    newAdvancedModel(defaults),
 		Cfg:         defaults,
@@ -417,7 +420,7 @@ func (m *WizardModel) syncLibraryConstraints() {
 	}
 }
 
-func buildAddOnPanels(reg *pkg.Registry, group string, integration string) (AddOnsModel, AddOnsModel) {
+func buildAddOnPanels(reg *pkg.Registry, group string, integration string) (tooling, libraries, backend AddOnsModel) {
 	// Resolve effective integration: nuxt is implicitly vue
 	effectiveInt := integration
 	if group == "nuxt" {
@@ -446,6 +449,13 @@ func buildAddOnPanels(reg *pkg.Registry, group string, integration string) (AddO
 		{"CMS", reg.CMS},
 		{"Deploy", reg.Deployment},
 		{"CI/CD", reg.CICD},
+	}
+
+	// Backend concerns live on their own tab, kept out of the frontend panels.
+	backendCats := []struct {
+		name    string
+		entries []pkg.OptionEntry
+	}{
 		{"Backend", reg.Backend},
 		{"ORM", reg.ORM},
 		{"Database", reg.Database},
@@ -477,7 +487,7 @@ func buildAddOnPanels(reg *pkg.Registry, group string, integration string) (AddO
 		return AddOnsModel{groups: groups}
 	}
 
-	return build(toolingCats), build(libraryCats)
+	return build(toolingCats), build(libraryCats), build(backendCats)
 }
 
 func (m WizardModel) Init() tea.Cmd {
@@ -508,8 +518,40 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
+		// Backend tab key handling
+		if m.screen == screenBackend {
+			switch msg.String() {
+			case "ctrl+c", "esc":
+				m.Canceled = true
+				return m, tea.Quit
+			case "enter":
+				m.collectConfig()
+				m.screen = screenSummary
+				return m, nil
+			case "[", "shift+tab":
+				m.screen = screenWizard
+				return m, nil
+			case "down", "j":
+				m.backend.CursorDown()
+				return m, nil
+			case "up", "k":
+				m.backend.CursorUp()
+				return m, nil
+			case "space":
+				m.backend.Select()
+				return m, nil
+			}
+			return m, nil
+		}
+
 		// Wizard screen key handling
 		switch msg.String() {
+		case "]":
+			// Switch to the backend tab (unless typing the project name)
+			if m.focus != focusProjectName {
+				m.screen = screenBackend
+				return m, nil
+			}
 		case "ctrl+c", "esc":
 			m.Canceled = true
 			return m, tea.Quit
@@ -661,6 +703,13 @@ func (m *WizardModel) collectConfig() {
 			m.Cfg.Deployment = pkg.DeployTarget(selected.value)
 		case "CI/CD":
 			m.Cfg.CICD = pkg.CICDProvider(selected.value)
+		}
+	}
+
+	// Backend tab
+	for _, g := range m.backend.groups {
+		selected := g.options[g.selected]
+		switch g.name {
 		case "Backend":
 			m.Cfg.Backend = pkg.BackendLib(selected.value)
 		case "ORM":
@@ -689,18 +738,19 @@ func (m WizardModel) View() tea.View {
 		c.Y += lipgloss.Height("10")
 	}
 
-	var s strings.Builder
-
-	lists := m.middleRow()
-	layout := lipgloss.JoinVertical(lipgloss.Top, m.projectNameInputView(), lists, m.pmView(), m.advancedView(), m.footerView())
-
-	s.Write([]byte(layout))
-
 	if m.screen == screenSummary {
 		return tea.NewView(m.centered(m.summaryPopup()))
 	}
 
-	return tea.NewView(s.String())
+	if m.screen == screenBackend {
+		layout := lipgloss.JoinVertical(lipgloss.Top, m.tabBar(), m.backendView(), m.footerView())
+		return tea.NewView(layout)
+	}
+
+	lists := m.middleRow()
+	layout := lipgloss.JoinVertical(lipgloss.Top, m.tabBar(), m.projectNameInputView(), lists, m.pmView(), m.advancedView(), m.footerView())
+
+	return tea.NewView(layout)
 }
 
 // centered places an overlay in the middle of the terminal.
@@ -821,6 +871,29 @@ func (m WizardModel) advancedView() string {
 	return box.Render(m.advanced.View(m.focus == focusAdvanced))
 }
 
+// tabBar renders the Frontend / Backend tab selector shown on both screens.
+func (m WizardModel) tabBar() string {
+	tab := func(label string, active bool) string {
+		style := lipgloss.NewStyle().Padding(0, 3)
+		if active {
+			return style.Background(ColorGreen).Foreground(ColorGray1).Bold(true).Render(label)
+		}
+		return style.Foreground(ColorLack).Render(label)
+	}
+	bar := lipgloss.JoinHorizontal(lipgloss.Top,
+		tab("Frontend", m.screen == screenWizard),
+		tab("Backend", m.screen == screenBackend),
+	)
+	return lipgloss.NewStyle().Width(fullRowWidth).Render(bar)
+}
+
+func (m WizardModel) backendView() string {
+	title := PanelTitleStyle.Render("BACKEND")
+	hint := FooterDescStyle.Render("Selecting a backend scaffolds a pnpm monorepo:\napps/web + apps/api + packages/domain.")
+	content := title + "\n" + m.backend.View(true, panelInnerWidth) + "\n\n" + hint
+	return ActiveBorder.Width(fullRowWidth).Render(content)
+}
+
 func (m *WizardModel) rebuildAddOns() {
 	sel, ok := m.BaseList.SelectedItem().(Option)
 	if !ok {
@@ -829,7 +902,7 @@ func (m *WizardModel) rebuildAddOns() {
 	reg := pkg.GetRegistry()
 	base := reg.GetBase(sel.value)
 	if base != nil {
-		m.tooling, m.libraries = buildAddOnPanels(reg, base.Group, base.Integration)
+		m.tooling, m.libraries, m.backend = buildAddOnPanels(reg, base.Group, base.Integration)
 		m.syncLibraryConstraints()
 	}
 }
@@ -844,6 +917,17 @@ func (m WizardModel) borderFor(section uint) lipgloss.Style {
 func (m WizardModel) footerView() string {
 	key := func(k, desc string) string {
 		return FooterKeyStyle.Render(k) + FooterDescStyle.Render(" "+desc)
+	}
+
+	if m.screen == screenBackend {
+		line := strings.Join([]string{
+			key("[", "frontend tab"),
+			key("↑/↓", "move"),
+			key("space", "select"),
+			key("enter", "confirm"),
+			key("esc", "quit"),
+		}, FooterSepStyle.Render("  •  "))
+		return FooterBarStyle.Render(line)
 	}
 
 	bindings := []string{
@@ -867,7 +951,7 @@ func (m WizardModel) footerView() string {
 		}
 	}
 
-	bindings = append(bindings, key("enter", "confirm"), key("esc", "quit"))
+	bindings = append(bindings, key("]", "backend tab"), key("enter", "confirm"), key("esc", "quit"))
 
 	line := strings.Join(bindings, FooterSepStyle.Render("  •  "))
 	line += "\n" + FooterDescStyle.Render("* recommended")
