@@ -135,16 +135,11 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 	}
 
 	if cfg.CMS != "none" {
-		if cfg.Base.IsVite() {
-			return fmt.Errorf("cms integration is currently not supported in vite project")
+		if cmsEntry := globalRegistry.GetCMS(string(cfg.CMS)); cmsEntry != nil && cmsEntry.ExcludesGroup(entry.Group) {
+			return fmt.Errorf("%s CMS is not supported for %s projects", cfg.CMS, entry.Group)
 		}
 
-		group, err := cfg.Base.GetGroup(string(cfg.Base))
-		if err != nil {
-			return err
-		}
-
-		cmsDir := "templates/cms/" + string(group)
+		cmsDir := "templates/cms/" + string(cfg.CMS) + "/" + entry.Group
 		cmsFS, err := fs.Sub(templates, cmsDir)
 		if err != nil {
 			return fmt.Errorf("failed to read CMS templates: %w", err)

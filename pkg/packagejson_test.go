@@ -28,6 +28,57 @@ func has(m map[string]string, key string) bool {
 	return ok
 }
 
+// TestKeystaticBuildScript verifies the production build skips the
+// server-rendered Keystatic admin so the site stays static.
+func TestKeystaticBuildScript(t *testing.T) {
+	setupRegistry(t)
+
+	cfg := NewProjectConfig()
+	cfg.ProjectName = "test-app"
+	cfg.Base = "astro"
+	cfg.CMS = "keystatic"
+	cfg.PM = "pnpm"
+
+	data, err := BuildPackageJSON(cfg)
+	if err != nil {
+		t.Fatalf("BuildPackageJSON: %v", err)
+	}
+	var parsed struct {
+		Scripts map[string]string `json:"scripts"`
+	}
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	want := "cross-env SKIP_KEYSTATIC=true astro build"
+	if parsed.Scripts["build"] != want {
+		t.Errorf("build script = %q, want %q", parsed.Scripts["build"], want)
+	}
+}
+
+func TestCMSIsValidForBase(t *testing.T) {
+	setupRegistry(t)
+
+	cases := []struct {
+		cms  CMS
+		base string
+		want bool
+	}{
+		{"keystatic", "astro", true},
+		{"keystatic", "astro-react", true},
+		{"keystatic", "astro-vue", true},
+		{"keystatic", "nuxt", false},
+		{"keystatic", "vite", false},
+		{"microcms", "astro", true},
+		{"microcms", "nuxt", true},
+		{"microcms", "vite", false},
+	}
+	for _, c := range cases {
+		if got := c.cms.IsValidForBase(c.base); got != c.want {
+			t.Errorf("%s.IsValidForBase(%s) = %v, want %v", c.cms, c.base, got, c.want)
+		}
+	}
+}
+
 func TestBuildPackageJSON(t *testing.T) {
 	setupRegistry(t)
 
@@ -199,6 +250,35 @@ func TestBuildPackageJSON(t *testing.T) {
 				return c
 			},
 			forbidDep: []string{"@tanstack/react-query", "@tanstack/vue-query"},
+		},
+		{
+			name: "keystatic on plain astro injects react renderer",
+			cfg: func() ProjectConfig {
+				c := baseCfg("astro")
+				c.CMS = "keystatic"
+				return c
+			},
+			wantDep: []string{"@keystatic/core", "@keystatic/astro", "@astrojs/react", "react", "react-dom"},
+			wantDev: []string{"cross-env", "@types/react", "@types/react-dom"},
+		},
+		{
+			name: "keystatic on astro-vue injects react alongside vue",
+			cfg: func() ProjectConfig {
+				c := baseCfg("astro-vue")
+				c.CMS = "keystatic"
+				return c
+			},
+			wantDep: []string{"@keystatic/astro", "@astrojs/react", "react", "vue"},
+			wantDev: []string{"cross-env"},
+		},
+		{
+			name: "keystatic on astro-react does not duplicate react deps",
+			cfg: func() ProjectConfig {
+				c := baseCfg("astro-react")
+				c.CMS = "keystatic"
+				return c
+			},
+			wantDep: []string{"@keystatic/core", "@keystatic/astro", "@astrojs/react", "react"},
 		},
 	}
 

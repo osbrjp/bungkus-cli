@@ -77,6 +77,9 @@ func (b BaseFramework) GetGroup(base string) (BaseGroup, error) {
 	}
 
 	entry := globalRegistry.GetBase(base)
+	if entry == nil {
+		return "", errors.New("unknown base framework: " + base)
+	}
 	return BaseGroup(entry.Group), nil
 }
 
@@ -390,6 +393,21 @@ func (s StateLib) IsValidIntegration(base string) bool {
 
 func (c CMS) IsValid() bool {
 	return globalRegistry != nil && globalRegistry.HasCMS(string(c))
+}
+
+// IsValidForBase reports whether the CMS is allowed for the given base
+// framework, per the registry's excludeGroups (e.g. Keystatic excludes the
+// nuxt and vite groups).
+func (c CMS) IsValidForBase(base string) bool {
+	if globalRegistry == nil {
+		return false
+	}
+	entry := globalRegistry.GetCMS(string(c))
+	baseEntry := globalRegistry.GetBase(base)
+	if entry == nil || baseEntry == nil {
+		return false
+	}
+	return !entry.ExcludesGroup(baseEntry.Group)
 }
 
 func (c CMS) GetDependencies() AllDependencies {

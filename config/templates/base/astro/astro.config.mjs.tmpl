@@ -1,10 +1,13 @@
 // @ts-check
-import { defineConfig {{if eq .CMS "microcms"}}, envField{{end}} } from 'astro/config';
+import { defineConfig{{if eq .CMS "microcms"}}, envField{{end}} } from 'astro/config';
 {{- if eq .Base "astro-vue"}}
 import vue from '@astrojs/vue';
 {{- end}}
-{{- if eq .Base "astro-react"}}
+{{- if or (eq .Base "astro-react") (eq .CMS "keystatic")}}
 import react from '@astrojs/react';
+{{- end}}
+{{- if eq .CMS "keystatic"}}
+import keystatic from '@keystatic/astro';
 {{- end}}
 {{- if eq .CSS "tailwindcss"}}
 import tailwindcss from "@tailwindcss/vite";
@@ -15,17 +18,30 @@ export default defineConfig({
   env: {
     schema: {
       {{- if eq .CMS "microcms"}}
-      MICROCMS_API_KEY: envField.string({ context: 'server', access: 'secret'}),
-      MICROCMS_SERVICE_DOMAIN: envField.string({ context: 'server', access: 'secret'}),
+      MICROCMS_API_KEY: envField.string({ context: 'server', access: 'secret' }),
+      MICROCMS_SERVICE_DOMAIN: envField.string({ context: 'server', access: 'secret' }),
       {{- end}}
-    }
-  }
-{{- if or (eq .Base "astro-vue") (eq .Base "astro-react")}}
-  integrations: [{{if eq .Base "astro-vue"}}vue(){{end}}{{if eq .Base "astro-react"}}react(){{end}}],
-{{- end}}
-{{- if eq .CSS "tailwindcss"}},
+    },
+  },
+  {{- if or (eq .Base "astro-vue") (eq .Base "astro-react") (eq .CMS "keystatic")}}
+  integrations: [
+    {{- if eq .Base "astro-vue"}}
+    vue(),
+    {{- end}}
+    {{- if or (eq .Base "astro-react") (eq .CMS "keystatic")}}
+    react(),
+    {{- end}}
+    {{- if eq .CMS "keystatic"}}
+    // Keystatic's admin UI is server-rendered, so it is only mounted outside
+    // production builds. Run `dev` to edit content at /keystatic; production
+    // builds stay fully static (set SKIP_KEYSTATIC=true — see package.json).
+    ...(process.env.SKIP_KEYSTATIC ? [] : [keystatic()]),
+    {{- end}}
+  ],
+  {{- end}}
+  {{- if eq .CSS "tailwindcss"}}
   vite: {
     plugins: [tailwindcss()],
   },
-{{- end}}
+  {{- end}}
 });
