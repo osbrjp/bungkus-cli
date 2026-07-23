@@ -228,10 +228,13 @@ var createCmd = &cobra.Command{
 			return fmt.Errorf("invalid orm: %s (none, drizzle, prisma)", cfg.ORM)
 		}
 		if !cfg.Database.IsValid() {
-			return fmt.Errorf("invalid database: %s (none, sqlite, postgres, mysql)", cfg.Database)
+			return fmt.Errorf("invalid database: %s (none, sqlite, postgres, mysql, d1)", cfg.Database)
 		}
 		if cfg.Database != "none" && cfg.ORM == "none" {
 			return fmt.Errorf("--db requires an --orm (drizzle or prisma)")
+		}
+		if cfg.Database == "d1" && cfg.ORM == "prisma" {
+			return fmt.Errorf("--db d1 is only supported with --orm drizzle")
 		}
 
 		if cfg.Form != "none" && !cfg.Form.IsValidIntegration(string(cfg.Base)) {
@@ -279,5 +282,5 @@ func init() {
 	createCmd.Flags().String("cicd", "none", "CI/CD provider (none, github-actions)")
 	createCmd.Flags().String("backend", "none", "Backend framework (none, hono, elysia)")
 	createCmd.Flags().String("orm", "none", "ORM / database toolkit (none, drizzle, prisma)")
-	createCmd.Flags().String("db", "none", "Database, requires --orm (none, sqlite, postgres, mysql)")
+	createCmd.Flags().String("db", "none", "Database, requires --orm (none, sqlite, postgres, mysql, d1). d1 needs --orm drizzle")
 }

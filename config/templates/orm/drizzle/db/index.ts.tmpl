@@ -12,6 +12,15 @@ import * as schema from "./schema";
 
 const pool = mysql.createPool(process.env.DATABASE_URL!);
 export const db = drizzle(pool, { schema, mode: "default" });
+{{- else if eq (printf "%s" .Database) "d1" -}}
+import { drizzle } from "drizzle-orm/d1";
+import * as schema from "./schema";
+
+// The D1 binding is only available per-request in the Worker runtime, so the
+// client is built from the binding rather than a module-level singleton.
+export function getDb(binding: D1Database) {
+  return drizzle(binding, { schema });
+}
 {{- else -}}
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";

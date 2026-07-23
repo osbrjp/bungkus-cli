@@ -56,6 +56,13 @@ func TestBackendORMPackageJSON(t *testing.T) {
 			wantDep: []string{"drizzle-orm", "better-sqlite3"},
 		},
 		{
+			name:      "drizzle + d1 uses built-in driver, only workers-types, no node drivers",
+			cfg:       func() ProjectConfig { c := baseCfg(); c.ORM = "drizzle"; c.Database = "d1"; return c },
+			wantDep:   []string{"drizzle-orm"},
+			wantDev:   []string{"@cloudflare/workers-types"},
+			forbidDep: []string{"better-sqlite3", "pg", "mysql2"},
+		},
+		{
 			name:      "prisma bundles its own engine, no drizzle driver",
 			cfg:       func() ProjectConfig { c := baseCfg(); c.ORM = "prisma"; c.Database = "postgres"; return c },
 			wantDep:   []string{"@prisma/client"},
@@ -119,5 +126,6 @@ func TestBackendORMDatabaseIsValid(t *testing.T) {
 	valid(Database("sqlite").IsValid(), "db sqlite")
 	valid(Database("postgres").IsValid(), "db postgres")
 	valid(Database("mysql").IsValid(), "db mysql")
+	valid(Database("d1").IsValid(), "db d1")
 	invalid(Database("mongodb").IsValid(), "db mongodb")
 }

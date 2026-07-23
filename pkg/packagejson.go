@@ -220,6 +220,10 @@ func applyCrossCuttingRules(pkg *packageJSON, cfg ProjectConfig) {
 			pkg.DevDependencies["@types/pg"] = "^8.11.10"
 		case "mysql":
 			pkg.Dependencies["mysql2"] = "^3.11.4"
+		case "d1":
+			// drizzle-orm/d1 is built in; the D1 binding is provided by the
+			// Workers runtime, so only the binding type is needed.
+			pkg.DevDependencies["@cloudflare/workers-types"] = "^4.20241205.0"
 		default: // sqlite / none
 			pkg.Dependencies["better-sqlite3"] = "^11.7.0"
 			pkg.DevDependencies["@types/better-sqlite3"] = "^7.6.12"

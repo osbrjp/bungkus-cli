@@ -642,6 +642,11 @@
       "value": "mysql",
       "label": "MySQL",
       "packages": {}
+    },
+    {
+      "value": "d1",
+      "label": "Cloudflare D1",
+      "packages": {}
     }
   ],
   "packageManagers": [
