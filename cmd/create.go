@@ -182,6 +182,22 @@ to scaffold into the current directory.`,
 			v, _ := cmd.Flags().GetString("audit")
 			cfg.Audit = pkg.AuditTool(v)
 		}
+		if cmd.Flags().Changed("backend") {
+			v, _ := cmd.Flags().GetString("backend")
+			cfg.Backend = pkg.BackendLib(v)
+		}
+		if cmd.Flags().Changed("orm") {
+			v, _ := cmd.Flags().GetString("orm")
+			cfg.ORM = pkg.ORMLib(v)
+		}
+		if cmd.Flags().Changed("db") {
+			v, _ := cmd.Flags().GetString("db")
+			cfg.Database = pkg.Database(v)
+		}
+		if cmd.Flags().Changed("layout") {
+			v, _ := cmd.Flags().GetString("layout")
+			cfg.Layout = pkg.Layout(v)
+		}
 		if cmd.Flags().Changed("channel") {
 			v, _ := cmd.Flags().GetString("channel")
 			cfg.Channel = pkg.VersionChannel(v)
@@ -198,6 +214,12 @@ to scaffold into the current directory.`,
 		}
 		if cmd.Flags().Changed("node-engine") {
 			cfg.NodeEngine, _ = cmd.Flags().GetString("node-engine")
+		}
+
+		// A selected backend defaults to the monorepo layout unless the user
+		// chose one explicitly (and only when pnpm, which monorepo requires).
+		if !cmd.Flags().Changed("layout") {
+			cfg.ApplyDefaultLayout()
 		}
 
 		if !cfg.Base.IsValid() {
@@ -241,6 +263,27 @@ to scaffold into the current directory.`,
 		}
 		if cfg.CICD != "none" && cfg.Deployment == "none" {
 			return fmt.Errorf("--cicd requires a deploy target (--deploy cloudflare-pages or --deploy cloudflare-workers)")
+		}
+		if !cfg.Backend.IsValid() {
+			return fmt.Errorf("invalid backend: %s (none, hono, elysia)", cfg.Backend)
+		}
+		if !cfg.ORM.IsValid() {
+			return fmt.Errorf("invalid orm: %s (none, drizzle, prisma)", cfg.ORM)
+		}
+		if !cfg.Database.IsValid() {
+			return fmt.Errorf("invalid database: %s (none, sqlite, postgres, mysql, d1)", cfg.Database)
+		}
+		if cfg.Database != "none" && cfg.ORM == "none" {
+			return fmt.Errorf("--db requires an --orm (drizzle or prisma)")
+		}
+		if cfg.Database == "d1" && cfg.ORM == "prisma" {
+			return fmt.Errorf("--db d1 is only supported with --orm drizzle")
+		}
+		if !cfg.Layout.IsValid() {
+			return fmt.Errorf("invalid layout: %s (flat, monorepo)", cfg.Layout)
+		}
+		if cfg.Layout.IsMonorepo() && cfg.PM != "pnpm" {
+			return fmt.Errorf("--layout monorepo currently requires --pm pnpm")
 		}
 
 		if cfg.Form != "none" && !cfg.Form.IsValidIntegration(string(cfg.Base)) {
@@ -293,6 +336,10 @@ func init() {
 	createCmd.Flags().StringP("template", "t", "", "Predefined template (astro, astro-react, astro-vue, nuxt, vite, vite-react, vite-vue)")
 	createCmd.Flags().String("deploy", "none", "Deployment target (none, cloudflare-pages, cloudflare-workers)")
 	createCmd.Flags().String("cicd", "none", "CI/CD provider (none, github-actions)")
+	createCmd.Flags().String("backend", "none", "Backend framework (none, hono, elysia)")
+	createCmd.Flags().String("orm", "none", "ORM / database toolkit (none, drizzle, prisma)")
+	createCmd.Flags().String("db", "none", "Database, requires --orm (none, sqlite, postgres, mysql, d1). d1 needs --orm drizzle")
+	createCmd.Flags().String("layout", "flat", "Project layout (flat, monorepo). Defaults to monorepo when --backend is set with pnpm; monorepo splits apps/web + apps/api + packages/domain")
 	createCmd.Flags().String("channel", "pinned", "Dependency version channel: pinned (vetted, >=14d old & safe) or latest")
 	createCmd.Flags().String("pin", "default", "Pin strategy: default (as registry), caret, tilde, exact")
 	createCmd.Flags().Bool("install", false, "Run the package manager install after scaffolding")

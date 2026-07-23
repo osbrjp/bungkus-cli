@@ -1,3 +1,8 @@
+{{- if .Layout.IsMonorepo}}
+packages:
+  - "apps/*"
+  - "packages/*"
+{{end}}
 strictDepBuilds: true
 minimumReleaseAge: 20160
 trustPolicy: no-downgrade
@@ -5,6 +10,9 @@ trustPolicyExclude:
   - chokidar
   {{- if .Base.IsNuxt}}
   - tinyclip
+  {{- end}}
+  {{- if or (ne .Backend "none") (ne .ORM "none")}}
+  - undici-types
   {{- end}}
 overrides:
   semver: "^7.7.1"
@@ -16,4 +24,12 @@ allowBuilds:
   sharp: true
   {{- if or (eq .Deployment "cloudflare-pages") (eq .Deployment "cloudflare-workers")}}
   workerd: true
+  {{- end}}
+  {{- if and (eq .ORM "drizzle") (or (eq .Database "sqlite") (eq .Database "none"))}}
+  better-sqlite3: true
+  {{- end}}
+  {{- if eq .ORM "prisma"}}
+  "@prisma/client": true
+  "@prisma/engines": true
+  prisma: true
   {{- end}}

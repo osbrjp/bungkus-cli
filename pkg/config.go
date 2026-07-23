@@ -24,6 +24,10 @@ type (
 	DeployTarget     string
 	AuditTool        string
 	CICDProvider     string
+	BackendLib       string
+	ORMLib           string
+	Database         string
+	Layout           string
 	VersionChannel   string
 	PinStrategy      string
 )
@@ -60,6 +64,34 @@ func (p PinStrategy) IsValid() bool {
 		return true
 	}
 	return false
+}
+
+// Layouts control the on-disk shape of the generated project. "flat" (default)
+// is the original single-package layout. "monorepo" emits a pnpm-workspace with
+// apps/web (frontend), apps/api (backend, when selected) and packages/domain
+// (shared zod/type contract) — the org's DDD-friendly FE+BE structure.
+const (
+	LayoutFlat     Layout = "flat"
+	LayoutMonorepo Layout = "monorepo"
+)
+
+func (l Layout) IsValid() bool {
+	return l == LayoutFlat || l == LayoutMonorepo
+}
+
+func (l Layout) IsMonorepo() bool {
+	return l == LayoutMonorepo
+}
+
+// ApplyDefaultLayout upgrades a flat layout to monorepo when a backend is
+// selected and pnpm is in use — the org default for FE+BE projects. No-op if a
+// non-flat layout was already chosen or the preconditions don't hold (monorepo
+// currently requires pnpm). Callers that expose an explicit layout choice
+// should only call this when the user left it unset.
+func (c *ProjectConfig) ApplyDefaultLayout() {
+	if c.Layout == LayoutFlat && c.Backend != "none" && c.PM == "pnpm" {
+		c.Layout = LayoutMonorepo
+	}
 }
 
 type AllDependencies struct {
@@ -442,6 +474,46 @@ func (d DeployTarget) GetDependencies() AllDependencies {
 	}
 }
 
+func (b BackendLib) IsValid() bool {
+	return globalRegistry != nil && globalRegistry.HasBackend(string(b))
+}
+
+func (b BackendLib) GetDependencies() AllDependencies {
+	if globalRegistry == nil {
+		return AllDependencies{}
+	}
+	entry := globalRegistry.GetBackend(string(b))
+	if entry == nil {
+		return AllDependencies{}
+	}
+	return AllDependencies{
+		Dependencies:    entry.Packages.Dependencies,
+		DevDependencies: entry.Packages.DevDependencies,
+	}
+}
+
+func (o ORMLib) IsValid() bool {
+	return globalRegistry != nil && globalRegistry.HasORM(string(o))
+}
+
+func (o ORMLib) GetDependencies() AllDependencies {
+	if globalRegistry == nil {
+		return AllDependencies{}
+	}
+	entry := globalRegistry.GetORM(string(o))
+	if entry == nil {
+		return AllDependencies{}
+	}
+	return AllDependencies{
+		Dependencies:    entry.Packages.Dependencies,
+		DevDependencies: entry.Packages.DevDependencies,
+	}
+}
+
+func (d Database) IsValid() bool {
+	return globalRegistry != nil && globalRegistry.HasDatabase(string(d))
+}
+
 func (p PackageManager) IsValid() bool {
 	return globalRegistry != nil && globalRegistry.HasPM(string(p))
 }
@@ -492,6 +564,10 @@ type ProjectConfig struct {
 	PM          PackageManager
 	Test        TestingFramework
 	Audit       AuditTool
+	Backend     BackendLib
+	ORM         ORMLib
+	Database    Database
+	Layout      Layout
 	Channel     VersionChannel
 	Pin         PinStrategy
 	Install     bool
@@ -545,6 +621,8 @@ func (c ProjectConfig) Stack() []StackEntry {
 	add("Deployment", c.Deployment.GetDependencies())
 	add("Testing", c.Test.GetDependencies())
 	add("Audit", c.Audit.GetDependencies())
+	add("Backend", c.Backend.GetDependencies())
+	add("ORM", c.ORM.GetDependencies())
 	return rows
 }
 
@@ -566,6 +644,10 @@ func NewProjectConfig() ProjectConfig {
 		Deployment:  "none",
 		CICD:        "none",
 		Audit:       "none",
+		Backend:     "none",
+		ORM:         "none",
+		Database:    "none",
+		Layout:      LayoutFlat,
 		Channel:     ChannelPinned,
 		Pin:         PinDefault,
 		Install:     false,

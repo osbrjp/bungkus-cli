@@ -1,0 +1,31 @@
+{{- if eq (printf "%s" .Database) "postgres" -}}
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
+import * as schema from "./schema";
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+export const db = drizzle(pool, { schema });
+{{- else if eq (printf "%s" .Database) "mysql" -}}
+import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
+import * as schema from "./schema";
+
+const pool = mysql.createPool(process.env.DATABASE_URL!);
+export const db = drizzle(pool, { schema, mode: "default" });
+{{- else if eq (printf "%s" .Database) "d1" -}}
+import { drizzle } from "drizzle-orm/d1";
+import * as schema from "./schema";
+
+// The D1 binding is only available per-request in the Worker runtime, so the
+// client is built from the binding rather than a module-level singleton.
+export function getDb(binding: D1Database) {
+  return drizzle(binding, { schema });
+}
+{{- else -}}
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import Database from "better-sqlite3";
+import * as schema from "./schema";
+
+const sqlite = new Database(process.env.DATABASE_URL ?? "sqlite.db");
+export const db = drizzle(sqlite, { schema });
+{{- end }}

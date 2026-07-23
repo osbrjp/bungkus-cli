@@ -546,6 +546,109 @@
       }
     }
   ],
+  "backend": [
+    {
+      "value": "none",
+      "label": "None",
+      "packages": {}
+    },
+    {
+      "value": "hono",
+      "label": "Hono",
+      "packages": {
+        "dependencies": {
+          "hono": "^4.6.14",
+          "@hono/node-server": "^1.13.7"
+        },
+        "devDependencies": {
+          "tsx": "^4.19.2"
+        },
+        "scripts": {
+          "dev:server": "tsx watch server/index.ts"
+        }
+      }
+    },
+    {
+      "value": "elysia",
+      "label": "Elysia",
+      "packages": {
+        "dependencies": {
+          "elysia": "^1.1.26"
+        },
+        "scripts": {
+          "dev:server": "bun run --watch server/index.ts"
+        }
+      }
+    }
+  ],
+  "orm": [
+    {
+      "value": "none",
+      "label": "None",
+      "packages": {}
+    },
+    {
+      "value": "drizzle",
+      "label": "Drizzle ORM",
+      "packages": {
+        "dependencies": {
+          "drizzle-orm": "^0.36.4"
+        },
+        "devDependencies": {
+          "drizzle-kit": "^0.28.1"
+        },
+        "scripts": {
+          "db:generate": "drizzle-kit generate",
+          "db:migrate": "drizzle-kit migrate",
+          "db:studio": "drizzle-kit studio"
+        }
+      }
+    },
+    {
+      "value": "prisma",
+      "label": "Prisma",
+      "packages": {
+        "dependencies": {
+          "@prisma/client": "^5.22.0"
+        },
+        "devDependencies": {
+          "prisma": "^5.22.0"
+        },
+        "scripts": {
+          "db:generate": "prisma generate",
+          "db:migrate": "prisma migrate dev",
+          "db:studio": "prisma studio"
+        }
+      }
+    }
+  ],
+  "database": [
+    {
+      "value": "none",
+      "label": "None",
+      "packages": {}
+    },
+    {
+      "value": "sqlite",
+      "label": "SQLite",
+      "packages": {}
+    },
+    {
+      "value": "postgres",
+      "label": "PostgreSQL",
+      "packages": {}
+    },
+    {
+      "value": "mysql",
+      "label": "MySQL",
+      "packages": {}
+    },
+    {
+      "value": "d1",
+      "label": "Cloudflare D1",
+      "packages": {}
+    }
+  ],
   "packageManagers": [
     {
       "value": "pnpm",
