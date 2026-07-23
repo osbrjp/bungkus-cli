@@ -206,6 +206,12 @@ var createCmd = &cobra.Command{
 			cfg.NodeEngine, _ = cmd.Flags().GetString("node-engine")
 		}
 
+		// A selected backend defaults to the monorepo layout unless the user
+		// chose one explicitly (and only when pnpm, which monorepo requires).
+		if !cmd.Flags().Changed("layout") {
+			cfg.ApplyDefaultLayout()
+		}
+
 		if !cfg.Base.IsValid() {
 			return fmt.Errorf("invalid base framework: %s", cfg.Base)
 		}
@@ -320,7 +326,7 @@ func init() {
 	createCmd.Flags().String("backend", "none", "Backend framework (none, hono, elysia)")
 	createCmd.Flags().String("orm", "none", "ORM / database toolkit (none, drizzle, prisma)")
 	createCmd.Flags().String("db", "none", "Database, requires --orm (none, sqlite, postgres, mysql, d1). d1 needs --orm drizzle")
-	createCmd.Flags().String("layout", "flat", "Project layout (flat, monorepo). monorepo splits apps/web + apps/api + packages/domain (pnpm only)")
+	createCmd.Flags().String("layout", "flat", "Project layout (flat, monorepo). Defaults to monorepo when --backend is set with pnpm; monorepo splits apps/web + apps/api + packages/domain")
 	createCmd.Flags().String("channel", "pinned", "Dependency version channel: pinned (vetted, >=14d old & safe) or latest")
 	createCmd.Flags().String("pin", "default", "Pin strategy: default (as registry), caret, tilde, exact")
 	createCmd.Flags().Bool("install", false, "Run the package manager install after scaffolding")

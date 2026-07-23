@@ -677,6 +677,9 @@ func (m *WizardModel) collectConfig() {
 	m.Cfg.Install = m.advanced.value("Install") == "true"
 	m.Cfg.GitInit = m.advanced.value("Git init") == "true"
 	m.Cfg.NodeEngine = m.advanced.value("Node")
+
+	// A selected backend implies the monorepo layout (pnpm only).
+	m.Cfg.ApplyDefaultLayout()
 }
 
 func (m WizardModel) View() tea.View {

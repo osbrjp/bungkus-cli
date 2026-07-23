@@ -83,6 +83,17 @@ func (l Layout) IsMonorepo() bool {
 	return l == LayoutMonorepo
 }
 
+// ApplyDefaultLayout upgrades a flat layout to monorepo when a backend is
+// selected and pnpm is in use — the org default for FE+BE projects. No-op if a
+// non-flat layout was already chosen or the preconditions don't hold (monorepo
+// currently requires pnpm). Callers that expose an explicit layout choice
+// should only call this when the user left it unset.
+func (c *ProjectConfig) ApplyDefaultLayout() {
+	if c.Layout == LayoutFlat && c.Backend != "none" && c.PM == "pnpm" {
+		c.Layout = LayoutMonorepo
+	}
+}
+
 type AllDependencies struct {
 	Dependencies
 	DevDependencies

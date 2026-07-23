@@ -116,6 +116,30 @@ func TestBuildDomainPackageJSON(t *testing.T) {
 	}
 }
 
+func TestApplyDefaultLayout(t *testing.T) {
+	cases := []struct {
+		name    string
+		backend BackendLib
+		pm      PackageManager
+		start   Layout
+		want    Layout
+	}{
+		{"backend+pnpm upgrades", "hono", "pnpm", LayoutFlat, LayoutMonorepo},
+		{"no backend stays flat", "none", "pnpm", LayoutFlat, LayoutFlat},
+		{"backend+bun stays flat", "hono", "bun", LayoutFlat, LayoutFlat},
+		{"already monorepo untouched", "hono", "pnpm", LayoutMonorepo, LayoutMonorepo},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			c := ProjectConfig{Backend: tc.backend, PM: tc.pm, Layout: tc.start}
+			c.ApplyDefaultLayout()
+			if c.Layout != tc.want {
+				t.Errorf("layout = %q, want %q", c.Layout, tc.want)
+			}
+		})
+	}
+}
+
 func TestLayoutIsValid(t *testing.T) {
 	if !Layout("flat").IsValid() || !Layout("monorepo").IsValid() {
 		t.Error("flat and monorepo should be valid")
