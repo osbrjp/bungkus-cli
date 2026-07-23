@@ -81,7 +81,7 @@
           "postinstall": "nuxt prepare"
         },
         "dependencies": {
-          "nuxt": "^4.4.2",
+          "nuxt": "4.4.6",
           "vue": "^3.5.32",
           "vue-router": "^5.0.4"
         },
@@ -195,7 +195,7 @@
           "format": "biome format --write ."
         },
         "devDependencies": {
-          "@biomejs/biome": "2.4.10"
+          "@biomejs/biome": "2.4.15"
         }
       }
     },
@@ -236,7 +236,7 @@
           "lint": "biome lint ."
         },
         "devDependencies": {
-          "@biomejs/biome": "2.4.10"
+          "@biomejs/biome": "2.4.15"
         }
       }
     },
@@ -294,7 +294,9 @@
     {
       "value": "react-hook-form",
       "label": "React Hook Form",
-      "requiresIntegration": ["react"],
+      "requiresIntegration": [
+        "react"
+      ],
       "packages": {
         "dependencies": {
           "react-hook-form": "^7.72.1"
@@ -304,7 +306,10 @@
     {
       "value": "tanstack-form",
       "label": "TanStack Form",
-      "requiresIntegration": ["react", "vue"],
+      "requiresIntegration": [
+        "react",
+        "vue"
+      ],
       "packages": {},
       "integrationPackages": {
         "react": {
@@ -322,7 +327,9 @@
     {
       "value": "veevalidate",
       "label": "VeeValidate",
-      "requiresIntegration": ["vue"],
+      "requiresIntegration": [
+        "vue"
+      ],
       "packages": {},
       "integrationPackages": {
         "vue": {
@@ -347,7 +354,10 @@
     {
       "value": "tanstack-query",
       "label": "TanStack Query",
-      "requiresIntegration": ["react", "vue"],
+      "requiresIntegration": [
+        "react",
+        "vue"
+      ],
       "packages": {},
       "integrationPackages": {
         "react": {
@@ -372,7 +382,9 @@
     {
       "value": "jotai",
       "label": "Jotai",
-      "requiresIntegration": ["react"],
+      "requiresIntegration": [
+        "react"
+      ],
       "packages": {
         "dependencies": {
           "jotai": "^2.19.1"
@@ -382,7 +394,9 @@
     {
       "value": "zustand",
       "label": "Zustand",
-      "requiresIntegration": ["react"],
+      "requiresIntegration": [
+        "react"
+      ],
       "packages": {
         "dependencies": {
           "zustand": "^5.0.12"
@@ -392,7 +406,9 @@
     {
       "value": "pinia",
       "label": "Pinia",
-      "requiresIntegration": ["vue"],
+      "requiresIntegration": [
+        "vue"
+      ],
       "packages": {
         "dependencies": {
           "pinia": "^3.0.4"
@@ -409,7 +425,10 @@
     {
       "value": "nanostores",
       "label": "Nano Stores",
-      "requiresIntegration": ["react", "vue"],
+      "requiresIntegration": [
+        "react",
+        "vue"
+      ],
       "packages": {
         "dependencies": {
           "nanostores": "^1.3.0"
@@ -448,20 +467,99 @@
       }
     }
   ],
+  "test": [
+    {
+      "value": "none",
+      "label": "None"
+    },
+    {
+      "value": "playwright",
+      "label": "Playwright",
+      "packages": {
+        "scripts": {
+          "test:e2e": "playwright test"
+        },
+        "devDependencies": {
+          "@playwright/test": "^1.5.9"
+        }
+      }
+    }
+  ],
+  "cicd": [
+    {
+      "value": "none",
+      "label": "None",
+      "packages": {}
+    },
+    {
+      "value": "github-actions",
+      "label": "GitHub Actions",
+      "packages": {}
+    }
+  ],
+  "deployment": [
+    {
+      "value": "none",
+      "label": "None",
+      "packages": {}
+    },
+    {
+      "value": "cloudflare-pages",
+      "label": "Cloudflare Pages",
+      "packages": {
+        "devDependencies": {
+          "wrangler": "^4.93.0"
+        },
+        "scripts": {
+          "deploy": "wrangler pages deploy dist"
+        }
+      }
+    },
+    {
+      "value": "cloudflare-workers",
+      "label": "Cloudflare Workers",
+      "packages": {
+        "devDependencies": {
+          "wrangler": "^4.93.0"
+        },
+        "scripts": {
+          "deploy": "wrangler deploy"
+        }
+      }
+    }
+  ],
+  "audit": [
+    {
+      "value": "none",
+      "label": "None"
+    },
+    {
+      "value": "lhci",
+      "label": "Lighthouse CI",
+      "packages": {
+        "scripts": {
+          "lhci": "lhci autorun"
+        },
+        "devDependencies": {
+          "@lhci/cli": "^0.14.0"
+        }
+      }
+    }
+  ],
   "packageManagers": [
     {
       "value": "pnpm",
       "label": "pnpm *",
       "installCmd": "pnpm install",
       "execCmd": "pnpx",
-      "runCmd": "pnpm dev"
+      "runCmd": "pnpm run dev"
     },
     {
       "value": "bun",
       "label": "bun",
       "installCmd": "bun install",
       "execCmd": "bunx",
-      "runCmd": "bun dev"
+      "runCmd": "bun run dev"
     },
     {
       "value": "npm",

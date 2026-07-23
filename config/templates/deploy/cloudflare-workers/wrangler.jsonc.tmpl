@@ -1,0 +1,28 @@
+{{- if eq .Base "nuxt"}}
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "{{.ProjectName}}",
+  "main": ".output/server/index.mjs",
+  "compatibility_date": "{{.Date}}",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".output/public"
+  },
+  "observability": {
+    "enabled": true
+  }
+}
+{{- else}}
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "{{.ProjectName}}",
+  "compatibility_date": "{{.Date}}",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist"
+  },
+  "observability": {
+    "enabled": true
+  }
+}
+{{- end}}

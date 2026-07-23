@@ -40,7 +40,11 @@ func (m model) Init() tea.Cmd {
 
 func (m model) runScaffold() tea.Cmd {
 	return func() tea.Msg {
-		err := pkg.Scaffold(m.cfg.ProjectName, m.templates, m.cfg)
+		destDir := m.cfg.ProjectName
+		if m.cfg.DestDir != "" {
+			destDir = m.cfg.DestDir
+		}
+		err := pkg.Scaffold(destDir, m.templates, m.cfg)
 		return ScaffoldDoneMsg{Err: err}
 	}
 }

@@ -1,0 +1,52 @@
+name: Lighthouse CI
+on:
+  push:
+    branches: [main, dev, staging, test]
+  pull_request:
+    branches: [main, dev, staging, test]
+
+jobs:
+  lighthouseci:
+    environment: lighthouseci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+{{- if eq .PM "pnpm" }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install
+      - run: pnpm run build
+      - run: pnpx lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: {{ "${{ secrets.LHCI_GITHUB_APP_TOKEN }}" }}
+{{- else if eq .PM "bun" }}
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - run: bun run build
+      - run: bunx lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: {{ "${{ secrets.LHCI_GITHUB_APP_TOKEN }}" }}
+{{- else if eq .PM "yarn" }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+      - run: yarn install
+      - run: yarn build
+      - run: yarn dlx @lhci/cli@0.15.x autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: {{ "${{ secrets.LHCI_GITHUB_APP_TOKEN }}" }}
+{{- else }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install
+      - run: npm run build
+      - run: npx --package=@lhci/cli@0.15.x lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: {{ "${{ secrets.LHCI_GITHUB_APP_TOKEN }}" }}
+{{- end }}
