@@ -80,7 +80,7 @@ jobs:
           go build -ldflags "-s -w -X main.Version=${{ needs.semantic-release.outputs.new_release_git_tag }}" -o bungkus-cli-${{ matrix.goos }}-${{ matrix.goarch }} .
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bungkus-cli-${{ matrix.goos }}-${{ matrix.goarch }}
           path: bungkus-cli-${{ matrix.goos }}-${{ matrix.goarch }}
