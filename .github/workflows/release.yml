@@ -2,7 +2,8 @@ name: Release
 on:
   push:
     branches:
-      - release
+      - main     # canary channel: publishes vX.Y.Z-canary.N pre-releases
+      - release  # stable channel: publishes vX.Y.Z + git tag
 
 jobs:
   deployment:
@@ -117,7 +118,10 @@ jobs:
   announce:
     name: Announce release on Slack
     needs: [semantic-release, upload-assets]
-    if: needs.semantic-release.outputs.new_release_published == 'true'
+    # Stable releases only — don't spam Slack on every canary from main.
+    if: >-
+      needs.semantic-release.outputs.new_release_published == 'true' &&
+      !contains(needs.semantic-release.outputs.new_release_git_tag, 'canary')
     runs-on: ubuntu-latest
     steps:
       - name: Post release announcement
