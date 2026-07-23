@@ -1,0 +1,40 @@
+name: Bump Package Versions
+on:
+  schedule:
+    - cron: "0 3 * * 1" # every Monday 03:00 UTC
+  workflow_dispatch:
+    inputs:
+      soak-days:
+        description: "Minimum age in days before adopting a release"
+        default: "14"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Refresh registry.json pins
+        run: go run . bump --write --soak-days "${{ github.event.inputs.soak-days || '14' }}"
+      - name: Verify build still passes
+        run: go build -o /dev/null . && go test ./...
+      - name: Open pull request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: chore/bump-versions
+          commit-message: "chore: bump package versions to latest safe, soaked releases"
+          title: "chore: bump package versions"
+          body: |
+            Automated version bump of `config/registry.json`.
+
+            Every pin is the newest stable, non-deprecated release published at
+            least the soak window ago (default 14 days). Review the diff — major
+            bumps may need template changes.
+          labels: dependencies

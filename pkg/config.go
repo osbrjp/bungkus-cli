@@ -28,7 +28,43 @@ type (
 	ORMLib           string
 	Database         string
 	Layout           string
+	VersionChannel   string
+	PinStrategy      string
 )
+
+// Version channels control how dependency versions land in the generated
+// package.json. "pinned" (default) uses the mature, safe versions baked into
+// registry.json (kept fresh by `bungkus-cli bump`, which only picks releases
+// that are >=14 days old and not deprecated). "latest" opts into whatever npm
+// resolves at install time — newest, unvetted, at the user's own risk.
+const (
+	ChannelPinned VersionChannel = "pinned"
+	ChannelLatest VersionChannel = "latest"
+)
+
+func (v VersionChannel) IsValid() bool {
+	return v == ChannelPinned || v == ChannelLatest
+}
+
+// Pin strategies rewrite the range operator on every dependency in the
+// generated package.json. "default" keeps whatever the registry authored
+// (a mix of ^, ~, and exact). The others force one operator everywhere:
+// caret (^) allows minor+patch, tilde (~) allows patch only, exact locks
+// the version. Ignored on the "latest" channel (no concrete version to pin).
+const (
+	PinDefault PinStrategy = "default"
+	PinCaret   PinStrategy = "caret"
+	PinTilde   PinStrategy = "tilde"
+	PinExact   PinStrategy = "exact"
+)
+
+func (p PinStrategy) IsValid() bool {
+	switch p {
+	case PinDefault, PinCaret, PinTilde, PinExact:
+		return true
+	}
+	return false
+}
 
 // Layouts control the on-disk shape of the generated project. "flat" (default)
 // is the original single-package layout. "monorepo" emits a pnpm-workspace with
@@ -521,6 +557,11 @@ type ProjectConfig struct {
 	ORM         ORMLib
 	Database    Database
 	Layout      Layout
+	Channel     VersionChannel
+	Pin         PinStrategy
+	Install     bool
+	GitInit     bool
+	NodeEngine  string
 }
 
 // StackEntry is one row in the project's tech-stack table: the category
@@ -596,6 +637,11 @@ func NewProjectConfig() ProjectConfig {
 		ORM:         "none",
 		Database:    "none",
 		Layout:      LayoutFlat,
+		Channel:     ChannelPinned,
+		Pin:         PinDefault,
+		Install:     false,
+		GitInit:     true,
+		NodeEngine:  DefaultNodeEngine,
 		Date:        time.Now().Format("2006-01-02"),
 	}
 }

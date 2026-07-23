@@ -1,8 +1,19 @@
 {
-  "branches": ["release"],
+  "branches": [
+    "release",
+    { "name": "main", "prerelease": "canary" }
+  ],
   "plugins": [
     "@semantic-release/commit-analyzer",
     "@semantic-release/release-notes-generator",
-    "@semantic-release/github"
+    [
+      "@semantic-release/github",
+      {
+        "successComment": false,
+        "failComment": false,
+        "failTitle": false,
+        "releasedLabels": false
+      }
+    ]
   ]
 }

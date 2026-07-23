@@ -39,6 +39,19 @@ func TestMonorepoFrontendPackageOmitsBackend(t *testing.T) {
 	}
 }
 
+func TestChannelLatestPreservesWorkspaceDeps(t *testing.T) {
+	setupRegistry(t)
+	c := monoCfg()
+	c.Channel = ChannelLatest
+	p := buildAndParse(t, c)
+	if p.Dependencies["domain"] != "workspace:*" {
+		t.Errorf("channel=latest must not rewrite workspace deps, got domain=%q", p.Dependencies["domain"])
+	}
+	if p.Dependencies["astro"] != "latest" {
+		t.Errorf("channel=latest should still pin normal deps to latest, got astro=%q", p.Dependencies["astro"])
+	}
+}
+
 func TestBuildAPIPackageJSON(t *testing.T) {
 	setupRegistry(t)
 	data, err := BuildAPIPackageJSON(monoCfg())
