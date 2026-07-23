@@ -222,12 +222,16 @@ func applyCrossCuttingRules(pkg *packageJSON, cfg ProjectConfig) {
 		pkg.DevDependencies["prettier-plugin-astro"] = "0.14.1"
 	}
 
-	// eslint + vite-react → extra React eslint plugins
-	if cfg.Linter == "eslint" && cfg.Base == "vite-react" {
+	// eslint → globals and typescript-eslint always required by eslint.config.mjs
+	if cfg.Linter == "eslint" {
 		pkg.DevDependencies["globals"] = "^17.4.0"
+		pkg.DevDependencies["typescript-eslint"] = "^8.58.0"
+	}
+
+	// eslint + react integration → React eslint plugins
+	if cfg.Linter == "eslint" && cfg.Base.IsReactInt() {
 		pkg.DevDependencies["eslint-plugin-react-hooks"] = "^7.0.1"
 		pkg.DevDependencies["eslint-plugin-react-refresh"] = "^0.5.2"
-		pkg.DevDependencies["typescript-eslint"] = "^8.58.0"
 	}
 
 	// veevalidate + zod → @vee-validate/zod adapter
@@ -243,6 +247,11 @@ func applyCrossCuttingRules(pkg *packageJSON, cfg ProjectConfig) {
 	// pnpm + astro → vite as devDep
 	if cfg.PM == "pnpm" && cfg.Base.IsAstro() {
 		pkg.DevDependencies["vite"] = "^6.3.5"
+	}
+
+	// astro + cloudflare -> @astrojs/cloudflare adapter
+	if cfg.Base.IsAstro() && (cfg.Deployment == "cloudflare-pages" || cfg.Deployment == "cloudflare-workers") {
+		pkg.DevDependencies["@astrojs/cloudflare"] = "^13.0.0"
 	}
 
 }
