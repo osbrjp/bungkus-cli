@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -186,6 +187,43 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 	}
 
 	return copyDir(sharedFS, destDir, cfg, "")
+}
+
+// PostScaffold runs optional post-generation steps: installing dependencies
+// and initializing a git repo with an initial commit. Subprocess output is
+// streamed to the terminal. Safe to call unconditionally — each step is gated
+// by its config flag. git init is skipped when scaffolding into an existing
+// directory (DestDir ".").
+func PostScaffold(destDir string, cfg ProjectConfig) error {
+	run := func(name string, args ...string) error {
+		c := exec.Command(name, args...)
+		c.Dir = destDir
+		c.Stdout = os.Stdout
+		c.Stderr = os.Stderr
+		return c.Run()
+	}
+
+	if cfg.Install {
+		fields := strings.Fields(cfg.PM.InstallCmd())
+		if len(fields) > 0 {
+			if err := run(fields[0], fields[1:]...); err != nil {
+				return fmt.Errorf("dependency install failed: %w", err)
+			}
+		}
+	}
+
+	if cfg.GitInit && cfg.DestDir != "." {
+		for _, args := range [][]string{
+			{"init"},
+			{"add", "."},
+			{"commit", "--no-verify", "-m", "initial commit"},
+		} {
+			if err := run("git", args...); err != nil {
+				return fmt.Errorf("git init failed: %w", err)
+			}
+		}
+	}
+	return nil
 }
 
 func copyDir(srcFS fs.FS, destDir string, cfg ProjectConfig, skip string) error {

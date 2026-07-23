@@ -24,7 +24,43 @@ type (
 	DeployTarget     string
 	AuditTool        string
 	CICDProvider     string
+	VersionChannel   string
+	PinStrategy      string
 )
+
+// Version channels control how dependency versions land in the generated
+// package.json. "pinned" (default) uses the mature, safe versions baked into
+// registry.json (kept fresh by `bungkus-cli bump`, which only picks releases
+// that are >=14 days old and not deprecated). "latest" opts into whatever npm
+// resolves at install time — newest, unvetted, at the user's own risk.
+const (
+	ChannelPinned VersionChannel = "pinned"
+	ChannelLatest VersionChannel = "latest"
+)
+
+func (v VersionChannel) IsValid() bool {
+	return v == ChannelPinned || v == ChannelLatest
+}
+
+// Pin strategies rewrite the range operator on every dependency in the
+// generated package.json. "default" keeps whatever the registry authored
+// (a mix of ^, ~, and exact). The others force one operator everywhere:
+// caret (^) allows minor+patch, tilde (~) allows patch only, exact locks
+// the version. Ignored on the "latest" channel (no concrete version to pin).
+const (
+	PinDefault PinStrategy = "default"
+	PinCaret   PinStrategy = "caret"
+	PinTilde   PinStrategy = "tilde"
+	PinExact   PinStrategy = "exact"
+)
+
+func (p PinStrategy) IsValid() bool {
+	switch p {
+	case PinDefault, PinCaret, PinTilde, PinExact:
+		return true
+	}
+	return false
+}
 
 type AllDependencies struct {
 	Dependencies
@@ -456,6 +492,11 @@ type ProjectConfig struct {
 	PM          PackageManager
 	Test        TestingFramework
 	Audit       AuditTool
+	Channel     VersionChannel
+	Pin         PinStrategy
+	Install     bool
+	GitInit     bool
+	NodeEngine  string
 }
 
 // StackEntry is one row in the project's tech-stack table: the category
@@ -525,6 +566,11 @@ func NewProjectConfig() ProjectConfig {
 		Deployment:  "none",
 		CICD:        "none",
 		Audit:       "none",
+		Channel:     ChannelPinned,
+		Pin:         PinDefault,
+		Install:     false,
+		GitInit:     true,
+		NodeEngine:  DefaultNodeEngine,
 		Date:        time.Now().Format("2006-01-02"),
 	}
 }
