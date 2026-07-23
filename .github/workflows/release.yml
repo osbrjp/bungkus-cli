@@ -113,3 +113,35 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "${{ needs.semantic-release.outputs.new_release_git_tag }}" assets/* --repo "${{ github.repository }}"
+
+  announce:
+    name: Announce release on Slack
+    needs: [semantic-release, upload-assets]
+    if: needs.semantic-release.outputs.new_release_published == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post release announcement
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          REPO: ${{ github.repository }}
+          NAME: ${{ github.event.repository.name }}
+          TAG: ${{ needs.semantic-release.outputs.new_release_git_tag }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "SLACK_WEBHOOK_URL not set — skipping Slack announcement"
+            exit 0
+          fi
+
+          title=$(gh release view "$TAG" --repo "$REPO" --json name --jq '.name // ""')
+          body=$(gh release view "$TAG" --repo "$REPO" --json body --jq '.body // ""')
+          url=$(gh release view "$TAG" --repo "$REPO" --json url --jq '.url')
+
+          header="*${NAME}@${TAG}*"
+          if [ -n "$title" ] && [ "$title" != "$TAG" ]; then
+            header="${header} — ${title}"
+          fi
+          text="${header}"$'\n\n'"${body}"$'\n\n'"<${url}|View release>"
+
+          jq -n --arg t "$text" '{text: $t}' \
+            | curl -sSf -X POST -H 'Content-type: application/json' --data @- "$SLACK_WEBHOOK_URL"
