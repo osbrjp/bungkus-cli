@@ -6,7 +6,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"os/exec"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/spencer-osbrjp/bungkus-cli/config"
@@ -45,20 +44,9 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("scaffold failed: %w", err)
 		}
 
-		// Only init git for new project folders, not when scaffolding into existing dir.
-		if cfg.DestDir != "." {
-			// Initialize git repository.
-			for _, args := range [][]string{
-				{"git", "init"},
-				{"git", "add", "."},
-				{"git", "commit", "--no-verify", "-m", "initial commit"},
-			} {
-				c := exec.Command(args[0], args[1:]...)
-				c.Dir = destDir
-				if err := c.Run(); err != nil {
-					return fmt.Errorf("git init failed: %w", err)
-				}
-			}
+		// Optional post-steps (install, git init) gated by advanced config.
+		if err := pkg.PostScaffold(destDir, cfg); err != nil {
+			return err
 		}
 
 		tui.PrintSuccess(cfg)
