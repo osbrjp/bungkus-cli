@@ -35,6 +35,12 @@ jobs:
               repo: context.repo.repo,
               labels: ["ci-testing"]
             })
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
       - name: Build and run tests
         run: |
-          echo "Build and run tests here"
+          go build -o /dev/null .
+          go test ./...
+      - name: Vulnerability scan
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...

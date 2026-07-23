@@ -21,7 +21,8 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Refresh registry.json pins
-        run: go run . bump --write --soak-days "${{ github.event.inputs.soak-days || '14' }}"
+        # The bump command is gated behind the "bump" build tag (maintainer-only).
+        run: go run -tags bump . bump --write --soak-days "${{ github.event.inputs.soak-days || '14' }}"
       - name: Verify build still passes
         run: go build -o /dev/null . && go test ./...
       - name: Open pull request
