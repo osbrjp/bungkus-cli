@@ -34,9 +34,18 @@ var rootCmd = &cobra.Command{
 			cfg.CICD = "none"
 		}
 
+		if cfg.DestDir != "." {
+			if err := pkg.ValidateProjectName(cfg.ProjectName); err != nil {
+				return err
+			}
+		}
+
 		destDir := cfg.ProjectName
 		if cfg.DestDir != "" {
 			destDir = cfg.DestDir
+		}
+		if err := pkg.ValidateDest(destDir); err != nil {
+			return err
 		}
 
 		// Scaffold project files.

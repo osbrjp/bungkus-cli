@@ -1,3 +1,8 @@
+//go:build bump
+
+// The bump command is maintainer/CI-only tooling. It is gated behind the
+// "bump" build tag so it is NOT compiled into released binaries — build or run
+// it with `-tags bump` (see .github/workflows/bump-versions.yml).
 package cmd
 
 import (
@@ -30,7 +35,13 @@ var bumpCmd = &cobra.Command{
 
 		now := time.Now()
 		minAge := time.Duration(days) * 24 * time.Hour
-		client := &http.Client{Timeout: 20 * time.Second}
+		client := &http.Client{
+			Timeout: 20 * time.Second,
+			// Do not transparently follow redirects off the pinned registry host.
+			CheckRedirect: func(*http.Request, []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+		}
 
 		resolve := func(name string) (string, bool) {
 			doc, err := pkg.FetchPackument(client, name)

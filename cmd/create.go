@@ -90,7 +90,14 @@ var templates = map[string]func() pkg.ProjectConfig{
 var createCmd = &cobra.Command{
 	Use:   "create [project-name]",
 	Short: "Create a new frontend project.",
-	Args:  cobra.MaximumNArgs(1),
+	Long: `Create a new frontend project.
+
+project-name must be a valid npm package name: lowercase letters, digits,
+'.', '-', '_', starting with a letter or digit (max 214 chars). It is used
+verbatim as the destination directory and the package.json "name", so paths
+that escape the current directory (absolute paths, "..") are rejected. Use "."
+to scaffold into the current directory.`,
+	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := pkg.NewProjectConfig()
 
@@ -112,6 +119,9 @@ var createCmd = &cobra.Command{
 				cfg.ProjectName = filepath.Base(cwd)
 				cfg.DestDir = "."
 			} else {
+				if err := pkg.ValidateProjectName(args[0]); err != nil {
+					return err
+				}
 				cfg.ProjectName = args[0]
 			}
 		}
@@ -291,6 +301,9 @@ var createCmd = &cobra.Command{
 		destDir := cfg.ProjectName
 		if cfg.DestDir != "" {
 			destDir = cfg.DestDir
+		}
+		if err := pkg.ValidateDest(destDir); err != nil {
+			return err
 		}
 
 		if err := pkg.Scaffold(destDir, config.Templates, cfg); err != nil {
