@@ -9,6 +9,9 @@ import (
 	"strings"
 )
 
+// DefaultNodeEngine is the engines.node constraint used unless overridden.
+const DefaultNodeEngine = ">=22.12.0"
+
 // packageJSON defines the structure and field order for generated package.json files.
 // Field order in the struct controls key order in the JSON output.
 type packageJSON struct {
@@ -33,12 +36,17 @@ func BuildPackageJSON(cfg ProjectConfig) ([]byte, error) {
 		return nil, fmt.Errorf("unknown base framework: %s", cfg.Base)
 	}
 
+	nodeEngine := cfg.NodeEngine
+	if nodeEngine == "" {
+		nodeEngine = DefaultNodeEngine
+	}
+
 	pkg := packageJSON{
 		Name:            cfg.ProjectName,
 		Private:         base.Private,
 		Version:         "0.0.1",
 		Type:            "module",
-		Engines:         map[string]string{"node": ">=22.12.0"},
+		Engines:         map[string]string{"node": nodeEngine},
 		Scripts:         make(map[string]string),
 		Dependencies:    make(map[string]string),
 		DevDependencies: make(map[string]string),
@@ -123,6 +131,26 @@ func BuildPackageJSON(cfg ProjectConfig) ([]byte, error) {
 
 	applyCrossCuttingRules(&pkg, cfg)
 
+	// On the "latest" channel the user opts out of the vetted registry pins;
+	// every dep resolves to whatever npm serves at install time. Otherwise an
+	// explicit pin strategy rewrites every range operator.
+	switch {
+	case cfg.Channel == ChannelLatest:
+		for name := range pkg.Dependencies {
+			pkg.Dependencies[name] = "latest"
+		}
+		for name := range pkg.DevDependencies {
+			pkg.DevDependencies[name] = "latest"
+		}
+	case cfg.Pin != "" && cfg.Pin != PinDefault:
+		for name, v := range pkg.Dependencies {
+			pkg.Dependencies[name] = applyPinStrategy(v, cfg.Pin)
+		}
+		for name, v := range pkg.DevDependencies {
+			pkg.DevDependencies[name] = applyPinStrategy(v, cfg.Pin)
+		}
+	}
+
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
 	enc.SetIndent("", "  ")
@@ -140,6 +168,25 @@ func pmVersion(pm string) (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(string(out)), nil
+}
+
+// applyPinStrategy rewrites a version's range operator. It strips any existing
+// operator (reusing bump's rangePrefix) and applies the strategy's. Values
+// that aren't a plain version (e.g. "latest", "workspace:*") are left as-is.
+func applyPinStrategy(version string, s PinStrategy) string {
+	bare := rangePrefix.ReplaceAllString(version, "")
+	if bare == "" || bare[0] < '0' || bare[0] > '9' {
+		return version // not a plain semver (e.g. "latest", "workspace:*")
+	}
+	switch s {
+	case PinCaret:
+		return "^" + bare
+	case PinTilde:
+		return "~" + bare
+	case PinExact:
+		return bare
+	}
+	return version
 }
 
 func mergeIntegrationPackages(pkg *packageJSON, entry *OptionEntry, integration string) {
