@@ -181,6 +181,7 @@ type WizardModel struct {
 	Cfg         pkg.ProjectConfig
 	Canceled    bool
 	screen      uint
+	prevScreen  uint // tab to return to from the summary screen
 	focus       uint
 	width       int
 	height      int
@@ -504,15 +505,15 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Summary screen key handling
 		if m.screen == screenSummary {
 			switch msg.String() {
-			case "ctrl+c", "esc":
+			case "ctrl+c", "esc", "q":
 				m.Canceled = true
 				return m, tea.Quit
 			case "enter":
 				// Confirm — quit with config ready
 				return m, tea.Quit
 			case "backspace":
-				// Go back to wizard
-				m.screen = screenWizard
+				// Go back to the tab we came from
+				m.screen = m.prevScreen
 				return m, nil
 			}
 			return m, nil
@@ -521,11 +522,12 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Backend tab key handling
 		if m.screen == screenBackend {
 			switch msg.String() {
-			case "ctrl+c", "esc":
+			case "ctrl+c", "esc", "q":
 				m.Canceled = true
 				return m, tea.Quit
 			case "enter":
 				m.collectConfig()
+				m.prevScreen = m.screen
 				m.screen = screenSummary
 				return m, nil
 			case "[", "shift+tab":
@@ -552,6 +554,12 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.screen = screenBackend
 				return m, nil
 			}
+		case "q":
+			// Quit, unless typing into the project name field
+			if m.focus != focusProjectName {
+				m.Canceled = true
+				return m, tea.Quit
+			}
 		case "ctrl+c", "esc":
 			m.Canceled = true
 			return m, tea.Quit
@@ -559,6 +567,7 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Collect config and move to summary screen
 			if m.focus != focusProjectName {
 				m.collectConfig()
+				m.prevScreen = m.screen
 				m.screen = screenSummary
 				return m, nil
 			}
@@ -816,7 +825,7 @@ func (m WizardModel) summaryPopup() string {
 		FooterSepStyle.Render("  •  ") +
 		key("backspace", "back") +
 		FooterSepStyle.Render("  •  ") +
-		key("esc", "quit")
+		key("q/esc", "quit")
 
 	popup := lipgloss.NewStyle().
 		Border(lipgloss.ASCIIBorder()).
@@ -925,7 +934,7 @@ func (m WizardModel) footerView() string {
 			key("↑/↓", "move"),
 			key("space", "select"),
 			key("enter", "confirm"),
-			key("esc", "quit"),
+			key("q/esc", "quit"),
 		}, FooterSepStyle.Render("  •  "))
 		return FooterBarStyle.Render(line)
 	}
@@ -951,7 +960,7 @@ func (m WizardModel) footerView() string {
 		}
 	}
 
-	bindings = append(bindings, key("]", "backend tab"), key("enter", "confirm"), key("esc", "quit"))
+	bindings = append(bindings, key("]", "backend tab"), key("enter", "confirm"), key("q/esc", "quit"))
 
 	line := strings.Join(bindings, FooterSepStyle.Render("  •  "))
 	line += "\n" + FooterDescStyle.Render("* recommended")
