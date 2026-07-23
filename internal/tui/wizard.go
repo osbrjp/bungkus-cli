@@ -749,6 +749,7 @@ func (m WizardModel) summaryPopup() string {
 		row("Backend:    ", string(m.Cfg.Backend)) +
 		row("ORM:        ", string(m.Cfg.ORM)) +
 		row("Database:   ", string(m.Cfg.Database)) +
+		row("Layout:     ", string(m.Cfg.Layout)) +
 		row("PM:         ", string(m.Cfg.PM)) +
 		row("Channel:    ", string(m.Cfg.Channel)) +
 		row("Pin:        ", string(m.Cfg.Pin)) +
