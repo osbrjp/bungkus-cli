@@ -244,6 +244,18 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		return err
 	}
 
+	// Playwright ships a .mcp.json at the project root so an agent can drive the
+	// running app through the Playwright MCP server.
+	if cfg.Test == "playwright" {
+		mcpFS, err := fs.Sub(templates, "templates/agent/mcp")
+		if err != nil {
+			return fmt.Errorf("failed to read mcp templates: %w", err)
+		}
+		if err := copyDir(mcpFS, destDir, cfg, ""); err != nil {
+			return err
+		}
+	}
+
 	if cfg.Layout.IsMonorepo() {
 		return scaffoldMonorepo(destDir, apiDir, templates, cfg)
 	}

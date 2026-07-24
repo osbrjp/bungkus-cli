@@ -74,6 +74,9 @@ cp {{ if .Layout.IsMonorepo }}apps/api/{{ end }}.env.example {{ if .Layout.IsMon
 ```
 
 - Schema lives in `{{ if eq (printf "%s" .ORM) "drizzle" }}db/schema.ts{{ else }}prisma/schema.prisma{{ end }}`. After changing it, re-run `db:generate` then `db:migrate`.
+{{- if eq (printf "%s" .ORM) "prisma" }}
+- `db:migrate` (`prisma migrate dev`) prompts for a migration name — **it blocks in a non-interactive shell**. Pass one directly (`{{ .PM }} {{ if .Layout.IsMonorepo }}--filter api {{ end }}db:migrate -- --name <name>`), or sync without a migration file using `{{ if .Layout.IsMonorepo }}{{ .PM }} --filter api exec {{ else }}{{ .PM }} exec {{ end }}prisma db push`.
+{{- end }}
 {{- end }}
 
 ## Workflow

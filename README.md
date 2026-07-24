@@ -131,6 +131,7 @@ Every scaffolded project ships with files that make it work well with Claude Cod
 - **`AGENTS.md`** (and a `CLAUDE.md` pointing to it) — describes your *exact* stack: real commands, both dev URLs, the monorepo map, the ORM/DB workflow, and the `/health-check` probe.
 - **`.claude/settings.json`** — a permission allowlist for routine dev commands (package manager, `docker compose` when a server DB is selected, `wrangler` for Cloudflare, read-only git) so agents don't stall on prompts.
 - **`.claude/commands/`** — project slash-commands: `/verify` (typecheck + build + test, and curl the health-check), `/format-fix`, and `/new-component` (follows the repo's naming + JSDoc conventions).
+- **`.mcp.json`** — with `--test playwright`, a Playwright MCP server so an agent can drive the running app in a browser.
 
 ## Project Structure
 
