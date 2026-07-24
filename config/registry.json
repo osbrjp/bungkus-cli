@@ -564,7 +564,7 @@
           "tsx": "^4.19.2"
         },
         "scripts": {
-          "dev:server": "tsx watch server/index.ts"
+          "dev:server": "tsx watch --env-file-if-exists=.env server/index.ts"
         }
       }
     },
@@ -595,12 +595,14 @@
           "drizzle-orm": "^0.36.4"
         },
         "devDependencies": {
-          "drizzle-kit": "^0.28.1"
+          "drizzle-kit": "^0.28.1",
+          "tsx": "^4.19.2"
         },
         "scripts": {
           "db:generate": "drizzle-kit generate",
           "db:migrate": "drizzle-kit migrate",
-          "db:studio": "drizzle-kit studio"
+          "db:studio": "drizzle-kit studio",
+          "db:seed": "tsx --env-file-if-exists=.env db/seed.ts"
         }
       }
     },
@@ -612,12 +614,14 @@
           "@prisma/client": "^5.22.0"
         },
         "devDependencies": {
-          "prisma": "^5.22.0"
+          "prisma": "^5.22.0",
+          "tsx": "^4.19.2"
         },
         "scripts": {
           "db:generate": "prisma generate",
           "db:migrate": "prisma migrate dev",
-          "db:studio": "prisma studio"
+          "db:studio": "prisma studio",
+          "db:seed": "tsx --env-file-if-exists=.env prisma/seed.ts"
         }
       }
     }

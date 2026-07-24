@@ -48,3 +48,64 @@ jobs:
           go test ./...
       - name: Vulnerability scan
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+  # Scaffold a real full-stack project, install it, set up the DB and hit the
+  # /health-check endpoint. Catches runtime breakage that `go test` can't (e.g.
+  # a bad DATABASE_URL that only fails when the app actually opens the DB).
+  scaffold-smoke:
+    if: |
+      (github.event.action == 'review_requested' ||
+      (github.event.action == 'labeled' && github.event.label.name == 'ci-testing') ||
+      (github.event.action == 'synchronize' && contains(github.event.pull_request.labels.*.name, 'ci-testing'))) ||
+      (github.event_name == 'push')
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # sqlite needs no Docker service, so both ORMs run on the cheap runner.
+          - orm: drizzle
+            setup_db: pnpm run db:generate && pnpm run db:migrate
+          - orm: prisma
+            # `prisma migrate dev` is interactive; `db push` syncs the schema
+            # non-interactively for the smoke test.
+            setup_db: pnpm run db:generate && pnpm exec prisma db push
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - name: Build CLI
+        run: go build -o bungkus-cli .
+      - name: Scaffold ${{ matrix.orm }} + sqlite
+        run: ./bungkus-cli create app --base astro-react --backend hono --orm ${{ matrix.orm }} --db sqlite --layout flat --pm pnpm --git=false
+      - name: Install, set up DB, seed
+        working-directory: app
+        run: |
+          cp .env.example .env
+          pnpm install
+          ${{ matrix.setup_db }}
+          pnpm run db:seed
+      - name: Boot API and verify /health-check
+        working-directory: app
+        run: |
+          pnpm run dev:server > server.log 2>&1 &
+          for i in $(seq 1 30); do
+            body=$(curl -s http://localhost:8000/health-check || true)
+            if echo "$body" | grep -q '"status":"ok"'; then
+              echo "health-check: $body"
+              echo "$body" | grep -q '"db":"connected"' || { echo "FAIL: db not connected"; exit 1; }
+              echo "$body" | grep -q 'Ada Lovelace' || { echo "FAIL: seed rows missing"; exit 1; }
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "FAIL: /health-check never came up"; cat server.log; exit 1

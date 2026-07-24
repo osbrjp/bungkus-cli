@@ -1,0 +1,15 @@
+---
+description: Scaffold a new component following this project's conventions
+argument-hint: <name> [what it does]
+---
+Create a new {{ .Base }} component for: $ARGUMENTS
+
+Follow the conventions in `AGENTS.md`:
+
+- **File name**: `kebab-case`, e.g. `primary-button.*` — use the extension this project already uses for components (`.astro`, `.tsx`, or `.vue`); match the existing files.
+- **Location**: pick the right folder under `/components` — `ui/` (primitives), `layout/` (header/footer/nav), `page/` (per-page sections), or `icon/`.
+- **JSDoc**: start every component with the JSDoc block from AGENTS.md (Module, @file, @description, @module).
+- **Types**: TypeScript `strict`; never `any` (use `unknown`); avoid `as` — prefer type guards. Prefer arrow functions and small, composable components.
+- Respect the formatter config; run `{{ .PM }} format` when done.
+
+Show the created file path and a one-line summary.
