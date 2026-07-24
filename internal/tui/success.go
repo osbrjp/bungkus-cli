@@ -55,6 +55,10 @@ func PrintSuccess(cfg pkg.ProjectConfig) {
 	if cfg.Layout.IsMonorepo() && cfg.Backend != "none" {
 		runLine += MutedStyle.Render("   # runs apps/web + apps/api")
 	}
+	runLine += MutedStyle.Render("   → web http://localhost:3000")
+	if cfg.Backend != "none" {
+		runLine += MutedStyle.Render(", api http://localhost:8000")
+	}
 
 	cmds := fmt.Sprintf(
 		"\n\n  %s%s\n    %s\n    %s",

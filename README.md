@@ -118,7 +118,7 @@ my-app/
     domain/              # shared contract: zod schemas (with --validation zod) or plain types
 ```
 
-- **`--backend hono`** runs on Node via `tsx`; **`--backend elysia`** runs on Bun. `pnpm dev` runs `apps/web` and `apps/api` together.
+- **`--backend hono`** runs on Node via `tsx`; **`--backend elysia`** runs on Bun. `pnpm dev` runs `apps/web` (`http://localhost:3000`) and `apps/api` (`http://localhost:8000`) together. Every backend exposes `GET /health-check`; with an ORM selected it also runs a read-only query against the database and returns the rows, so you can confirm the DB wiring end-to-end.
 - **`--orm drizzle` / `--orm prisma`** add the config, a `db/` client, and `.env.example` under `apps/api`. `web` and `api` both depend on `packages/domain` via `workspace:*`.
 - **`--db postgres` / `--db mysql`** also generate a root `docker-compose.yml` whose credentials match `.env.example`, so `docker compose up -d` gives you a working database. `sqlite` needs nothing extra; `d1` targets Cloudflare Workers (pair with `--deploy cloudflare-workers`).
 

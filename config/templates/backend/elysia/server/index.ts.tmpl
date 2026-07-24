@@ -1,7 +1,32 @@
 import { Elysia } from "elysia";
+{{- $orm := printf "%s" .ORM }}
+{{- $hasDb := and (ne $orm "none") (ne (printf "%s" .Database) "d1") }}
+{{- if $hasDb }}
+import { db } from "../db";
+{{- if eq $orm "drizzle" }}
+import { users } from "../db/schema";
+{{- end }}
+{{- end }}
 
 const app = new Elysia()
   .get("/", () => ({ message: "Hello from {{ .ProjectName }}" }))
-  .listen(Number(process.env.PORT ?? 3001));
+  // Health check — read-only; verifies the DB connection with a lightweight query.
+  .get("/health-check", async () => {
+{{- if $hasDb }}
+    try {
+{{- if eq $orm "drizzle" }}
+      const rows = await db.select().from(users);
+{{- else }}
+      const rows = await db.user.findMany();
+{{- end }}
+      return { status: "ok", db: "connected", users: rows };
+    } catch (err) {
+      return { status: "error", db: "disconnected", error: String(err) };
+    }
+{{- else }}
+    return { status: "ok" };
+{{- end }}
+  })
+  .listen(Number(process.env.PORT ?? 8000));
 
 console.log(`Server running on http://localhost:${app.server?.port}`);
