@@ -1,27 +1,80 @@
 # Global AI Agent Guidance
 
 ## Overview
-This project contains the following stack:
+This project was scaffolded with bungkus-cli. Stack:
 
-- Framework: {{ .Base }}
+- Framework: {{ .Base }}{{ if ne (printf "%s" .CMS) "none" }} + {{ .CMS }} (CMS){{ end }}
 - CSS: {{ .CSS }}
+- Formatter / Linter: {{ .Fmt }} / {{ .Linter }}
 - Package Manager: {{ .PM }}
+- Layout: {{ .Layout }}
+{{- if ne (printf "%s" .Validation) "none" }}
+- Validation: {{ .Validation }}
+{{- end }}
+{{- if ne (printf "%s" .Backend) "none" }}
+- Backend: {{ .Backend }} (API on `http://localhost:8000`)
+{{- end }}
+{{- if ne (printf "%s" .ORM) "none" }}
+- ORM / Database: {{ .ORM }} / {{ .Database }}
+{{- end }}
 
-## Dev environments tips
-- Always prioritise to use `{{ .PM }}` as package manager.
-- Development PORT is set to `:3000` by default
-- Always update README.md and AGENTS.md when new package and new script has been added
-- Do not install packages unless nesccessary, practice less dependency
-- Prioitise fixing/adding code in smaller chunk. 
-- Add useful comments to document complex features / code changes, not generic comments
+The frontend dev server runs on `http://localhost:3000`.
+
+## Dev environment tips
+- Always use `{{ .PM }}` as the package manager.
+- Update `README.md` and `AGENTS.md` when you add a package or a script.
+- Don't install packages unless necessary — keep the dependency footprint small.
+- Make changes in small chunks; add useful comments for complex logic, not generic ones.
+
+{{ if .Layout.IsMonorepo -}}
+This is a **{{ .PM }} workspace monorepo**:
+
+```
+apps/web         frontend ({{ .Base }})
+{{ if ne (printf "%s" .Backend) "none" }}apps/api         backend ({{ .Backend }}{{ if ne (printf "%s" .ORM) "none" }} + {{ .ORM }}{{ end }})
+{{ end }}packages/domain  shared types / schemas (imported by web + api via workspace:*)
+```
 
 ```bash
-{{ .PM }} install       # install dependency
-{{ .PM }} dev           # start dev server
-{{ .PM }} build         # production build
-{{ .PM }} preview       # preview build
+{{ .PM }} install            # install all workspace deps
+{{ .PM }} dev                # run every app together{{ if ne (printf "%s" .Backend) "none" }} (web + api){{ end }}
+{{ .PM }} -r build           # typecheck + build all workspaces
+{{ .PM }} --filter web dev   # run only the frontend
+{{ if ne (printf "%s" .Backend) "none" }}{{ .PM }} --filter api dev   # run only the backend
+{{ end }}{{ .PM }} format             # format and lint
+```
+{{- else -}}
+```bash
+{{ .PM }} install       # install dependencies
+{{ .PM }} dev           # start dev server (http://localhost:3000)
+{{ .PM }} build         # production build (also typechecks)
+{{ .PM }} preview       # preview the production build
 {{ .PM }} format        # format and lint code
 ```
+{{- end }}
+{{ if ne (printf "%s" .Backend) "none" }}
+## Backend ({{ .Backend }})
+
+- The API runs on `http://localhost:8000` (override with the `PORT` env var).
+- Start it with `{{ if .Layout.IsMonorepo }}{{ .PM }} dev` (runs web + api together) or `{{ .PM }} --filter api dev`{{ else }}{{ .PM }} run dev:server` (or `{{ .PM }} dev` for the frontend){{ end }}.
+- `GET /health-check` returns `{ status: "ok" }`{{ if ne (printf "%s" .ORM) "none" }} plus a read-only list of `users` when the database is reachable — use it to confirm the DB is wired{{ end }}.
+- Keep secrets in the API's `.env`; never expose them to the client bundle.
+{{- end }}
+{{ if ne (printf "%s" .ORM) "none" }}
+## Database ({{ .ORM }} / {{ .Database }})
+
+{{ if .Layout.IsMonorepo }}Run from `apps/api`, or with `{{ .PM }} --filter api <script>`:{{ else }}Database scripts:{{ end }}
+
+```bash
+cp {{ if .Layout.IsMonorepo }}apps/api/{{ end }}.env.example {{ if .Layout.IsMonorepo }}apps/api/{{ end }}.env
+{{ if or (eq (printf "%s" .Database) "postgres") (eq (printf "%s" .Database) "mysql") }}docker compose up -d              # start the local {{ .Database }} service
+{{ end }}{{ .PM }} {{ if .Layout.IsMonorepo }}--filter api {{ end }}db:generate   # generate a migration from the schema
+{{ .PM }} {{ if .Layout.IsMonorepo }}--filter api {{ end }}db:migrate    # apply migrations
+{{ .PM }} {{ if .Layout.IsMonorepo }}--filter api {{ end }}db:seed       # insert dummy rows for local dev
+```
+
+- Schema lives in `{{ if eq (printf "%s" .ORM) "drizzle" }}db/schema.ts{{ else }}prisma/schema.prisma{{ end }}`. After changing it, re-run `db:generate` then `db:migrate`.
+{{- end }}
 
 ## Workflow
 Use the information below as the standard workflow and criteria check-point:

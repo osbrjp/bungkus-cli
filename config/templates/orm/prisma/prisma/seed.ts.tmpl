@@ -1,0 +1,16 @@
+import { db } from "../db";
+
+/** Seed the database with a couple of deterministic rows for local dev. */
+async function main() {
+  await db.user.createMany({
+    data: [{ name: "Ada Lovelace" }, { name: "Alan Turing" }],
+  });
+  console.log("Seeded users ✔");
+}
+
+main()
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  })
+  .finally(() => db.$disconnect());

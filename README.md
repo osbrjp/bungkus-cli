@@ -119,10 +119,18 @@ my-app/
 ```
 
 - **`--backend hono`** runs on Node via `tsx`; **`--backend elysia`** runs on Bun. `pnpm dev` runs `apps/web` (`http://localhost:3000`) and `apps/api` (`http://localhost:8000`) together. Every backend exposes `GET /health-check`; with an ORM selected it also runs a read-only query against the database and returns the rows, so you can confirm the DB wiring end-to-end.
-- **`--orm drizzle` / `--orm prisma`** add the config, a `db/` client, and `.env.example` under `apps/api`. `web` and `api` both depend on `packages/domain` via `workspace:*`.
+- **`--orm drizzle` / `--orm prisma`** add the config, a `db/` client, `.env.example`, and `db:generate` / `db:migrate` / `db:seed` scripts under `apps/api`. `db:seed` inserts a couple of dummy rows so a fresh DB (and `/health-check`) returns real data. `web` and `api` both depend on `packages/domain` via `workspace:*`.
 - **`--db postgres` / `--db mysql`** also generate a root `docker-compose.yml` whose credentials match `.env.example`, so `docker compose up -d` gives you a working database. `sqlite` needs nothing extra; `d1` targets Cloudflare Workers (pair with `--deploy cloudflare-workers`).
 
 The post-scaffold summary prints the get-started steps for your exact combo (install, dev, and — when a server database is selected — `docker compose up -d` plus the `db:generate` / `db:migrate` commands).
+
+### AI-agent-ready
+
+Every scaffolded project ships with files that make it work well with Claude Code and other AI agents out of the box:
+
+- **`AGENTS.md`** (and a `CLAUDE.md` pointing to it) — describes your *exact* stack: real commands, both dev URLs, the monorepo map, the ORM/DB workflow, and the `/health-check` probe.
+- **`.claude/settings.json`** — a permission allowlist for routine dev commands (package manager, `docker compose` when a server DB is selected, `wrangler` for Cloudflare, read-only git) so agents don't stall on prompts.
+- **`.claude/commands/`** — project slash-commands: `/verify` (typecheck + build + test, and curl the health-check), `/format-fix`, and `/new-component` (follows the repo's naming + JSDoc conventions).
 
 ## Project Structure
 
