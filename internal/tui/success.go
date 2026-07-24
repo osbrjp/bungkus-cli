@@ -55,10 +55,6 @@ func PrintSuccess(cfg pkg.ProjectConfig) {
 	if cfg.Layout.IsMonorepo() && cfg.Backend != "none" {
 		runLine += MutedStyle.Render("   # runs apps/web + apps/api")
 	}
-	runLine += MutedStyle.Render("   → web http://localhost:3000")
-	if cfg.Backend != "none" {
-		runLine += MutedStyle.Render(", api http://localhost:8000")
-	}
 
 	cmds := fmt.Sprintf(
 		"\n\n  %s%s\n    %s\n    %s",
@@ -67,6 +63,14 @@ func PrintSuccess(cfg pkg.ProjectConfig) {
 		orange.Render(cfg.PM.InstallCmd()),
 		runLine,
 	)
+
+	// Local URLs the dev server serves on.
+	urls := "\n\n  " + AccentStyle.Render("Local URLs:") +
+		"\n    " + MutedStyle.Render("web  ") + orange.Render("http://localhost:3000")
+	if cfg.Backend != "none" {
+		urls += "\n    " + MutedStyle.Render("api  ") + orange.Render("http://localhost:8000")
+	}
+	cmds += urls
 
 	// Monorepo layout: explain the pnpm-workspace structure.
 	if cfg.Layout.IsMonorepo() {
