@@ -1,9 +1,25 @@
 name: Lighthouse CI
+
+# Pull requests only. GitHub runs this against the merge result rather than the branch
+# head, so a post-merge run on the default branch would re-audit a tree that has already
+# passed — a full duplicate audit for every change.
+#
+# Run it by hand on any ref from Actions -> Run workflow, or:
+#   gh workflow run "Lighthouse CI" --ref main
 on:
-  push:
-    branches: [main, dev, staging, test]
   pull_request:
-    branches: [main, dev, staging, test]
+    branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'LICENSE'
+      - '.github/**'
+  workflow_dispatch:
+
+# Only the newest tree is worth measuring. Without this, several pushes in quick
+# succession each run a full audit through to completion.
+concurrency:
+  group: lhci-{{ "${{ github.ref }}" }}
+  cancel-in-progress: true
 
 jobs:
   lighthouseci:
