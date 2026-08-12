@@ -58,7 +58,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 	if entry.Group == "vite" && entry.EntryPoint != "" {
 		skip = "main.ts"
 	}
-	if err := copyDir(baseFS, webDir, cfg, skip, nil); err != nil {
+	if err := copyDir(baseFS, webDir, cfg, skip, nil, ""); err != nil {
 		return err
 	}
 
@@ -70,7 +70,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		if err != nil {
 			return fmt.Errorf("failed to read %v integration templates: %w", entry.Integration, err)
 		}
-		if err := copyDir(integrationFS, webDir, cfg, "", nil); err != nil {
+		if err := copyDir(integrationFS, webDir, cfg, "", nil, ""); err != nil {
 			return err
 		}
 	}
@@ -83,7 +83,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 	}
 
 	stylesDir := filepath.Join(webDir, entry.StylesDir)
-	if err := copyDir(cssFS, stylesDir, cfg, "", nil); err != nil {
+	if err := copyDir(cssFS, stylesDir, cfg, "", nil, ""); err != nil {
 		return err
 	}
 
@@ -94,7 +94,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		return fmt.Errorf("failed to read formatter templates: %w", err)
 	}
 
-	if err := copyDir(fmtFS, webDir, cfg, "", nil); err != nil {
+	if err := copyDir(fmtFS, webDir, cfg, "", nil, ""); err != nil {
 		return err
 	}
 
@@ -105,7 +105,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		if err != nil {
 			return fmt.Errorf("failed to read linter templates: %w", err)
 		}
-		if err := copyDir(linterFS, webDir, cfg, "", nil); err != nil {
+		if err := copyDir(linterFS, webDir, cfg, "", nil, ""); err != nil {
 			return err
 		}
 	}
@@ -117,7 +117,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		if err != nil {
 			return fmt.Errorf("failed to read package manager templates: %w", err)
 		}
-		if err := copyDir(pmFS, destDir, cfg, "", nil); err != nil {
+		if err := copyDir(pmFS, destDir, cfg, "", nil, ""); err != nil {
 			return err
 		}
 	}
@@ -129,7 +129,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 			if err != nil {
 				return fmt.Errorf("failed to read test templates: %w", err)
 			}
-			if err := copyDir(testFS, webDir, cfg, "", nil); err != nil {
+			if err := copyDir(testFS, webDir, cfg, "", nil, ""); err != nil {
 				return err
 			}
 		}
@@ -142,7 +142,14 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 			if err != nil {
 				return fmt.Errorf("failed to read audit templates: %w", err)
 			}
-			if err := copyDir(auditFS, webDir, cfg, "", nil); err != nil {
+			// In a monorepo the audit config (lighthouserc.json) belongs to
+			// apps/web, but its workflow must live at the workspace root or
+			// GitHub never runs it (#115).
+			ghRoot := ""
+			if cfg.Layout.IsMonorepo() {
+				ghRoot = destDir
+			}
+			if err := copyDir(auditFS, webDir, cfg, "", nil, ghRoot); err != nil {
 				return err
 			}
 		}
@@ -163,7 +170,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		if err != nil {
 			return fmt.Errorf("failed to read CMS templates: %w", err)
 		}
-		if err := copyDir(cmsFS, webDir, cfg, "", nil); err != nil {
+		if err := copyDir(cmsFS, webDir, cfg, "", nil, ""); err != nil {
 			return err
 		}
 	}
@@ -175,7 +182,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 			if err != nil {
 				return fmt.Errorf("failed to read deployment templates: %w", err)
 			}
-			if err := copyDir(deployFS, webDir, cfg, "", nil); err != nil {
+			if err := copyDir(deployFS, webDir, cfg, "", nil, ""); err != nil {
 				return err
 			}
 		}
@@ -188,7 +195,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 			if err != nil {
 				return fmt.Errorf("failed to read cicd templates: %w", err)
 			}
-			if err := copyDir(cicdFS, webDir, cfg, "", nil); err != nil {
+			if err := copyDir(cicdFS, webDir, cfg, "", nil, ""); err != nil {
 				return err
 			}
 		}
@@ -201,7 +208,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 			if err != nil {
 				return fmt.Errorf("failed to read desktop templates: %w", err)
 			}
-			if err := copyDir(desktopFS, webDir, cfg, "", nil); err != nil {
+			if err := copyDir(desktopFS, webDir, cfg, "", nil, ""); err != nil {
 				return err
 			}
 		}
@@ -214,7 +221,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 			if err != nil {
 				return fmt.Errorf("failed to read backend templates: %w", err)
 			}
-			if err := copyDir(backendFS, apiDir, cfg, "", nil); err != nil {
+			if err := copyDir(backendFS, apiDir, cfg, "", nil, ""); err != nil {
 				return err
 			}
 		}
@@ -227,7 +234,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 			if err != nil {
 				return fmt.Errorf("failed to read orm templates: %w", err)
 			}
-			if err := copyDir(ormFS, apiDir, cfg, "", nil); err != nil {
+			if err := copyDir(ormFS, apiDir, cfg, "", nil, ""); err != nil {
 				return err
 			}
 		}
@@ -243,7 +250,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 			if err != nil {
 				return fmt.Errorf("failed to read database templates: %w", err)
 			}
-			if err := copyDir(dbFS, destDir, cfg, "", nil); err != nil {
+			if err := copyDir(dbFS, destDir, cfg, "", nil, ""); err != nil {
 				return err
 			}
 		}
@@ -254,7 +261,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 	if err != nil {
 		return fmt.Errorf("failed to read shared templates: %w", err)
 	}
-	if err := copyDir(sharedFS, destDir, cfg, "", nil); err != nil {
+	if err := copyDir(sharedFS, destDir, cfg, "", nil, ""); err != nil {
 		return err
 	}
 
@@ -265,7 +272,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		if err != nil {
 			return fmt.Errorf("failed to read mcp templates: %w", err)
 		}
-		if err := copyDir(mcpFS, destDir, cfg, "", nil); err != nil {
+		if err := copyDir(mcpFS, destDir, cfg, "", nil, ""); err != nil {
 			return err
 		}
 	}
@@ -294,7 +301,7 @@ func scaffoldMonorepo(destDir, apiDir string, templates fs.FS, cfg ProjectConfig
 	if err != nil {
 		return fmt.Errorf("failed to read monorepo root templates: %w", err)
 	}
-	if err := copyDir(rootFS, destDir, cfg, "", nil); err != nil {
+	if err := copyDir(rootFS, destDir, cfg, "", nil, ""); err != nil {
 		return err
 	}
 
@@ -314,7 +321,7 @@ func scaffoldMonorepo(destDir, apiDir string, templates fs.FS, cfg ProjectConfig
 	if err != nil {
 		return fmt.Errorf("failed to read domain templates: %w", err)
 	}
-	if err := copyDir(domainFS, domainDir, cfg, "", nil); err != nil {
+	if err := copyDir(domainFS, domainDir, cfg, "", nil, ""); err != nil {
 		return err
 	}
 
@@ -334,7 +341,7 @@ func scaffoldMonorepo(destDir, apiDir string, templates fs.FS, cfg ProjectConfig
 		if err != nil {
 			return fmt.Errorf("failed to read api templates: %w", err)
 		}
-		if err := copyDir(apiFS, apiDir, cfg, "", nil); err != nil {
+		if err := copyDir(apiFS, apiDir, cfg, "", nil, ""); err != nil {
 			return err
 		}
 	}
@@ -380,8 +387,11 @@ func PostScaffold(destDir string, cfg ProjectConfig) error {
 
 // copyDir renders/copies srcFS into destDir. A non-nil rep switches to `add`
 // semantics: existing files are never overwritten, and every write or skip is
-// recorded in the report.
-func copyDir(srcFS fs.FS, destDir string, cfg ProjectConfig, skip string, rep *AddReport) error {
+// recorded in the report. A non-empty ghRoot redirects .github/** there —
+// GitHub only reads workflows from the repo root's .github/, so templates
+// rendered into a subdirectory (monorepo apps/web, `add` in a workspace app)
+// must emit their workflows at the root instead.
+func copyDir(srcFS fs.FS, destDir string, cfg ProjectConfig, skip string, rep *AddReport, ghRoot string) error {
 	return fs.WalkDir(srcFS, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -406,10 +416,8 @@ func copyDir(srcFS fs.FS, destDir string, cfg ProjectConfig, skip string, rep *A
 		}
 
 		destPath := filepath.Join(destDir, path)
-		// The `add` path writes .github/** at the git root — GitHub only reads
-		// workflows from the repo root's .github/, not a subdirectory's.
-		if rep != nil && rep.GitRoot != "" && strings.HasPrefix(filepath.ToSlash(path)+"/", ".github/") {
-			destPath = filepath.Join(rep.GitRoot, path)
+		if ghRoot != "" && strings.HasPrefix(filepath.ToSlash(path)+"/", ".github/") {
+			destPath = filepath.Join(ghRoot, path)
 		}
 
 		if d.IsDir() {

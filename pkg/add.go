@@ -349,14 +349,14 @@ func Add(dir string, templates fs.FS, cfg ProjectConfig, opt string) (*AddReport
 		if err != nil {
 			return nil, fmt.Errorf("failed to read %s templates: %w", cat.name, err)
 		}
-		if err := copyDir(sub, dir, cfg, "", rep); err != nil {
+		if err := copyDir(sub, dir, cfg, "", rep, rep.GitRoot); err != nil {
 			return nil, err
 		}
 	}
 	// Playwright ships the agent MCP config too, same as create.
 	if cfg.Test == "playwright" {
 		if sub, err := fs.Sub(templates, "templates/agent/mcp"); err == nil {
-			if err := copyDir(sub, dir, cfg, "", rep); err != nil {
+			if err := copyDir(sub, dir, cfg, "", rep, rep.GitRoot); err != nil {
 				return nil, err
 			}
 		}
