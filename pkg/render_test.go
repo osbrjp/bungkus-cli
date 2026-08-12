@@ -45,6 +45,16 @@ func TestScaffoldRenders(t *testing.T) {
 		return c
 	}
 	plainAstro := func() ProjectConfig { return NewProjectConfig() }
+	lhciAstro := func() ProjectConfig {
+		c := NewProjectConfig()
+		c.Audit = "lhci"
+		return c
+	}
+	lhciNuxt := func() ProjectConfig {
+		c := NewProjectConfig()
+		c.Base, c.Audit = "nuxt", "lhci"
+		return c
+	}
 
 	cases := []struct {
 		name string
@@ -88,6 +98,21 @@ func TestScaffoldRenders(t *testing.T) {
 			name:   "plain_astro",
 			cfg:    plainAstro(),
 			absent: []string{".mcp.json", "docker-compose.yml", "apps/api/db/seed.ts"},
+		},
+		{
+			name:    "lhci_astro",
+			cfg:     lhciAstro(),
+			present: []string{"lighthouserc.json"},
+			contains: map[string][]string{
+				".github/workflows/lhci.yml": {`pages_dir="src/pages"`, "steps.affected.outputs.urls"},
+			},
+		},
+		{
+			name: "lhci_nuxt",
+			cfg:  lhciNuxt(),
+			contains: map[string][]string{
+				".github/workflows/lhci.yml": {`pages_dir="app/pages"`, "steps.affected.outputs.urls"},
+			},
 		},
 	}
 

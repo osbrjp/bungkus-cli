@@ -1,3 +1,4 @@
+{{- $urls := "" }}{{- if not .Base.IsVite }}{{- $urls = " ${{ steps.affected.outputs.urls }}" }}{{- end -}}
 name: Lighthouse CI
 
 # Pull requests only. GitHub runs this against the merge result rather than the branch
@@ -27,6 +28,36 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+{{- if not .Base.IsVite }}
+      # A PR that only touches static page files can't change any other route's
+      # score, so audit just those routes instead of the full lighthouserc list.
+      # Anything shared (components, layouts, config), dynamic routes ([slug]),
+      # underscore partials, and non-HTML endpoints (rss.xml.ts) fall back to
+      # the full audit — narrowing must never skip a route a change could regress.
+      - name: Limit audit to changed pages
+        id: affected
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: {{ "${{ github.event.pull_request.base.sha }}" }}
+        run: |
+          pages_dir="{{ if .Base.IsNuxt }}app/pages{{ else }}src/pages{{ end }}"
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          urls=""
+          while IFS= read -r f; do
+            case "$f" in
+              "$pages_dir"/_* | "$pages_dir"/*/_* | "$pages_dir"/*\[* | "$pages_dir"/*.*.*)
+                urls=""; break ;;
+              "$pages_dir"/*)
+                route="${f#"$pages_dir"}"
+                route="${route%.*}"
+                route="${route%/index}"
+                urls="$urls --collect.url=http://localhost:3000${route:-/}"
+                ;;
+              *) urls=""; break ;;
+            esac
+          done < <(git diff --name-only --diff-filter=d "$BASE_SHA" HEAD)
+          echo "urls=$urls" >> "$GITHUB_OUTPUT"
+{{- end }}
 {{- if eq .PM "pnpm" }}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
@@ -35,14 +66,14 @@ jobs:
           cache: pnpm
       - run: pnpm install
       - run: pnpm run build
-      - run: pnpx lhci autorun
+      - run: pnpx lhci autorun{{ $urls }}
         env:
           LHCI_GITHUB_APP_TOKEN: {{ "${{ secrets.LHCI_GITHUB_APP_TOKEN }}" }}
 {{- else if eq .PM "bun" }}
       - uses: oven-sh/setup-bun@v2
       - run: bun install
       - run: bun run build
-      - run: bunx lhci autorun
+      - run: bunx lhci autorun{{ $urls }}
         env:
           LHCI_GITHUB_APP_TOKEN: {{ "${{ secrets.LHCI_GITHUB_APP_TOKEN }}" }}
 {{- else if eq .PM "yarn" }}
@@ -52,7 +83,7 @@ jobs:
           cache: yarn
       - run: yarn install
       - run: yarn build
-      - run: yarn dlx @lhci/cli@0.15.x autorun
+      - run: yarn dlx @lhci/cli@0.15.x autorun{{ $urls }}
         env:
           LHCI_GITHUB_APP_TOKEN: {{ "${{ secrets.LHCI_GITHUB_APP_TOKEN }}" }}
 {{- else }}
@@ -62,7 +93,7 @@ jobs:
           cache: npm
       - run: npm install
       - run: npm run build
-      - run: npx --package=@lhci/cli@0.15.x lhci autorun
+      - run: npx --package=@lhci/cli@0.15.x lhci autorun{{ $urls }}
         env:
           LHCI_GITHUB_APP_TOKEN: {{ "${{ secrets.LHCI_GITHUB_APP_TOKEN }}" }}
 {{- end }}
