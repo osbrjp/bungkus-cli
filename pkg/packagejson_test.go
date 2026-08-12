@@ -40,12 +40,12 @@ func TestBuildPackageJSON(t *testing.T) {
 	}
 
 	tests := []struct {
-		name       string
-		cfg        func() ProjectConfig
-		wantDep    []string // must be in dependencies
-		wantDev    []string // must be in devDependencies
-		forbidDep  []string // must NOT be in dependencies
-		forbidDev  []string // must NOT be in devDependencies
+		name      string
+		cfg       func() ProjectConfig
+		wantDep   []string // must be in dependencies
+		wantDev   []string // must be in devDependencies
+		forbidDep []string // must NOT be in dependencies
+		forbidDev []string // must NOT be in devDependencies
 	}{
 		{
 			name: "astro-react + react-hook-form + zod installs resolver",
