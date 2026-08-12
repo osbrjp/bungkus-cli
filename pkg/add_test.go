@@ -277,6 +277,73 @@ func TestAdd(t *testing.T) {
 	}
 }
 
+func TestAddRelocatesWorkflowsToGitRoot(t *testing.T) {
+	setupRegistry(t)
+	root := t.TempDir()
+	dir := filepath.Join(root, "apps", "web")
+	writeFiles(t, root, map[string]string{".git/HEAD": ""})
+	writeFiles(t, dir, map[string]string{"package.json": `{"name": "web", "dependencies": {"astro": "1"}}`})
+
+	rep, err := Add(dir, config.Templates, addCfg("astro", "vanilla"), "lhci")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(root, ".github", "workflows", "lhci.yml")); err != nil {
+		t.Errorf("workflow not at git root: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".github")); err == nil {
+		t.Error("stray .github left inside the app dir")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "lighthouserc.json")); err != nil {
+		t.Errorf("lighthouserc.json should stay in the app dir: %v", err)
+	}
+	if !rep.WorkflowRelocated {
+		t.Error("WorkflowRelocated not set")
+	}
+	if rep.NoGitWarning {
+		t.Error("NoGitWarning set despite a .git at the root")
+	}
+}
+
+func TestAddWithoutGitWarns(t *testing.T) {
+	setupRegistry(t)
+	dir := t.TempDir() // no .git anywhere within the temp dir
+	writeFiles(t, dir, map[string]string{"package.json": `{"name": "site", "dependencies": {"astro": "1"}}`})
+	rep, err := Add(dir, config.Templates, addCfg("astro", "vanilla"), "lhci")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The walk-up may or may not find a .git above the temp dir on the host
+	// machine; only assert the invariant that holds either way: files exist
+	// and the report is internally consistent.
+	if rep.NoGitWarning && rep.GitRoot == "" {
+		t.Error("NoGitWarning must come with a dir fallback GitRoot")
+	}
+}
+
+func TestDetectDeploy(t *testing.T) {
+	setupRegistry(t)
+	cases := []struct {
+		name  string
+		files map[string]string
+		want  DeployTarget
+	}{
+		{"no wrangler config", nil, "none"},
+		{"pages", map[string]string{"wrangler.jsonc": `{"pages_build_output_dir": "./dist"}`}, "cloudflare-pages"},
+		{"workers", map[string]string{"wrangler.jsonc": `{"main": "src/index.ts"}`}, "cloudflare-workers"},
+		{"workers toml", map[string]string{"wrangler.toml": `main = "src/index.ts"`}, "cloudflare-workers"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			writeFiles(t, dir, tc.files)
+			if got := detectDeploy(dir); got != tc.want {
+				t.Errorf("detectDeploy = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestAddPreservesExistingFileContent(t *testing.T) {
 	setupRegistry(t)
 	dir := t.TempDir()

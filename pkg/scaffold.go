@@ -393,6 +393,11 @@ func copyDir(srcFS fs.FS, destDir string, cfg ProjectConfig, skip string, rep *A
 		}
 
 		destPath := filepath.Join(destDir, path)
+		// The `add` path writes .github/** at the git root — GitHub only reads
+		// workflows from the repo root's .github/, not a subdirectory's.
+		if rep != nil && rep.GitRoot != "" && strings.HasPrefix(filepath.ToSlash(path)+"/", ".github/") {
+			destPath = filepath.Join(rep.GitRoot, path)
+		}
 
 		if d.IsDir() {
 			return os.MkdirAll(destPath, 0o755)

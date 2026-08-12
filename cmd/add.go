@@ -23,10 +23,13 @@ NEVER overwritten — they are skipped and reported) and additively merges the
 option's dependencies and scripts into package.json (existing versions and
 scripts are never changed; other package.json fields are preserved).
 
+GitHub Actions workflow files (.github/**) are always written to the git
+repository root, even when adding inside a subdirectory such as apps/web.
+
 The package manager is detected from package.json's packageManager field or
-the lockfile, and the base framework from package.json dependencies; use
---pm / --base to override. Run "bungkus-cli add" with no option to list what
-can be added.`,
+a lockfile (searched upward to the git root), and the base framework from
+package.json dependencies; use --pm / --base to override. Run "bungkus-cli
+add" with no option to list what can be added.`,
 	Args: cobra.MaximumNArgs(2),
 	RunE: runAdd,
 }
@@ -109,7 +112,11 @@ func runAdd(cmd *cobra.Command, args []string) error {
 func printAddReport(rep *pkg.AddReport, dir, opt string, cfg pkg.ProjectConfig) {
 	fmt.Printf("Added %s (%s) to %s\n\n", opt, strings.Join(rep.Categories, ", "), dir)
 	for _, f := range rep.CreatedFiles {
-		fmt.Printf("  created   %s\n", f)
+		if strings.HasPrefix(f, "..") {
+			fmt.Printf("  created   %s   (repo root)\n", f)
+		} else {
+			fmt.Printf("  created   %s\n", f)
+		}
 	}
 	for _, f := range rep.SkippedFiles {
 		fmt.Printf("  skipped   %s (already exists — kept yours)\n", f)
@@ -130,14 +137,16 @@ func printAddReport(rep *pkg.AddReport, dir, opt string, cfg pkg.ProjectConfig) 
 		}
 	}
 
-	// GitHub only runs workflows from the repo root's .github/workflows/.
-	for _, f := range rep.CreatedFiles {
-		if strings.HasPrefix(filepath.ToSlash(f), ".github/") {
-			if _, err := os.Stat(filepath.Join(dir, ".git")); err != nil {
-				fmt.Println("\n  warning: .github/ files were created in a directory that is not a git")
-				fmt.Println("  repository root — GitHub only runs workflows from the repo root.")
+	if rep.WorkflowRelocated {
+		fmt.Printf("\n  note: workflow(s) written to %s/.github — review job steps if this is a monorepo.\n", rep.GitRoot)
+	}
+	if rep.NoGitWarning {
+		for _, f := range rep.CreatedFiles {
+			if strings.HasPrefix(filepath.ToSlash(f), ".github/") {
+				fmt.Printf("\n  warning: no git repository found — .github/ written under %s;\n", dir)
+				fmt.Println("  GitHub Actions only reads .github/ at the repo root.")
+				break
 			}
-			break
 		}
 	}
 

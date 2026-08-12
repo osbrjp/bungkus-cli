@@ -14,13 +14,16 @@ import (
 var ErrUnknownAddOption = errors.New("unknown add option")
 
 // AddReport records what Add did (and refused to do). File paths are relative
-// to the project directory.
+// to the project directory (relocated workflow files may contain "../").
 type AddReport struct {
 	CreatedFiles, SkippedFiles   []string
 	DepsAdded, DepsSkipped       []string
 	ScriptsAdded, ScriptsSkipped []string
 	PkgJSONChanged               bool
 	Categories                   []string
+	GitRoot                      string // where .github/** is written
+	NoGitWarning                 bool   // no .git found walking up from dir
+	WorkflowRelocated            bool   // .github/** landed outside dir
 }
 
 // addCategory wires one registry category into `add`. Options inside each
@@ -121,7 +124,45 @@ func DetectProject(dir string, rawPkg []byte) (ProjectConfig, error) {
 	} else {
 		cfg.CSS = "vanilla"
 	}
+	cfg.Deployment = detectDeploy(dir)
 	return cfg, nil
+}
+
+// detectDeploy infers the deploy target from an existing wrangler config so
+// `add cloudflare-pages` followed by `add github-actions` needs no flags.
+// ponytail: heuristic tied to the two current registry targets — only the
+// pages template carries pages_build_output_dir.
+func detectDeploy(dir string) DeployTarget {
+	for _, f := range []string{"wrangler.jsonc", "wrangler.toml"} {
+		data, err := os.ReadFile(filepath.Join(dir, f))
+		if err != nil {
+			continue
+		}
+		if strings.Contains(string(data), "pages_build_output_dir") {
+			return "cloudflare-pages"
+		}
+		return "cloudflare-workers"
+	}
+	return "none"
+}
+
+// findGitRoot walks up from dir to the nearest ancestor containing .git (a
+// directory, or a file in worktrees). Returns "" when there is none.
+func findGitRoot(dir string) string {
+	d, err := filepath.Abs(dir)
+	if err != nil {
+		return ""
+	}
+	for {
+		if _, err := os.Stat(filepath.Join(d, ".git")); err == nil {
+			return d
+		}
+		parent := filepath.Dir(d)
+		if parent == d {
+			return ""
+		}
+		d = parent
+	}
 }
 
 // detectPM resolves the package manager: package.json's packageManager field
@@ -239,9 +280,16 @@ func Add(dir string, templates fs.FS, cfg ProjectConfig, opt string) (*AddReport
 	}
 	for _, cat := range matched {
 		if cat.name == "cicd" && cfg.Deployment == "none" {
-			return nil, fmt.Errorf("%s needs a deploy target: pass --deploy (cloudflare-pages, cloudflare-workers)", opt)
+			return nil, fmt.Errorf("%s needs a deploy target: pass --deploy (cloudflare-pages, cloudflare-workers) or run 'bungkus-cli add cloudflare-pages' first", opt)
 		}
 		cat.set(&cfg, opt)
+	}
+
+	// GitHub only reads .github/ at the repo root, so workflow templates are
+	// redirected there (copyDir handles the redirect via rep.GitRoot).
+	if rep.GitRoot = findGitRoot(dir); rep.GitRoot == "" {
+		rep.NoGitWarning = true
+		rep.GitRoot, _ = filepath.Abs(dir)
 	}
 
 	for _, cat := range matched {
@@ -284,11 +332,18 @@ func Add(dir string, templates fs.FS, cfg ProjectConfig, opt string) (*AddReport
 		}
 	}
 
+	absDir, _ := filepath.Abs(dir)
 	rel := func(paths []string) []string {
 		out := make([]string, 0, len(paths))
 		for _, p := range paths {
-			if r, err := filepath.Rel(dir, p); err == nil {
+			if abs, err := filepath.Abs(p); err == nil {
+				p = abs
+			}
+			if r, err := filepath.Rel(absDir, p); err == nil {
 				out = append(out, r)
+				if strings.HasPrefix(r, "..") {
+					rep.WorkflowRelocated = true
+				}
 			} else {
 				out = append(out, p)
 			}
