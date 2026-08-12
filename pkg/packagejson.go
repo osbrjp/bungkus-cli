@@ -336,12 +336,14 @@ func applyCrossCuttingRules(pkg *packageJSON, cfg ProjectConfig) {
 		pkg.DevDependencies["prettier-plugin-astro"] = "0.14.1"
 	}
 
-	// eslint + vite-react → extra React eslint plugins
-	if cfg.Linter == "eslint" && cfg.Base == "vite-react" {
-		pkg.DevDependencies["globals"] = "^17.4.0"
+	// eslint + a react-integrated base → react eslint plugins. The generated
+	// eslint.config.mjs imports these whenever the base has a react
+	// integration, so the deps must track the same condition (issue #118:
+	// globals/typescript-eslint are imported unconditionally and live in the
+	// registry's eslint entry instead).
+	if cfg.Linter == "eslint" && cfg.Base.IsReactInt() {
 		pkg.DevDependencies["eslint-plugin-react-hooks"] = "^7.0.1"
 		pkg.DevDependencies["eslint-plugin-react-refresh"] = "^0.5.2"
-		pkg.DevDependencies["typescript-eslint"] = "^8.58.0"
 	}
 
 	// veevalidate + zod → @vee-validate/zod adapter
