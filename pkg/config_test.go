@@ -146,3 +146,31 @@ func TestCrateNameAndBundleIdentifier(t *testing.T) {
 		}
 	}
 }
+
+func TestBaseIntegrationHelpers(t *testing.T) {
+	setupRegistry(t)
+	cases := []struct {
+		base  BaseFramework
+		react bool
+		vue   bool
+	}{
+		{"astro", false, false},
+		{"astro-react", true, false},
+		{"astro-vue", false, true},
+		{"vite", false, false},
+		{"vite-react", true, false},
+		{"vite-vue", false, true},
+		// nuxt's registry entry has no integration field; its vue-ness is
+		// remapped separately (see BuildPackageJSON / IsValidIntegration).
+		{"nuxt", false, false},
+		{"bogus", false, false},
+	}
+	for _, tc := range cases {
+		if got := tc.base.IsReactInt(); got != tc.react {
+			t.Errorf("%s.IsReactInt() = %v, want %v", tc.base, got, tc.react)
+		}
+		if got := tc.base.IsVueInt(); got != tc.vue {
+			t.Errorf("%s.IsVueInt() = %v, want %v", tc.base, got, tc.vue)
+		}
+	}
+}

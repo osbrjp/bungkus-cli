@@ -249,7 +249,9 @@
         },
         "devDependencies": {
           "eslint": "^10.0.0",
-          "@eslint/js": "^10.0.0"
+          "@eslint/js": "^10.0.0",
+          "globals": "^17.4.0",
+          "typescript-eslint": "^8.58.0"
         }
       }
     },

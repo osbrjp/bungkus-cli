@@ -157,11 +157,14 @@ func (b BaseFramework) IsVite() bool {
 }
 
 func (b BaseFramework) GetIntegration() (BaseIntegration, error) {
-	if globalRegistry != nil {
+	if globalRegistry == nil {
 		return BaseIntegration(""), errors.New("unable to read registry")
 	}
 
 	entry := globalRegistry.GetBase(string(b))
+	if entry == nil {
+		return BaseIntegration(""), errors.New("unknown base framework: " + string(b))
+	}
 	return BaseIntegration(entry.Integration), nil
 }
 
@@ -182,7 +185,7 @@ func (b BaseFramework) IsVueInt() bool {
 		return false
 	}
 
-	return integration == "react"
+	return integration == "vue"
 }
 
 func (c CSSFramework) IsValid() bool {
