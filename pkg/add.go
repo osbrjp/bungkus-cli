@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -76,6 +77,9 @@ func AddableOptions() []AddableCategory {
 	return out
 }
 
+// wranglerTomlMainRE matches a top-level `main = ...` in wrangler.toml.
+var wranglerTomlMainRE = regexp.MustCompile(`(?m)^\s*main\s*=`)
+
 // lockfileNames maps each package manager to its lockfile names. These are npm
 // ecosystem facts, not bungkus choices, so they live here, not in the registry.
 var lockfileNames = map[string][]string{
@@ -130,32 +134,50 @@ func DetectProject(dir string, rawPkg []byte) (ProjectConfig, error) {
 
 // detectDeploy infers the deploy target from an existing wrangler config so
 // `add cloudflare-pages` followed by `add github-actions` needs no flags.
-// ponytail: heuristic tied to the two current registry targets — only the
-// pages template carries pages_build_output_dir.
+// Deliberately conservative: each target needs its own positive marker
+// (pages_build_output_dir / main); anything else stays "none" and the caller
+// asks for --deploy rather than guessing a workflow that deploys wrongly.
 func detectDeploy(dir string) DeployTarget {
 	for _, f := range []string{"wrangler.jsonc", "wrangler.toml"} {
 		data, err := os.ReadFile(filepath.Join(dir, f))
 		if err != nil {
 			continue
 		}
-		if strings.Contains(string(data), "pages_build_output_dir") {
+		s := string(data)
+		switch {
+		case strings.Contains(s, "pages_build_output_dir"):
 			return "cloudflare-pages"
+		case strings.Contains(s, `"main"`) || wranglerTomlMainRE.MatchString(s):
+			return "cloudflare-workers"
 		}
-		return "cloudflare-workers"
+		return "none"
 	}
 	return "none"
 }
 
 // findGitRoot walks up from dir to the nearest ancestor containing .git (a
-// directory, or a file in worktrees). Returns "" when there is none.
+// directory, or a file in worktrees). Unless that ancestor is dir itself it
+// must also look like a JS workspace root (package.json or
+// pnpm-workspace.yaml) — otherwise an unrelated outer repo (e.g. a
+// git-managed $HOME) would receive this project's workflow files or lend it
+// a stray lockfile. Returns "" when there is no usable root.
 func findGitRoot(dir string) string {
 	d, err := filepath.Abs(dir)
 	if err != nil {
 		return ""
 	}
+	start := d
 	for {
 		if _, err := os.Stat(filepath.Join(d, ".git")); err == nil {
-			return d
+			if d == start {
+				return d
+			}
+			for _, marker := range []string{"package.json", "pnpm-workspace.yaml"} {
+				if _, err := os.Stat(filepath.Join(d, marker)); err == nil {
+					return d
+				}
+			}
+			return ""
 		}
 		parent := filepath.Dir(d)
 		if parent == d {
@@ -166,9 +188,11 @@ func findGitRoot(dir string) string {
 }
 
 // detectPM resolves the package manager: package.json's packageManager field
-// wins; otherwise walk up from dir looking for exactly one PM's lockfile,
-// stopping at the repo root (a directory containing .git). Zero or several
-// matching lockfiles yield "" so the caller can require --pm.
+// wins; otherwise look for exactly one PM's lockfile, walking up from dir but
+// never past the project's own git root (see findGitRoot). Without a usable
+// git root only dir itself is checked — walking further would adopt stray
+// lockfiles from unrelated ancestors. Zero or several matching lockfiles
+// yield "" so the caller can require --pm.
 func detectPM(dir, pmField string) PackageManager {
 	if name, _, _ := strings.Cut(pmField, "@"); name != "" && GetRegistry().HasPM(name) {
 		return PackageManager(name)
@@ -177,6 +201,7 @@ func detectPM(dir, pmField string) PackageManager {
 	if err != nil {
 		return ""
 	}
+	root := findGitRoot(dir)
 	for {
 		var found []string
 		for pm, files := range lockfileNames {
@@ -193,8 +218,8 @@ func detectPM(dir, pmField string) PackageManager {
 		if len(found) > 1 {
 			return "" // ambiguous
 		}
-		if _, err := os.Stat(filepath.Join(d, ".git")); err == nil {
-			return "" // repo root reached, no lockfile anywhere
+		if root == "" || d == root {
+			return ""
 		}
 		parent := filepath.Dir(d)
 		if parent == d {
@@ -278,9 +303,17 @@ func Add(dir string, templates fs.FS, cfg ProjectConfig, opt string) (*AddReport
 			return nil, fmt.Errorf("%s does not support %s projects", opt, baseEntry.Group)
 		}
 	}
+	cfgBefore := cfg
 	for _, cat := range matched {
-		if cat.name == "cicd" && cfg.Deployment == "none" {
-			return nil, fmt.Errorf("%s needs a deploy target: pass --deploy (cloudflare-pages, cloudflare-workers) or run 'bungkus-cli add cloudflare-pages' first", opt)
+		if cat.name == "cicd" {
+			if cfg.Deployment == "none" {
+				return nil, fmt.Errorf("%s needs a deploy target: pass --deploy (cloudflare-pages, cloudflare-workers) or run 'bungkus-cli add cloudflare-pages' first", opt)
+			}
+			// The rendered workflow runs wrangler; ship the deploy target's
+			// packages (wrangler devDep + deploy script) alongside it.
+			if de := reg.GetDeployment(string(cfg.Deployment)); de != nil {
+				entries = append(entries, de)
+			}
 		}
 		cat.set(&cfg, opt)
 	}
@@ -290,6 +323,18 @@ func Add(dir string, templates fs.FS, cfg ProjectConfig, opt string) (*AddReport
 	if rep.GitRoot = findGitRoot(dir); rep.GitRoot == "" {
 		rep.NoGitWarning = true
 		rep.GitRoot, _ = filepath.Abs(dir)
+	}
+
+	// Merge package.json FIRST: a malformed file (e.g. "devDependencies": null)
+	// must abort before any template file lands in the user's tree.
+	pkgPath := filepath.Join(dir, "package.json")
+	raw, err := os.ReadFile(pkgPath)
+	if err != nil {
+		return nil, fmt.Errorf("could not read package.json: %w", err)
+	}
+	merged, err := MergeAddPackages(raw, collectAddPackages(cfgBefore, cfg, entries), rep)
+	if err != nil {
+		return nil, err
 	}
 
 	for _, cat := range matched {
@@ -317,23 +362,21 @@ func Add(dir string, templates fs.FS, cfg ProjectConfig, opt string) (*AddReport
 		}
 	}
 
-	pkgPath := filepath.Join(dir, "package.json")
-	raw, err := os.ReadFile(pkgPath)
-	if err != nil {
-		return nil, fmt.Errorf("could not read package.json: %w", err)
-	}
-	merged, err := MergeAddPackages(raw, collectAddPackages(cfg, entries), rep)
-	if err != nil {
-		return nil, err
-	}
+	// Atomic replace: a crash or full disk mid-write must never truncate the
+	// user's package.json (the one pre-existing file this command rewrites).
 	if rep.PkgJSONChanged {
-		if err := os.WriteFile(pkgPath, merged, 0o644); err != nil {
+		tmp := pkgPath + ".bungkus.tmp"
+		if err := os.WriteFile(tmp, merged, 0o644); err != nil {
+			return nil, err
+		}
+		if err := os.Rename(tmp, pkgPath); err != nil {
+			os.Remove(tmp)
 			return nil, err
 		}
 	}
 
 	absDir, _ := filepath.Abs(dir)
-	rel := func(paths []string) []string {
+	rel := func(paths []string, markRelocated bool) []string {
 		out := make([]string, 0, len(paths))
 		for _, p := range paths {
 			if abs, err := filepath.Abs(p); err == nil {
@@ -341,7 +384,7 @@ func Add(dir string, templates fs.FS, cfg ProjectConfig, opt string) (*AddReport
 			}
 			if r, err := filepath.Rel(absDir, p); err == nil {
 				out = append(out, r)
-				if strings.HasPrefix(r, "..") {
+				if markRelocated && strings.HasPrefix(r, "..") {
 					rep.WorkflowRelocated = true
 				}
 			} else {
@@ -350,20 +393,39 @@ func Add(dir string, templates fs.FS, cfg ProjectConfig, opt string) (*AddReport
 		}
 		return out
 	}
-	rep.CreatedFiles, rep.SkippedFiles = rel(rep.CreatedFiles), rel(rep.SkippedFiles)
+	rep.CreatedFiles = rel(rep.CreatedFiles, true)
+	rep.SkippedFiles = rel(rep.SkippedFiles, false)
 	return rep, nil
 }
 
 // collectAddPackages builds the packages an add contributes: each matched
-// entry's own packages plus the cross-cutting rules evaluated against the
-// detected config (e.g. `add prettier` on a tailwind project also brings
-// prettier-plugin-tailwindcss). Reuses the create path's rule code so version
-// literals are never duplicated.
-func collectAddPackages(cfg ProjectConfig, entries []*OptionEntry) Packages {
+// entry's own packages plus the cross-cutting-rule DELTA the added option
+// causes (e.g. `add prettier` on a tailwind project also brings
+// prettier-plugin-tailwindcss). Rules that fire regardless of the option —
+// like pnpm+astro -> vite — are create-time concerns and must not ride along
+// on an unrelated add, so rules matched by the before-config are subtracted.
+func collectAddPackages(before, after ProjectConfig, entries []*OptionEntry) Packages {
 	p := packageJSON{Scripts: map[string]string{}, Dependencies: map[string]string{}, DevDependencies: map[string]string{}}
 	for _, e := range entries {
 		mergePackages(&p, e.Packages)
 	}
-	applyCrossCuttingRules(&p, cfg)
+
+	empty := func() packageJSON {
+		return packageJSON{Scripts: map[string]string{}, Dependencies: map[string]string{}, DevDependencies: map[string]string{}}
+	}
+	base, withOpt := empty(), empty()
+	applyCrossCuttingRules(&base, before)
+	applyCrossCuttingRules(&withOpt, after)
+	delta := func(dst, all, already map[string]string) {
+		for k, v := range all {
+			if _, ok := already[k]; !ok {
+				dst[k] = v
+			}
+		}
+	}
+	delta(p.Scripts, withOpt.Scripts, base.Scripts)
+	delta(p.Dependencies, withOpt.Dependencies, base.Dependencies)
+	delta(p.DevDependencies, withOpt.DevDependencies, base.DevDependencies)
+
 	return Packages{Scripts: p.Scripts, Dependencies: p.Dependencies, DevDependencies: p.DevDependencies}
 }

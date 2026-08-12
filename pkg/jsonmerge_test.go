@@ -89,12 +89,24 @@ func TestMergeAddPackages(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:        "duplicate top-level keys are deduped on write",
-			orig:        `{"license": "MIT", "license": "ISC", "scripts": {}}`,
-			add:         Packages{Scripts: map[string]string{"lhci": "lhci autorun"}},
-			wantChanged: true,
-			contains:    []string{"\"license\": \"ISC\""},
-			notContains: []string{"\"MIT\""},
+			// A rewrite would silently drop one of the duplicate values, so the
+			// merge must refuse rather than destroy user-written bytes.
+			name:    "duplicate top-level keys are refused",
+			orig:    `{"license": "MIT", "license": "ISC", "scripts": {}}`,
+			add:     Packages{Scripts: map[string]string{"lhci": "lhci autorun"}},
+			wantErr: true,
+		},
+		{
+			name:    "duplicate section keys are refused",
+			orig:    `{"scripts": {"build": "tsc", "build": "vite build"}}`,
+			add:     Packages{Scripts: map[string]string{"lhci": "lhci autorun"}},
+			wantErr: true,
+		},
+		{
+			name:    "null section is rejected before anything is written",
+			orig:    `{"devDependencies": null}`,
+			add:     Packages{DevDependencies: DevDependencies{"@lhci/cli": "^0.14.0"}},
+			wantErr: true,
 		},
 	}
 
@@ -128,6 +140,37 @@ func TestMergeAddPackages(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestMergeAddPackagesPreservesIndentStyle(t *testing.T) {
+	// A tab-indented package.json must stay tab-indented: untouched lines keep
+	// their exact bytes and new keys use the file's own indent unit.
+	orig := "{\n\t\"name\": \"x\",\n\t\"scripts\": {\n\t\t\"dev\": \"astro dev\"\n\t}\n}\n"
+	rep := &AddReport{}
+	out, err := MergeAddPackages([]byte(orig), Packages{Scripts: map[string]string{"lhci": "lhci autorun"}}, rep)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(out)
+	for _, want := range []string{"\t\"name\": \"x\"", "\t\t\"dev\": \"astro dev\"", "\t\t\"lhci\": \"lhci autorun\""} {
+		if !strings.Contains(s, want) {
+			t.Errorf("output missing %q:\n%s", want, s)
+		}
+	}
+	if strings.Contains(s, "  \"") {
+		t.Errorf("space indentation leaked into a tab-indented file:\n%s", s)
+	}
+
+	// CRLF files keep CRLF framing.
+	crlf := "{\r\n  \"name\": \"x\"\r\n}\r\n"
+	rep = &AddReport{}
+	out, err = MergeAddPackages([]byte(crlf), Packages{Scripts: map[string]string{"a": "b"}}, rep)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(out), "\r\n") || strings.Contains(strings.ReplaceAll(string(out), "\r\n", ""), "\n") {
+		t.Errorf("CRLF framing not preserved:\n%q", out)
 	}
 }
 

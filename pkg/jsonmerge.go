@@ -5,13 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"regexp"
 	"slices"
 )
 
 // orderedObj preserves top-level key order and the exact raw bytes of every
-// value, so re-emitting an untouched package.json section changes nothing the
-// user wrote. Interior bytes of untouched values are preserved verbatim; only
-// each emitted level's key/indent framing is normalized to two-space style.
+// value. Interior bytes of untouched values are preserved verbatim; each
+// emitted level's key/indent framing is re-emitted using the file's own
+// sniffed indent unit and newline style, so an untouched line normally stays
+// byte-identical (exotic per-line indentation is the one case it normalizes).
 type orderedObj struct {
 	keys []string
 	vals map[string]json.RawMessage
@@ -40,10 +42,12 @@ func parseOrderedObj(data []byte) (*orderedObj, error) {
 		if err := dec.Decode(&raw); err != nil {
 			return nil, err
 		}
-		// Duplicate keys: last value wins, the key is emitted once.
-		if _, dup := o.vals[key]; !dup {
-			o.keys = append(o.keys, key)
+		// A duplicate key means any rewrite would silently drop one of the
+		// user's values (JSON parsers keep the last one) — refuse instead.
+		if _, dup := o.vals[key]; dup {
+			return nil, fmt.Errorf("duplicate key %q — refusing to rewrite", key)
 		}
+		o.keys = append(o.keys, key)
 		o.vals[key] = raw
 	}
 	if _, err := dec.Token(); err != nil { // consume the closing brace
@@ -60,27 +64,43 @@ func (o *orderedObj) set(key string, v json.RawMessage) {
 	o.vals[key] = v
 }
 
-// marshal emits the object with two-space indentation at this level; value
-// bytes are written verbatim, preserving their interior formatting.
-func (o *orderedObj) marshal(indent string) []byte {
+// marshal emits the object using the file's own indent unit and newline style
+// (see sniffFormat); value bytes are written verbatim, preserving their
+// interior formatting. prefix is the indentation of the object's own braces.
+func (o *orderedObj) marshal(prefix, unit, nl string) []byte {
 	if len(o.keys) == 0 {
 		return []byte("{}")
 	}
 	var buf bytes.Buffer
-	buf.WriteString("{\n")
+	buf.WriteString("{" + nl)
 	for i, k := range o.keys {
 		kb, _ := json.Marshal(k)
-		buf.WriteString(indent + "  ")
+		buf.WriteString(prefix + unit)
 		buf.Write(kb)
 		buf.WriteString(": ")
 		buf.Write(bytes.TrimSpace(o.vals[k]))
 		if i < len(o.keys)-1 {
 			buf.WriteByte(',')
 		}
-		buf.WriteByte('\n')
+		buf.WriteString(nl)
 	}
-	buf.WriteString(indent + "}")
+	buf.WriteString(prefix + "}")
 	return buf.Bytes()
+}
+
+var indentRE = regexp.MustCompile(`(?m)^([ \t]+)\S`)
+
+// sniffFormat detects the file's indent unit (first indented line ≈ the
+// top-level unit) and newline style so a rewrite matches what the user wrote.
+func sniffFormat(orig []byte) (unit, nl string) {
+	unit, nl = "  ", "\n"
+	if bytes.Contains(orig, []byte("\r\n")) {
+		nl = "\r\n"
+	}
+	if m := indentRE.FindSubmatch(orig); m != nil {
+		unit = string(m[1])
+	}
+	return
 }
 
 // depSections are every package.json section that can already carry a
@@ -173,8 +193,9 @@ func MergeAddPackages(orig []byte, add Packages, rep *AddReport) ([]byte, error)
 		return orig, nil
 	}
 	rep.PkgJSONChanged = true
+	unit, nl := sniffFormat(orig)
 	for name := range changed {
-		top.set(name, sections[name].marshal("  "))
+		top.set(name, sections[name].marshal(unit, unit, nl))
 	}
-	return append(top.marshal(""), '\n'), nil
+	return append(top.marshal("", unit, nl), []byte(nl)...), nil
 }

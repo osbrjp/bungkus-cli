@@ -67,9 +67,19 @@ func TestDetectProject(t *testing.T) {
 		{
 			name:    "lockfile found in a parent workspace root",
 			pkgJSON: astroPkg,
-			files:   map[string]string{"../../pnpm-lock.yaml": "", "../../.git/HEAD": ""},
+			files:   map[string]string{"../../pnpm-lock.yaml": "", "../../.git/HEAD": "", "../../package.json": "{}"},
 			subdir:  "apps/web",
 			wantPM:  "pnpm", wantBase: "astro",
+		},
+		{
+			// Without a git root the walk must not leave dir: a stray lockfile
+			// in an unrelated ancestor (e.g. an accidental npm i in $HOME) must
+			// not decide the project's package manager.
+			name:    "stray parent lockfile without git is ignored",
+			pkgJSON: astroPkg,
+			files:   map[string]string{"../package-lock.json": ""},
+			subdir:  "proj",
+			wantPM:  "", wantBase: "astro",
 		},
 		{
 			name: "astro-react beats astro",
@@ -197,9 +207,12 @@ func TestAdd(t *testing.T) {
 			wantErr: "needs a deploy target",
 		},
 		{
+			// The rendered workflow runs wrangler, so the deploy target's
+			// packages must ride along or the first CI run fails.
 			name: "add github-actions with deploy",
 			cfg:  addCfg("astro", "vanilla"), opt: "github-actions", deploy: "cloudflare-pages",
-			pkgHas: []string{"\"name\": \"site\""},
+			created: []string{".github/workflows/deploy.yml"},
+			pkgHas:  []string{"wrangler", "\"deploy\""},
 		},
 		{
 			name: "add oxfmt on astro is rejected",
@@ -244,6 +257,26 @@ func TestAdd(t *testing.T) {
 					t.Errorf("expected %s to be created: %v", f, err)
 				}
 			}
+			// The same render invariants create output gets: no unrendered
+			// template residue, valid JSON — add renders with a config shape
+			// (Fmt="", Linter="") the create path never produces.
+			for _, f := range rep.CreatedFiles {
+				b, err := os.ReadFile(filepath.Join(dir, f))
+				if err != nil {
+					t.Errorf("read created file %s: %v", f, err)
+					continue
+				}
+				for _, m := range goTemplateMarkers {
+					if strings.Contains(string(b), m) {
+						t.Errorf("unrendered template marker %q in %s", m, f)
+					}
+				}
+				if strings.HasSuffix(f, ".json") {
+					if err := json.Unmarshal(b, new(json.RawMessage)); err != nil {
+						t.Errorf("invalid JSON in %s: %v", f, err)
+					}
+				}
+			}
 			for _, f := range tc.skipped {
 				found := false
 				for _, s := range rep.SkippedFiles {
@@ -281,7 +314,7 @@ func TestAddRelocatesWorkflowsToGitRoot(t *testing.T) {
 	setupRegistry(t)
 	root := t.TempDir()
 	dir := filepath.Join(root, "apps", "web")
-	writeFiles(t, root, map[string]string{".git/HEAD": ""})
+	writeFiles(t, root, map[string]string{".git/HEAD": "", "package.json": `{"name": "workspace"}`})
 	writeFiles(t, dir, map[string]string{"package.json": `{"name": "web", "dependencies": {"astro": "1"}}`})
 
 	rep, err := Add(dir, config.Templates, addCfg("astro", "vanilla"), "lhci")
@@ -302,6 +335,77 @@ func TestAddRelocatesWorkflowsToGitRoot(t *testing.T) {
 	}
 	if rep.NoGitWarning {
 		t.Error("NoGitWarning set despite a .git at the root")
+	}
+}
+
+func TestAddIgnoresUnrelatedAncestorRepo(t *testing.T) {
+	// A git ancestor that is not a JS workspace (e.g. a git-managed $HOME) must
+	// not receive this project's workflow files.
+	setupRegistry(t)
+	root := t.TempDir()
+	dir := filepath.Join(root, "scratch", "site")
+	writeFiles(t, root, map[string]string{".git/HEAD": ""}) // no package.json at root
+	writeFiles(t, dir, map[string]string{"package.json": `{"name": "site", "dependencies": {"astro": "1"}}`})
+
+	rep, err := Add(dir, config.Templates, addCfg("astro", "vanilla"), "lhci")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(root, ".github")); err == nil {
+		t.Error("workflow leaked into the unrelated ancestor repo")
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".github", "workflows", "lhci.yml")); err != nil {
+		t.Errorf("workflow should stay in the project dir: %v", err)
+	}
+	if !rep.NoGitWarning {
+		t.Error("NoGitWarning should be set when no usable git root exists")
+	}
+}
+
+func TestAddOnlyOptionPackages(t *testing.T) {
+	// `add lhci` on a pnpm astro project must add ONLY lhci's packages — the
+	// create-time pnpm+astro -> vite rule must not ride along.
+	setupRegistry(t)
+	dir := t.TempDir()
+	writeFiles(t, dir, map[string]string{
+		"package.json": `{"name": "site", "dependencies": {"astro": "1"}}`,
+	})
+	rep, err := Add(dir, config.Templates, addCfg("astro", "vanilla"), "lhci")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rep.DepsAdded) != 1 || !strings.HasPrefix(rep.DepsAdded[0], "@lhci/cli") {
+		t.Errorf("DepsAdded = %v, want exactly [@lhci/cli ...]", rep.DepsAdded)
+	}
+	raw, _ := os.ReadFile(filepath.Join(dir, "package.json"))
+	if strings.Contains(string(raw), `"vite"`) {
+		t.Errorf("unrequested vite dependency injected:\n%s", raw)
+	}
+}
+
+func TestDetectBaseTieIsAmbiguous(t *testing.T) {
+	// A project matching two equally specific base signatures (e.g. migrating
+	// between stacks) must not silently pick one.
+	setupRegistry(t)
+	reg := GetRegistry()
+	a, b := reg.GetBase("astro-react"), reg.GetBase("vite-vue")
+	count := func(e *BaseEntry) int {
+		return len(e.Packages.Dependencies) + len(e.Packages.DevDependencies)
+	}
+	if count(a) != count(b) {
+		t.Skipf("registry signatures no longer tie (%d vs %d) — pick two equal-count bases", count(a), count(b))
+	}
+	names := map[string]bool{}
+	for _, e := range []*BaseEntry{a, b} {
+		for k := range e.Packages.Dependencies {
+			names[k] = true
+		}
+		for k := range e.Packages.DevDependencies {
+			names[k] = true
+		}
+	}
+	if got := detectBase(names); got != "" {
+		t.Errorf("detectBase = %q, want \"\" for a tie", got)
 	}
 }
 
@@ -332,6 +436,9 @@ func TestDetectDeploy(t *testing.T) {
 		{"pages", map[string]string{"wrangler.jsonc": `{"pages_build_output_dir": "./dist"}`}, "cloudflare-pages"},
 		{"workers", map[string]string{"wrangler.jsonc": `{"main": "src/index.ts"}`}, "cloudflare-workers"},
 		{"workers toml", map[string]string{"wrangler.toml": `main = "src/index.ts"`}, "cloudflare-workers"},
+		// A wrangler config without a positive marker (e.g. a Pages project
+		// configured in the dashboard) must NOT be guessed as workers.
+		{"ambiguous wrangler config", map[string]string{"wrangler.toml": "name = \"site\"\ncompatibility_date = \"2026-01-01\""}, "none"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

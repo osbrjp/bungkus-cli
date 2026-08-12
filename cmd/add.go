@@ -21,7 +21,8 @@ touching your code.
 Renders the option's config templates into the project (existing files are
 NEVER overwritten — they are skipped and reported) and additively merges the
 option's dependencies and scripts into package.json (existing versions and
-scripts are never changed; other package.json fields are preserved).
+scripts are never changed; other package.json fields, key order, and the
+file's own indent style are preserved).
 
 GitHub Actions workflow files (.github/**) are always written to the git
 repository root, even when adding inside a subdirectory such as apps/web.
