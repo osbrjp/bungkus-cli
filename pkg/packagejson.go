@@ -127,6 +127,14 @@ func BuildPackageJSON(cfg ProjectConfig) ([]byte, error) {
 		}
 	}
 
+	// Desktop wraps the frontend, so in monorepo mode the tauri script and CLI
+	// belong to apps/web's package.json — merged before the monorepo branch.
+	if cfg.Desktop != "none" {
+		if d := reg.GetDesktop(string(cfg.Desktop)); d != nil {
+			mergePackages(&pkg, d.Packages)
+		}
+	}
+
 	// In a monorepo the backend/orm live in apps/api (see buildAPIPackageJSON),
 	// so the frontend package omits them and instead depends on the shared
 	// domain package. In the flat layout they are colocated here.

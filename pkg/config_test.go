@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/spencer-osbrjp/bungkus-cli/config"
@@ -105,5 +106,43 @@ func TestStateLib_IsValidIntegration(t *testing.T) {
 				t.Errorf("IsValidIntegration(%q) = %v, want %v", tt.base, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestDesktopTarget_IsValid(t *testing.T) {
+	setupRegistry(t)
+	cases := map[DesktopTarget]bool{"none": true, "tauri": true, "electron": false, "": false}
+	for d, want := range cases {
+		if got := d.IsValid(); got != want {
+			t.Errorf("DesktopTarget(%q).IsValid() = %v, want %v", d, got, want)
+		}
+	}
+}
+
+func TestCrateNameAndBundleIdentifier(t *testing.T) {
+	cases := []struct {
+		name  string
+		crate string
+		id    string
+	}{
+		{"my-app", "my-app", "com.example.my-app"},
+		{"my.app", "my-app", "com.example.my-app"},
+		{"My App", "my-app", "com.example.my-app"},
+		{"my_app", "my-app", "com.example.my-app"},
+		{"app", "app", "com.example.app-desktop"}, // .app suffix guard
+		{"アプリ", "app", "com.example.app-desktop"},
+	}
+	for _, tc := range cases {
+		c := ProjectConfig{ProjectName: tc.name}
+		if got := c.CrateName(); got != tc.crate {
+			t.Errorf("CrateName(%q) = %q, want %q", tc.name, got, tc.crate)
+		}
+		got := c.BundleIdentifier()
+		if got != tc.id {
+			t.Errorf("BundleIdentifier(%q) = %q, want %q", tc.name, got, tc.id)
+		}
+		if strings.HasSuffix(got, ".app") || got == "com.tauri.dev" {
+			t.Errorf("BundleIdentifier(%q) = %q violates tauri identifier rules", tc.name, got)
+		}
 	}
 }

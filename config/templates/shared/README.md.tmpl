@@ -43,3 +43,19 @@ Edit `lighthouserc.json` to tune the assertions, URLs, and collection settings t
 For more information about `lhci`, visit [the Lighthouse CI repository](https://github.com/GoogleChrome/lighthouse-ci/).
 
 {{ end}}
+{{- if eq .Desktop "tauri"}}
+## Desktop (Tauri)
+
+Requires the Rust toolchain (https://rustup.rs) and Tauri's platform
+prerequisites (https://tauri.app/start/prerequisites/).
+
+{{ if .Layout.IsMonorepo -}}
+- `{{ .PM }} --filter web tauri dev` — run the desktop app against the dev server
+- `{{ .PM }} --filter web tauri build` — bundle installers into `apps/web/src-tauri/target/release/bundle`
+{{- else -}}
+- `{{ .PM }} run tauri dev` — run the desktop app against the dev server
+- `{{ .PM }} run tauri build` — bundle installers into `src-tauri/target/release/bundle`
+{{- end }}
+
+Rebrand the app icon with the Tauri CLI: `tauri icon <your-icon.png>` (1024x1024 RGBA source).
+{{- end }}

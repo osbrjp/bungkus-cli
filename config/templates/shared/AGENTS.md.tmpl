@@ -41,6 +41,7 @@ apps/web         frontend ({{ .Base }})
 {{ .PM }} -r build           # typecheck + build all workspaces
 {{ .PM }} --filter web dev   # run only the frontend
 {{ if ne (printf "%s" .Backend) "none" }}{{ .PM }} --filter api dev   # run only the backend
+{{ end }}{{ if eq (printf "%s" .Desktop) "tauri" }}{{ .PM }} --filter web tauri dev   # run the desktop app (needs Rust)
 {{ end }}{{ .PM }} format             # format and lint
 ```
 {{- else -}}
@@ -49,7 +50,8 @@ apps/web         frontend ({{ .Base }})
 {{ .PM }} dev           # start dev server (http://localhost:3000)
 {{ .PM }} build         # production build (also typechecks)
 {{ .PM }} preview       # preview the production build
-{{ .PM }} format        # format and lint code
+{{ if eq (printf "%s" .Desktop) "tauri" }}{{ .PM }} run tauri dev # run the desktop app (needs Rust)
+{{ end }}{{ .PM }} format        # format and lint code
 ```
 {{- end }}
 {{ if ne (printf "%s" .Backend) "none" }}

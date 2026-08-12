@@ -2,6 +2,8 @@ package pkg
 
 import (
 	"encoding/json"
+	"image/color"
+	"image/png"
 	"os"
 	"path/filepath"
 	"strings"
@@ -55,6 +57,22 @@ func TestScaffoldRenders(t *testing.T) {
 		c.Base, c.Audit = "nuxt", "lhci"
 		return c
 	}
+	tauriAstroReact := func() ProjectConfig {
+		c := NewProjectConfig()
+		c.Base, c.Desktop = "astro-react", "tauri"
+		return c
+	}
+	tauriNuxt := func() ProjectConfig {
+		c := NewProjectConfig()
+		c.Base, c.Desktop = "nuxt", "tauri"
+		return c
+	}
+	tauriMonorepo := func() ProjectConfig {
+		c := NewProjectConfig()
+		c.Base, c.Backend, c.ORM, c.Database = "astro-react", "hono", "drizzle", "sqlite"
+		c.PM, c.Layout, c.Desktop = "pnpm", LayoutMonorepo, "tauri"
+		return c
+	}
 
 	cases := []struct {
 		name string
@@ -97,7 +115,7 @@ func TestScaffoldRenders(t *testing.T) {
 		{
 			name:   "plain_astro",
 			cfg:    plainAstro(),
-			absent: []string{".mcp.json", "docker-compose.yml", "apps/api/db/seed.ts"},
+			absent: []string{".mcp.json", "docker-compose.yml", "apps/api/db/seed.ts", "src-tauri"},
 		},
 		{
 			name:    "lhci_astro",
@@ -112,6 +130,44 @@ func TestScaffoldRenders(t *testing.T) {
 			cfg:  lhciNuxt(),
 			contains: map[string][]string{
 				".github/workflows/lhci.yml": {`pages_dir="app/pages"`, "steps.affected.outputs.urls"},
+			},
+		},
+		{
+			name: "tauri_astro_react",
+			cfg:  tauriAstroReact(),
+			present: []string{
+				"src-tauri/Cargo.toml", "src-tauri/build.rs", "src-tauri/src/main.rs",
+				"src-tauri/src/lib.rs", "src-tauri/capabilities/default.json",
+				"src-tauri/.gitignore", "src-tauri/icons/icon.ico", "src-tauri/icons/icon.icns",
+				"src-tauri/icons/32x32.png",
+			},
+			contains: map[string][]string{
+				"src-tauri/tauri.conf.json": {
+					"http://localhost:3000", `"frontendDist": "../dist"`,
+					"pnpm run dev", "pnpm run build", "com.example.my-app",
+				},
+				"src-tauri/Cargo.toml": {`name = "my-app"`},
+				"package.json":         {"@tauri-apps/cli", `"tauri": "tauri"`},
+				"README.md":            {"tauri dev"},
+			},
+		},
+		{
+			name: "tauri_nuxt",
+			cfg:  tauriNuxt(),
+			contains: map[string][]string{
+				"src-tauri/tauri.conf.json": {"pnpm run generate"},
+				"nuxt.config.ts":            {"ssr: false"},
+			},
+		},
+		{
+			name: "tauri_monorepo",
+			cfg:  tauriMonorepo(),
+			present: []string{
+				"apps/web/src-tauri/tauri.conf.json",
+			},
+			contains: map[string][]string{
+				"apps/web/package.json": {"@tauri-apps/cli"},
+				"README.md":             {"--filter web tauri dev"},
 			},
 		},
 	}
@@ -177,5 +233,38 @@ func TestScaffoldRenders(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestTauriIconsRGBA guards the Tauri icon footgun: PNG icons must be square
+// and RGBA (tauri-build rejects palette-based PNGs at compile time), and the
+// committed binary assets must decode at all.
+func TestTauriIconsRGBA(t *testing.T) {
+	for _, name := range []string{"32x32.png", "128x128.png", "128x128@2x.png"} {
+		f, err := config.Templates.Open("templates/desktop/tauri/src-tauri/icons/" + name)
+		if err != nil {
+			t.Fatalf("open %s: %v", name, err)
+		}
+		img, err := png.Decode(f)
+		f.Close()
+		if err != nil {
+			t.Fatalf("decode %s: %v", name, err)
+		}
+		b := img.Bounds()
+		if b.Dx() != b.Dy() {
+			t.Errorf("%s is not square: %dx%d", name, b.Dx(), b.Dy())
+		}
+		switch img.ColorModel() {
+		case color.RGBAModel, color.NRGBAModel, color.RGBA64Model, color.NRGBA64Model:
+		default:
+			t.Errorf("%s is not an RGBA png (tauri build would reject it)", name)
+		}
+	}
+	for _, name := range []string{"icon.icns", "icon.ico"} {
+		f, err := config.Templates.Open("templates/desktop/tauri/src-tauri/icons/" + name)
+		if err != nil {
+			t.Fatalf("open %s: %v", name, err)
+		}
+		f.Close()
 	}
 }

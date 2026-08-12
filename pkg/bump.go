@@ -134,6 +134,7 @@ func BumpRegistry(content string, resolve func(name string) (string, bool)) (Bum
 	for _, group := range [][]OptionEntry{
 		reg.CSS, reg.Formatters, reg.Linters, reg.Validation, reg.Form,
 		reg.Query, reg.State, reg.CMS, reg.Test, reg.Audit, reg.Deployment, reg.CICD,
+		reg.Desktop,
 	} {
 		for _, e := range group {
 			record(e.Packages)

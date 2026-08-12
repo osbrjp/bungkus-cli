@@ -182,6 +182,10 @@ to scaffold into the current directory.`,
 			v, _ := cmd.Flags().GetString("audit")
 			cfg.Audit = pkg.AuditTool(v)
 		}
+		if cmd.Flags().Changed("desktop") {
+			v, _ := cmd.Flags().GetString("desktop")
+			cfg.Desktop = pkg.DesktopTarget(v)
+		}
 		if cmd.Flags().Changed("backend") {
 			v, _ := cmd.Flags().GetString("backend")
 			cfg.Backend = pkg.BackendLib(v)
@@ -264,6 +268,9 @@ to scaffold into the current directory.`,
 		if cfg.CICD != "none" && cfg.Deployment == "none" {
 			return fmt.Errorf("--cicd requires a deploy target (--deploy cloudflare-pages or --deploy cloudflare-workers)")
 		}
+		if !cfg.Desktop.IsValid() {
+			return fmt.Errorf("invalid desktop shell: %s (none, tauri)", cfg.Desktop)
+		}
 		if !cfg.Backend.IsValid() {
 			return fmt.Errorf("invalid backend: %s (none, hono, elysia)", cfg.Backend)
 		}
@@ -333,6 +340,7 @@ func init() {
 	createCmd.Flags().String("cms", "none", "CMS (none, microcms)")
 	createCmd.Flags().String("test", "none", "Testing library (none, playwright)")
 	createCmd.Flags().String("audit", "none", "Audit / performance tool (none, lhci)")
+	createCmd.Flags().String("desktop", "none", "Desktop shell (none, tauri)")
 	createCmd.Flags().StringP("template", "t", "", "Predefined template (astro, astro-react, astro-vue, nuxt, vite, vite-react, vite-vue)")
 	createCmd.Flags().String("deploy", "none", "Deployment target (none, cloudflare-pages, cloudflare-workers)")
 	createCmd.Flags().String("cicd", "none", "CI/CD provider (none, github-actions)")
