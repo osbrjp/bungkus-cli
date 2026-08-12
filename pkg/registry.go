@@ -69,6 +69,7 @@ type Registry struct {
 	CommonPackages  Packages      `json:"commonPackages"`
 	Deployment      []OptionEntry `json:"deployment"`
 	CICD            []OptionEntry `json:"cicd"`
+	Desktop         []OptionEntry `json:"desktop"`
 	Backend         []OptionEntry `json:"backend"`
 	ORM             []OptionEntry `json:"orm"`
 	Database        []OptionEntry `json:"database"`
@@ -285,6 +286,19 @@ func (r *Registry) GetCICD(value string) *OptionEntry {
 
 func (r *Registry) HasCICD(value string) bool {
 	return r.GetCICD(value) != nil
+}
+
+func (r *Registry) GetDesktop(value string) *OptionEntry {
+	for i := range r.Desktop {
+		if r.Desktop[i].Value == value {
+			return &r.Desktop[i]
+		}
+	}
+	return nil
+}
+
+func (r *Registry) HasDesktop(value string) bool {
+	return r.GetDesktop(value) != nil
 }
 
 func (r *Registry) GetBackend(value string) *OptionEntry {

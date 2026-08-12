@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -226,5 +227,53 @@ func TestBuildPackageJSON(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestBuildPackageJSONDesktop(t *testing.T) {
+	setupRegistry(t)
+
+	cfg := NewProjectConfig()
+	cfg.Desktop = "tauri"
+	b, err := BuildPackageJSON(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"@tauri-apps/cli", `"tauri": "tauri"`} {
+		if !strings.Contains(string(b), want) {
+			t.Errorf("package.json missing %q", want)
+		}
+	}
+
+	cfg.Desktop = "none"
+	b, err = BuildPackageJSON(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(b), "@tauri-apps/cli") {
+		t.Error("desktop none must not pull @tauri-apps/cli")
+	}
+
+	// Monorepo: the desktop packages belong to the web app only.
+	mono := NewProjectConfig()
+	mono.Base, mono.Backend, mono.ORM, mono.Database = "astro-react", "hono", "drizzle", "sqlite"
+	mono.PM, mono.Layout, mono.Desktop = "pnpm", LayoutMonorepo, "tauri"
+	web, err := BuildPackageJSON(mono)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(web), "@tauri-apps/cli") {
+		t.Error("monorepo web package.json missing @tauri-apps/cli")
+	}
+	for name, build := range map[string]func(ProjectConfig) ([]byte, error){
+		"api": BuildAPIPackageJSON, "root": BuildRootPackageJSON,
+	} {
+		b, err := build(mono)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(b), "@tauri-apps/cli") {
+			t.Errorf("monorepo %s package.json must not carry @tauri-apps/cli", name)
+		}
 	}
 }

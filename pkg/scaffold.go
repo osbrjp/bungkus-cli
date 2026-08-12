@@ -194,6 +194,19 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		}
 	}
 
+	if cfg.Desktop != "none" {
+		desktopDir := "templates/desktop/" + string(cfg.Desktop)
+		if _, err := fs.Stat(templates, desktopDir); err == nil {
+			desktopFS, err := fs.Sub(templates, desktopDir)
+			if err != nil {
+				return fmt.Errorf("failed to read desktop templates: %w", err)
+			}
+			if err := copyDir(desktopFS, webDir, cfg, "", nil); err != nil {
+				return err
+			}
+		}
+	}
+
 	if cfg.Backend != "none" {
 		backendDir := "templates/backend/" + string(cfg.Backend)
 		if _, err := fs.Stat(templates, backendDir); err == nil {

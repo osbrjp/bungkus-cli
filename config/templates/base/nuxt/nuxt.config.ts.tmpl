@@ -5,6 +5,10 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineNuxtConfig({
   compatibilityDate: '{{.Date}}',
   devtools: { enabled: true },
+  {{- if eq .Desktop "tauri"}}
+  // Tauri wraps the static output (SSG); tauri.conf.json builds via `generate`.
+  ssr: false,
+  {{- end}}
   {{- if eq .Deployment "cloudflare-pages"}}
   nitro: {
     preset: 'cloudflare_pages',

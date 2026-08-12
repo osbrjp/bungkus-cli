@@ -120,3 +120,32 @@ func contains(s, sub string) bool {
 	}
 	return false
 }
+
+func TestBumpRegistryDesktop(t *testing.T) {
+	// Proves the desktop category is scanned by BumpRegistry (it enumerates
+	// option groups explicitly, so a missing group silently freezes its pins).
+	content := `{
+  "desktop": [
+    {
+      "value": "tauri",
+      "packages": { "devDependencies": { "@tauri-apps/cli": "^2.11.4" } }
+    }
+  ]
+}`
+	resolve := func(name string) (string, bool) {
+		if name == "@tauri-apps/cli" {
+			return "2.12.0", true
+		}
+		return "", false
+	}
+	res, err := BumpRegistry(content, resolve)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Changes) != 1 || res.Changes[0].To != "^2.12.0" {
+		t.Fatalf("changes = %+v; want single @tauri-apps/cli -> ^2.12.0", res.Changes)
+	}
+	if want := `"@tauri-apps/cli": "^2.12.0"`; !contains(res.Content, want) {
+		t.Errorf("content missing %q", want)
+	}
+}

@@ -546,6 +546,25 @@
       }
     }
   ],
+  "desktop": [
+    {
+      "value": "none",
+      "label": "None",
+      "packages": {}
+    },
+    {
+      "value": "tauri",
+      "label": "Tauri 2",
+      "packages": {
+        "scripts": {
+          "tauri": "tauri"
+        },
+        "devDependencies": {
+          "@tauri-apps/cli": "^2.11.4"
+        }
+      }
+    }
+  ],
   "backend": [
     {
       "value": "none",
