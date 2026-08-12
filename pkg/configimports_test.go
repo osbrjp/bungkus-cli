@@ -104,3 +104,47 @@ func TestGeneratedConfigImportsAreInstalled(t *testing.T) {
 		})
 	}
 }
+
+// TestEslintReactPluginsWired asserts the positive direction the import-vs-
+// deps guard can't see: react bases must actually get the react eslint
+// plugins (both the config imports and the installed packages), and
+// non-react bases must not. Before the GetIntegration nil-check fix,
+// IsReactInt always returned false and this wiring silently never fired.
+func TestEslintReactPluginsWired(t *testing.T) {
+	setupRegistry(t)
+	scaffoldEslint := func(base BaseFramework) (conf, pkgJSON string) {
+		c := NewProjectConfig()
+		c.Base, c.Fmt, c.Linter = base, "prettier", "eslint"
+		dir := t.TempDir()
+		if err := Scaffold(dir, config.Templates, c); err != nil {
+			t.Fatalf("Scaffold(%s): %v", base, err)
+		}
+		cb, err := os.ReadFile(filepath.Join(dir, "eslint.config.mjs"))
+		if err != nil {
+			t.Fatalf("read eslint config for %s: %v", base, err)
+		}
+		pb, err := os.ReadFile(filepath.Join(dir, "package.json"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(cb), string(pb)
+	}
+
+	for _, base := range []BaseFramework{"astro-react", "vite-react"} {
+		conf, pkgJSON := scaffoldEslint(base)
+		for _, want := range []string{"eslint-plugin-react-hooks", "eslint-plugin-react-refresh"} {
+			if !strings.Contains(conf, want) {
+				t.Errorf("%s: eslint.config.mjs missing %s", base, want)
+			}
+			if !strings.Contains(pkgJSON, want) {
+				t.Errorf("%s: package.json missing %s", base, want)
+			}
+		}
+	}
+	for _, base := range []BaseFramework{"astro", "astro-vue", "vite-vue", "nuxt"} {
+		conf, pkgJSON := scaffoldEslint(base)
+		if strings.Contains(conf, "eslint-plugin-react") || strings.Contains(pkgJSON, "eslint-plugin-react") {
+			t.Errorf("%s: react eslint plugins leaked into a non-react base", base)
+		}
+	}
+}
