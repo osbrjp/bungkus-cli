@@ -14,7 +14,7 @@
           "astro": "astro"
         },
         "dependencies": {
-          "astro": "^6.1.3"
+          "astro": "^7.1.6"
         }
       }
     },
@@ -33,9 +33,9 @@
           "astro": "astro"
         },
         "dependencies": {
-          "astro": "^6.1.3",
-          "@astrojs/vue": "^6.0.1",
-          "vue": "^3.5.32"
+          "astro": "^7.1.6",
+          "@astrojs/vue": "^7.0.1",
+          "vue": "^3.5.40"
         }
       }
     },
@@ -54,14 +54,14 @@
           "astro": "astro"
         },
         "dependencies": {
-          "astro": "^6.1.3",
-          "@astrojs/react": "^5.0.3",
-          "react": "^19.2.4",
-          "react-dom": "^19.2.4"
+          "astro": "^7.1.6",
+          "@astrojs/react": "^6.0.2",
+          "react": "^19.2.8",
+          "react-dom": "^19.2.8"
         },
         "devDependencies": {
-          "@types/react": "^19.2.14",
-          "@types/react-dom": "^19.2.3"
+          "@types/react": "^19.2.18",
+          "@types/react-dom": "^19.2.4"
         }
       }
     },
@@ -81,12 +81,12 @@
           "postinstall": "nuxt prepare"
         },
         "dependencies": {
-          "nuxt": "4.4.6",
-          "vue": "^3.5.32",
-          "vue-router": "^5.0.4"
+          "nuxt": "4.5.1",
+          "vue": "^3.5.40",
+          "vue-router": "^5.2.0"
         },
         "devDependencies": {
-          "@types/node": "^25.5.2"
+          "@types/node": "^26.1.2"
         }
       }
     },
@@ -104,8 +104,8 @@
           "preview": "vite preview"
         },
         "devDependencies": {
-          "typescript": "~5.9.3",
-          "vite": "^8.0.1"
+          "typescript": "~7.0.2",
+          "vite": "^8.2.0"
         }
       }
     },
@@ -125,15 +125,15 @@
           "preview": "vite preview"
         },
         "dependencies": {
-          "react": "^19.2.4",
-          "react-dom": "^19.2.4"
+          "react": "^19.2.8",
+          "react-dom": "^19.2.8"
         },
         "devDependencies": {
-          "typescript": "~5.9.3",
-          "vite": "^8.0.1",
-          "@vitejs/plugin-react": "^6.0.1",
-          "@types/react": "^19.2.14",
-          "@types/react-dom": "^19.2.3"
+          "typescript": "~7.0.2",
+          "vite": "^8.2.0",
+          "@vitejs/plugin-react": "^6.0.5",
+          "@types/react": "^19.2.18",
+          "@types/react-dom": "^19.2.4"
         }
       }
     },
@@ -153,13 +153,13 @@
           "preview": "vite preview"
         },
         "dependencies": {
-          "vue": "^3.5.32"
+          "vue": "^3.5.40"
         },
         "devDependencies": {
-          "typescript": "~5.9.3",
-          "vite": "^8.0.1",
-          "@vitejs/plugin-vue": "^6.0.5",
-          "vue-tsc": "^3.2.6",
+          "typescript": "~7.0.2",
+          "vite": "^8.2.0",
+          "@vitejs/plugin-vue": "^6.0.8",
+          "vue-tsc": "^3.3.9",
           "@vue/tsconfig": "^0.9.1"
         }
       }
@@ -171,11 +171,11 @@
       "label": "TailwindCSS *",
       "packages": {
         "dependencies": {
-          "tailwindcss": "^4.2.2",
-          "@tailwindcss/vite": "^4.2.2",
+          "tailwindcss": "^4.3.3",
+          "@tailwindcss/vite": "^4.3.3",
           "class-variance-authority": "^0.7.1",
           "clsx": "^2.1.1",
-          "tailwind-merge": "^3.5.0",
+          "tailwind-merge": "^3.6.0",
           "tw-animate-css": "^1.4.0"
         }
       }
@@ -195,7 +195,7 @@
           "format": "biome format --write ."
         },
         "devDependencies": {
-          "@biomejs/biome": "2.4.15"
+          "@biomejs/biome": "2.5.6"
         }
       }
     },
@@ -207,7 +207,7 @@
           "format": "prettier --write ."
         },
         "devDependencies": {
-          "prettier": "3.8.1"
+          "prettier": "3.9.6"
         }
       }
     },
@@ -222,7 +222,7 @@
           "format": "oxfmt ."
         },
         "devDependencies": {
-          "oxlint": "^1.59.0"
+          "oxlint": "^1.76.0"
         }
       }
     }
@@ -236,7 +236,7 @@
           "lint": "biome lint ."
         },
         "devDependencies": {
-          "@biomejs/biome": "2.4.15"
+          "@biomejs/biome": "2.5.6"
         }
       }
     },
@@ -248,10 +248,10 @@
           "lint": "eslint ."
         },
         "devDependencies": {
-          "eslint": "^10.0.0",
-          "@eslint/js": "^10.0.0",
-          "globals": "^17.4.0",
-          "typescript-eslint": "^8.58.0"
+          "eslint": "^10.8.0",
+          "@eslint/js": "^10.0.1",
+          "globals": "^17.9.0",
+          "typescript-eslint": "^8.65.0"
         }
       }
     },
@@ -266,7 +266,7 @@
           "lint": "oxlint ."
         },
         "devDependencies": {
-          "oxlint": "^1.59.0"
+          "oxlint": "^1.76.0"
         }
       }
     }
@@ -282,7 +282,7 @@
       "label": "Zod",
       "packages": {
         "dependencies": {
-          "zod": "^4.3.6"
+          "zod": "^4.4.3"
         }
       }
     }
@@ -301,7 +301,7 @@
       ],
       "packages": {
         "dependencies": {
-          "react-hook-form": "^7.72.1"
+          "react-hook-form": "^7.84.0"
         }
       }
     },
@@ -316,12 +316,12 @@
       "integrationPackages": {
         "react": {
           "dependencies": {
-            "@tanstack/react-form": "^1.29.0"
+            "@tanstack/react-form": "^1.33.3"
           }
         },
         "vue": {
           "dependencies": {
-            "@tanstack/vue-form": "^1.29.0"
+            "@tanstack/vue-form": "^1.33.3"
           }
         }
       }
@@ -364,12 +364,12 @@
       "integrationPackages": {
         "react": {
           "dependencies": {
-            "@tanstack/react-query": "^5.80.7"
+            "@tanstack/react-query": "^5.101.4"
           }
         },
         "vue": {
           "dependencies": {
-            "@tanstack/vue-query": "^5.80.7"
+            "@tanstack/vue-query": "^5.101.4"
           }
         }
       }
@@ -389,7 +389,7 @@
       ],
       "packages": {
         "dependencies": {
-          "jotai": "^2.19.1"
+          "jotai": "^2.20.2"
         }
       }
     },
@@ -401,7 +401,7 @@
       ],
       "packages": {
         "dependencies": {
-          "zustand": "^5.0.12"
+          "zustand": "^5.0.14"
         }
       }
     },
@@ -413,13 +413,13 @@
       ],
       "packages": {
         "dependencies": {
-          "pinia": "^3.0.4"
+          "pinia": "^4.0.2"
         }
       },
       "integrationPackages": {
         "nuxt": {
           "dependencies": {
-            "@pinia/nuxt": "^0.11.3"
+            "@pinia/nuxt": "^1.0.1"
           }
         }
       }
@@ -433,7 +433,7 @@
       ],
       "packages": {
         "dependencies": {
-          "nanostores": "^1.3.0"
+          "nanostores": "^1.4.2"
         }
       },
       "integrationPackages": {
@@ -464,7 +464,7 @@
       ],
       "packages": {
         "dependencies": {
-          "microcms-js-sdk": "^3.2.0"
+          "microcms-js-sdk": "^3.4.0"
         }
       }
     }
@@ -482,7 +482,7 @@
           "test:e2e": "playwright test"
         },
         "devDependencies": {
-          "@playwright/test": "^1.5.9"
+          "@playwright/test": "^1.62.1"
         }
       }
     }
@@ -510,7 +510,7 @@
       "label": "Cloudflare Pages",
       "packages": {
         "devDependencies": {
-          "wrangler": "^4.93.0"
+          "wrangler": "^4.118.0"
         },
         "scripts": {
           "deploy": "wrangler pages deploy dist"
@@ -522,7 +522,7 @@
       "label": "Cloudflare Workers",
       "packages": {
         "devDependencies": {
-          "wrangler": "^4.93.0"
+          "wrangler": "^4.118.0"
         },
         "scripts": {
           "deploy": "wrangler deploy"
@@ -543,7 +543,7 @@
           "lhci": "lhci autorun"
         },
         "devDependencies": {
-          "@lhci/cli": "^0.14.0"
+          "@lhci/cli": "^0.15.1"
         }
       }
     }
