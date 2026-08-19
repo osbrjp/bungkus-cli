@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash({{ .PM }} install)",
+      "Bash({{ .PM }} run:*)",
+      "Bash({{ .PM }} dev)",
+      "Bash({{ .PM }} build)",
+      "Bash({{ .PM }} preview)",
+      "Bash({{ .PM }} test:*)",
+      "Bash({{ .PM }} format)",
+      "Bash({{ .PM }} lint)",
+{{- if .Layout.IsMonorepo }}
+      "Bash({{ .PM }} --filter:*)",
+      "Bash({{ .PM }} -r:*)",
+{{- end }}
+{{- if or (eq (printf "%s" .Database) "postgres") (eq (printf "%s" .Database) "mysql") }}
+      "Bash(docker compose:*)",
+{{- end }}
+{{- if or (eq (printf "%s" .Deployment) "cloudflare-pages") (eq (printf "%s" .Deployment) "cloudflare-workers") }}
+      "Bash(wrangler:*)",
+{{- end }}
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
+    ]
+  }
+}

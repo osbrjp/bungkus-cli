@@ -4,6 +4,7 @@ import (
 	"errors"
 	"maps"
 	"slices"
+	"strings"
 	"time"
 )
 
@@ -23,6 +24,7 @@ type (
 	TestingFramework string
 	DeployTarget     string
 	AuditTool        string
+	DesktopTarget    string
 	CICDProvider     string
 	BackendLib       string
 	ORMLib           string
@@ -155,11 +157,14 @@ func (b BaseFramework) IsVite() bool {
 }
 
 func (b BaseFramework) GetIntegration() (BaseIntegration, error) {
-	if globalRegistry != nil {
+	if globalRegistry == nil {
 		return BaseIntegration(""), errors.New("unable to read registry")
 	}
 
 	entry := globalRegistry.GetBase(string(b))
+	if entry == nil {
+		return BaseIntegration(""), errors.New("unknown base framework: " + string(b))
+	}
 	return BaseIntegration(entry.Integration), nil
 }
 
@@ -180,7 +185,7 @@ func (b BaseFramework) IsVueInt() bool {
 		return false
 	}
 
-	return integration == "react"
+	return integration == "vue"
 }
 
 func (c CSSFramework) IsValid() bool {
@@ -314,6 +319,60 @@ func (a AuditTool) GetDependencies() AllDependencies {
 		Dependencies:    entry.Packages.Dependencies,
 		DevDependencies: entry.Packages.DevDependencies,
 	}
+}
+
+func (d DesktopTarget) IsValid() bool {
+	return globalRegistry != nil && globalRegistry.HasDesktop(string(d))
+}
+
+func (d DesktopTarget) GetDependencies() AllDependencies {
+	if globalRegistry == nil {
+		return AllDependencies{}
+	}
+	entry := globalRegistry.GetDesktop(string(d))
+	if entry == nil {
+		return AllDependencies{}
+	}
+	return AllDependencies{
+		Dependencies:    entry.Packages.Dependencies,
+		DevDependencies: entry.Packages.DevDependencies,
+	}
+}
+
+// desktopSlug lowercases name and collapses every run of characters outside
+// [a-z0-9] to a single '-'. The result is valid both as a Cargo crate name
+// and as a bundle-identifier segment ("My App" -> "my-app", "my.app" -> "my-app").
+func desktopSlug(name string) string {
+	var b strings.Builder
+	dash := false
+	for _, r := range strings.ToLower(name) {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+			dash = false
+		} else if !dash && b.Len() > 0 {
+			b.WriteByte('-')
+			dash = true
+		}
+	}
+	s := strings.TrimSuffix(b.String(), "-")
+	if s == "" {
+		return "app" // e.g. `create .` in a directory with no ascii-alnum chars
+	}
+	return s
+}
+
+// CrateName is ProjectName as a valid Cargo package name.
+func (c ProjectConfig) CrateName() string { return desktopSlug(c.ProjectName) }
+
+// BundleIdentifier is a reverse-DNS placeholder id for tauri.conf.json.
+// Never ends in ".app" (conflicts with the macOS bundle extension) and never
+// equals the forbidden default "com.tauri.dev".
+func (c ProjectConfig) BundleIdentifier() string {
+	id := "com.example." + desktopSlug(c.ProjectName)
+	if strings.HasSuffix(id, ".app") { // only possible when the slug is exactly "app"
+		id += "-desktop"
+	}
+	return id
 }
 
 func (v ValidationLib) IsValid() bool {
@@ -561,6 +620,7 @@ type ProjectConfig struct {
 	CMS         CMS
 	Deployment  DeployTarget
 	CICD        CICDProvider
+	Desktop     DesktopTarget
 	PM          PackageManager
 	Test        TestingFramework
 	Audit       AuditTool
@@ -619,6 +679,7 @@ func (c ProjectConfig) Stack() []StackEntry {
 	add("State", c.State.GetDependencies())
 	add("CMS", c.CMS.GetDependencies())
 	add("Deployment", c.Deployment.GetDependencies())
+	add("Desktop", c.Desktop.GetDependencies())
 	add("Testing", c.Test.GetDependencies())
 	add("Audit", c.Audit.GetDependencies())
 	add("Backend", c.Backend.GetDependencies())
@@ -644,6 +705,7 @@ func NewProjectConfig() ProjectConfig {
 		Deployment:  "none",
 		CICD:        "none",
 		Audit:       "none",
+		Desktop:     "none",
 		Backend:     "none",
 		ORM:         "none",
 		Database:    "none",

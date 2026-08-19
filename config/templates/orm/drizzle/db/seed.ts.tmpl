@@ -1,0 +1,20 @@
+{{- if eq (printf "%s" .Database) "d1" -}}
+// D1 runs inside the Cloudflare Worker runtime, so there is no module-level
+// client to seed from here. Seed with wrangler instead, e.g.:
+//   wrangler d1 execute <DB> --command "INSERT INTO users (name) VALUES ('Ada Lovelace')"
+console.log("For D1, seed via `wrangler d1 execute` — see db/seed.ts.");
+{{- else -}}
+import { db } from "./index";
+import { users } from "./schema";
+
+/** Seed the database with a couple of deterministic rows for local dev. */
+async function main() {
+  await db.insert(users).values([{ name: "Ada Lovelace" }, { name: "Alan Turing" }]);
+  console.log("Seeded users ✔");
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
+{{- end }}

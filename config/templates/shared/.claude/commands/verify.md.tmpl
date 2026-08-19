@@ -1,0 +1,17 @@
+---
+description: Typecheck, build, and test the project; report any failures
+---
+Verify the project is healthy. Run, in order, and report results concisely:
+
+{{ if .Layout.IsMonorepo -}}
+1. `{{ .PM }} -r build` — typechecks and builds every workspace (apps/web, apps/api, packages/domain)
+2. `{{ .PM }} -r test` — runs tests where a `test` script exists
+{{- else -}}
+1. `{{ .PM }} build` — typechecks and builds the project
+2. `{{ .PM }} test` — runs tests if a `test` script exists
+{{- end }}
+{{ if ne (printf "%s" .Backend) "none" -}}
+3. With the API running (`{{ .PM }} dev`), `curl -s http://localhost:8000/health-check` — confirms the server{{ if ne (printf "%s" .ORM) "none" }} and database connection{{ end }} are up.
+{{- end }}
+
+If anything fails, show the failing output and fix the root cause. Do not report success unless every step passes.

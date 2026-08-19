@@ -26,6 +26,8 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
 import * as schema from "./schema";
 
-const sqlite = new Database(process.env.DATABASE_URL ?? "sqlite.db");
+// better-sqlite3 wants a filesystem path, not a `file:` URL — strip the scheme
+// so the same DATABASE_URL works for both drizzle-kit and the runtime client.
+const sqlite = new Database((process.env.DATABASE_URL ?? "sqlite.db").replace(/^file:/, ""));
 export const db = drizzle(sqlite, { schema });
 {{- end }}

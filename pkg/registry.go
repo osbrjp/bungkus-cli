@@ -69,9 +69,22 @@ type Registry struct {
 	CommonPackages  Packages      `json:"commonPackages"`
 	Deployment      []OptionEntry `json:"deployment"`
 	CICD            []OptionEntry `json:"cicd"`
+	Desktop         []OptionEntry `json:"desktop"`
 	Backend         []OptionEntry `json:"backend"`
 	ORM             []OptionEntry `json:"orm"`
 	Database        []OptionEntry `json:"database"`
+}
+
+// optionGroups returns every []OptionEntry category of the registry. Anything
+// that scans "all options" (e.g. bump's pin collection) must go through this —
+// TestOptionGroupsCoverRegistry asserts it stays in sync with the struct, so a
+// new category can't silently fall out of the freshness policy again (#122).
+func (r *Registry) optionGroups() [][]OptionEntry {
+	return [][]OptionEntry{
+		r.CSS, r.Formatters, r.Linters, r.Validation, r.Form,
+		r.Query, r.State, r.CMS, r.Test, r.Audit, r.Deployment, r.CICD,
+		r.Desktop, r.Backend, r.ORM, r.Database,
+	}
 }
 
 var globalRegistry *Registry
@@ -285,6 +298,19 @@ func (r *Registry) GetCICD(value string) *OptionEntry {
 
 func (r *Registry) HasCICD(value string) bool {
 	return r.GetCICD(value) != nil
+}
+
+func (r *Registry) GetDesktop(value string) *OptionEntry {
+	for i := range r.Desktop {
+		if r.Desktop[i].Value == value {
+			return &r.Desktop[i]
+		}
+	}
+	return nil
+}
+
+func (r *Registry) HasDesktop(value string) bool {
+	return r.GetDesktop(value) != nil
 }
 
 func (r *Registry) GetBackend(value string) *OptionEntry {

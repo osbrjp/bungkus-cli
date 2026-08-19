@@ -450,6 +450,7 @@ func buildAddOnPanels(reg *pkg.Registry, group string, integration string) (tool
 		{"CMS", reg.CMS},
 		{"Deploy", reg.Deployment},
 		{"CI/CD", reg.CICD},
+		{"Desktop", reg.Desktop},
 	}
 
 	// Backend concerns live on their own tab, kept out of the frontend panels.
@@ -712,6 +713,8 @@ func (m *WizardModel) collectConfig() {
 			m.Cfg.Deployment = pkg.DeployTarget(selected.value)
 		case "CI/CD":
 			m.Cfg.CICD = pkg.CICDProvider(selected.value)
+		case "Desktop":
+			m.Cfg.Desktop = pkg.DesktopTarget(selected.value)
 		}
 	}
 
@@ -805,6 +808,7 @@ func (m WizardModel) summaryPopup() string {
 		row("CMS:        ", string(m.Cfg.CMS)) +
 		row("Deploy:     ", string(m.Cfg.Deployment)) +
 		row("CI/CD:      ", string(m.Cfg.CICD)) +
+		row("Desktop:    ", string(m.Cfg.Desktop)) +
 		row("Backend:    ", string(m.Cfg.Backend)) +
 		row("ORM:        ", string(m.Cfg.ORM)) +
 		row("Database:   ", string(m.Cfg.Database)) +

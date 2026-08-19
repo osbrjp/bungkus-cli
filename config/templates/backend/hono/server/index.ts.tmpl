@@ -1,11 +1,37 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
+{{- $orm := printf "%s" .ORM }}
+{{- $hasDb := and (ne $orm "none") (ne (printf "%s" .Database) "d1") }}
+{{- if $hasDb }}
+import { db } from "../db";
+{{- if eq $orm "drizzle" }}
+import { users } from "../db/schema";
+{{- end }}
+{{- end }}
 
 const app = new Hono();
 
 app.get("/", (c) => c.json({ message: "Hello from {{ .ProjectName }}" }));
 
-const port = Number(process.env.PORT ?? 3001);
+// Health check — read-only; verifies the DB connection with a lightweight query.
+app.get("/health-check", async (c) => {
+{{- if $hasDb }}
+  try {
+{{- if eq $orm "drizzle" }}
+    const rows = await db.select().from(users);
+{{- else }}
+    const rows = await db.user.findMany();
+{{- end }}
+    return c.json({ status: "ok", db: "connected", users: rows });
+  } catch (err) {
+    return c.json({ status: "error", db: "disconnected", error: String(err) }, 503);
+  }
+{{- else }}
+  return c.json({ status: "ok" });
+{{- end }}
+});
+
+const port = Number(process.env.PORT ?? 8000);
 serve({ fetch: app.fetch, port }, (info) => {
   console.log(`Server running on http://localhost:${info.port}`);
 });

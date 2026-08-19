@@ -10,6 +10,10 @@ import vue from '@vitejs/plugin-vue'
 {{- end}}
 
 export default defineConfig({
+  {{- if eq .Desktop "tauri"}}
+  clearScreen: false,
+  server: { watch: { ignored: ["**/src-tauri/**"] } },
+  {{- end}}
   plugins: [
   {{- if eq .CSS "tailwindcss"}}
     tailwindcss(),

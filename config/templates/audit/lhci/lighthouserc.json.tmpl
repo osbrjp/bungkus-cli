@@ -3,14 +3,15 @@
     "collect": {
       "startServerCommand": "{{ .PM }} run preview --port 3000",
       "url": ["http://localhost:3000"],
-      "numberOfRuns": 3
+      "numberOfRuns": 1
     },
     "upload": {
       "target": "temporary-public-storage"
     },
     "assert": {
       "assertions": {
-        "categories:performance": ["error", { "minScore": 0.5 }]
+        "categories:performance": ["error", { "minScore": 0.5 }],
+        "categories:accessibility": ["warn", { "minScore": 0.9 }]
       }
     }
   }

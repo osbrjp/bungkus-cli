@@ -3,6 +3,7 @@ package pkg
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -57,7 +58,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 	if entry.Group == "vite" && entry.EntryPoint != "" {
 		skip = "main.ts"
 	}
-	if err := copyDir(baseFS, webDir, cfg, skip); err != nil {
+	if err := copyDir(baseFS, webDir, cfg, skip, nil, ""); err != nil {
 		return err
 	}
 
@@ -69,7 +70,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		if err != nil {
 			return fmt.Errorf("failed to read %v integration templates: %w", entry.Integration, err)
 		}
-		if err := copyDir(integrationFS, webDir, cfg, ""); err != nil {
+		if err := copyDir(integrationFS, webDir, cfg, "", nil, ""); err != nil {
 			return err
 		}
 	}
@@ -82,7 +83,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 	}
 
 	stylesDir := filepath.Join(webDir, entry.StylesDir)
-	if err := copyDir(cssFS, stylesDir, cfg, ""); err != nil {
+	if err := copyDir(cssFS, stylesDir, cfg, "", nil, ""); err != nil {
 		return err
 	}
 
@@ -93,7 +94,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		return fmt.Errorf("failed to read formatter templates: %w", err)
 	}
 
-	if err := copyDir(fmtFS, webDir, cfg, ""); err != nil {
+	if err := copyDir(fmtFS, webDir, cfg, "", nil, ""); err != nil {
 		return err
 	}
 
@@ -104,7 +105,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		if err != nil {
 			return fmt.Errorf("failed to read linter templates: %w", err)
 		}
-		if err := copyDir(linterFS, webDir, cfg, ""); err != nil {
+		if err := copyDir(linterFS, webDir, cfg, "", nil, ""); err != nil {
 			return err
 		}
 	}
@@ -116,9 +117,18 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		if err != nil {
 			return fmt.Errorf("failed to read package manager templates: %w", err)
 		}
-		if err := copyDir(pmFS, destDir, cfg, ""); err != nil {
+		if err := copyDir(pmFS, destDir, cfg, "", nil, ""); err != nil {
 			return err
 		}
+	}
+
+	// The test/audit/cicd sets render into the web app, but their configs
+	// (playwright.config, lighthouserc, ...) and workflows split in a
+	// monorepo: the workflow must live at the workspace root or GitHub never
+	// runs it (#115, #125), while everything else stays in apps/web.
+	ghRoot := ""
+	if cfg.Layout.IsMonorepo() {
+		ghRoot = destDir
 	}
 
 	if cfg.Test != "none" {
@@ -128,7 +138,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 			if err != nil {
 				return fmt.Errorf("failed to read test templates: %w", err)
 			}
-			if err := copyDir(testFS, webDir, cfg, ""); err != nil {
+			if err := copyDir(testFS, webDir, cfg, "", nil, ghRoot); err != nil {
 				return err
 			}
 		}
@@ -141,7 +151,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 			if err != nil {
 				return fmt.Errorf("failed to read audit templates: %w", err)
 			}
-			if err := copyDir(auditFS, webDir, cfg, ""); err != nil {
+			if err := copyDir(auditFS, webDir, cfg, "", nil, ghRoot); err != nil {
 				return err
 			}
 		}
@@ -162,7 +172,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		if err != nil {
 			return fmt.Errorf("failed to read CMS templates: %w", err)
 		}
-		if err := copyDir(cmsFS, webDir, cfg, ""); err != nil {
+		if err := copyDir(cmsFS, webDir, cfg, "", nil, ""); err != nil {
 			return err
 		}
 	}
@@ -174,7 +184,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 			if err != nil {
 				return fmt.Errorf("failed to read deployment templates: %w", err)
 			}
-			if err := copyDir(deployFS, webDir, cfg, ""); err != nil {
+			if err := copyDir(deployFS, webDir, cfg, "", nil, ""); err != nil {
 				return err
 			}
 		}
@@ -187,7 +197,20 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 			if err != nil {
 				return fmt.Errorf("failed to read cicd templates: %w", err)
 			}
-			if err := copyDir(cicdFS, webDir, cfg, ""); err != nil {
+			if err := copyDir(cicdFS, webDir, cfg, "", nil, ghRoot); err != nil {
+				return err
+			}
+		}
+	}
+
+	if cfg.Desktop != "none" {
+		desktopDir := "templates/desktop/" + string(cfg.Desktop)
+		if _, err := fs.Stat(templates, desktopDir); err == nil {
+			desktopFS, err := fs.Sub(templates, desktopDir)
+			if err != nil {
+				return fmt.Errorf("failed to read desktop templates: %w", err)
+			}
+			if err := copyDir(desktopFS, webDir, cfg, "", nil, ""); err != nil {
 				return err
 			}
 		}
@@ -200,7 +223,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 			if err != nil {
 				return fmt.Errorf("failed to read backend templates: %w", err)
 			}
-			if err := copyDir(backendFS, apiDir, cfg, ""); err != nil {
+			if err := copyDir(backendFS, apiDir, cfg, "", nil, ""); err != nil {
 				return err
 			}
 		}
@@ -213,7 +236,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 			if err != nil {
 				return fmt.Errorf("failed to read orm templates: %w", err)
 			}
-			if err := copyDir(ormFS, apiDir, cfg, ""); err != nil {
+			if err := copyDir(ormFS, apiDir, cfg, "", nil, ""); err != nil {
 				return err
 			}
 		}
@@ -229,7 +252,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 			if err != nil {
 				return fmt.Errorf("failed to read database templates: %w", err)
 			}
-			if err := copyDir(dbFS, destDir, cfg, ""); err != nil {
+			if err := copyDir(dbFS, destDir, cfg, "", nil, ""); err != nil {
 				return err
 			}
 		}
@@ -240,8 +263,20 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 	if err != nil {
 		return fmt.Errorf("failed to read shared templates: %w", err)
 	}
-	if err := copyDir(sharedFS, destDir, cfg, ""); err != nil {
+	if err := copyDir(sharedFS, destDir, cfg, "", nil, ""); err != nil {
 		return err
+	}
+
+	// Playwright ships a .mcp.json at the project root so an agent can drive the
+	// running app through the Playwright MCP server.
+	if cfg.Test == "playwright" {
+		mcpFS, err := fs.Sub(templates, "templates/agent/mcp")
+		if err != nil {
+			return fmt.Errorf("failed to read mcp templates: %w", err)
+		}
+		if err := copyDir(mcpFS, destDir, cfg, "", nil, ""); err != nil {
+			return err
+		}
 	}
 
 	if cfg.Layout.IsMonorepo() {
@@ -268,7 +303,7 @@ func scaffoldMonorepo(destDir, apiDir string, templates fs.FS, cfg ProjectConfig
 	if err != nil {
 		return fmt.Errorf("failed to read monorepo root templates: %w", err)
 	}
-	if err := copyDir(rootFS, destDir, cfg, ""); err != nil {
+	if err := copyDir(rootFS, destDir, cfg, "", nil, ""); err != nil {
 		return err
 	}
 
@@ -288,7 +323,7 @@ func scaffoldMonorepo(destDir, apiDir string, templates fs.FS, cfg ProjectConfig
 	if err != nil {
 		return fmt.Errorf("failed to read domain templates: %w", err)
 	}
-	if err := copyDir(domainFS, domainDir, cfg, ""); err != nil {
+	if err := copyDir(domainFS, domainDir, cfg, "", nil, ""); err != nil {
 		return err
 	}
 
@@ -308,7 +343,7 @@ func scaffoldMonorepo(destDir, apiDir string, templates fs.FS, cfg ProjectConfig
 		if err != nil {
 			return fmt.Errorf("failed to read api templates: %w", err)
 		}
-		if err := copyDir(apiFS, apiDir, cfg, ""); err != nil {
+		if err := copyDir(apiFS, apiDir, cfg, "", nil, ""); err != nil {
 			return err
 		}
 	}
@@ -352,7 +387,13 @@ func PostScaffold(destDir string, cfg ProjectConfig) error {
 	return nil
 }
 
-func copyDir(srcFS fs.FS, destDir string, cfg ProjectConfig, skip string) error {
+// copyDir renders/copies srcFS into destDir. A non-nil rep switches to `add`
+// semantics: existing files are never overwritten, and every write or skip is
+// recorded in the report. A non-empty ghRoot redirects .github/** there —
+// GitHub only reads workflows from the repo root's .github/, so templates
+// rendered into a subdirectory (monorepo apps/web, `add` in a workspace app)
+// must emit their workflows at the root instead.
+func copyDir(srcFS fs.FS, destDir string, cfg ProjectConfig, skip string, rep *AddReport, ghRoot string) error {
 	return fs.WalkDir(srcFS, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -377,6 +418,9 @@ func copyDir(srcFS fs.FS, destDir string, cfg ProjectConfig, skip string) error 
 		}
 
 		destPath := filepath.Join(destDir, path)
+		if ghRoot != "" && strings.HasPrefix(filepath.ToSlash(path)+"/", ".github/") {
+			destPath = filepath.Join(ghRoot, path)
+		}
 
 		if d.IsDir() {
 			return os.MkdirAll(destPath, 0o755)
@@ -385,14 +429,14 @@ func copyDir(srcFS fs.FS, destDir string, cfg ProjectConfig, skip string) error 
 		// Render .tmpl files, copy everything else as-is
 		if strings.HasSuffix(path, ".tmpl") {
 			destPath = strings.TrimSuffix(destPath, ".tmpl")
-			return renderTemplate(srcFS, path, destPath, cfg)
+			return renderTemplate(srcFS, path, destPath, cfg, rep)
 		}
 
-		return copyFile(srcFS, path, destPath)
+		return copyFile(srcFS, path, destPath, rep)
 	})
 }
 
-func renderTemplate(srcFS fs.FS, srcPath string, destPath string, cfg ProjectConfig) error {
+func renderTemplate(srcFS fs.FS, srcPath string, destPath string, cfg ProjectConfig, rep *AddReport) error {
 	data, err := fs.ReadFile(srcFS, srcPath)
 	if err != nil {
 		return fmt.Errorf("failed to read %s: %w", srcPath, err)
@@ -429,10 +473,10 @@ func renderTemplate(srcFS fs.FS, srcPath string, destPath string, cfg ProjectCon
 		perm = 0o755
 	}
 
-	return os.WriteFile(destPath, output, perm)
+	return writeScaffoldFile(destPath, output, perm, rep)
 }
 
-func copyFile(srcFS fs.FS, srcPath string, destPath string) error {
+func copyFile(srcFS fs.FS, srcPath string, destPath string, rep *AddReport) error {
 	data, err := fs.ReadFile(srcFS, srcPath)
 	if err != nil {
 		return fmt.Errorf("failed to read %s: %w", srcPath, err)
@@ -442,5 +486,30 @@ func copyFile(srcFS fs.FS, srcPath string, destPath string) error {
 		return fmt.Errorf("failed to create directory for %s: %w", destPath, err)
 	}
 
-	return os.WriteFile(destPath, data, 0o644)
+	return writeScaffoldFile(destPath, data, 0o644, rep)
+}
+
+// writeScaffoldFile writes one scaffolded file. With a non-nil report (the
+// `add` path) an existing file is never touched — it is recorded as skipped.
+func writeScaffoldFile(destPath string, data []byte, perm os.FileMode, rep *AddReport) error {
+	if rep == nil {
+		return os.WriteFile(destPath, data, perm)
+	}
+	f, err := os.OpenFile(destPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm)
+	if errors.Is(err, fs.ErrExist) {
+		rep.SkippedFiles = append(rep.SkippedFiles, destPath)
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if _, err := f.Write(data); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	rep.CreatedFiles = append(rep.CreatedFiles, destPath)
+	return nil
 }

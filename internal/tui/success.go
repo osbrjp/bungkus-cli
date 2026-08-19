@@ -64,6 +64,14 @@ func PrintSuccess(cfg pkg.ProjectConfig) {
 		runLine,
 	)
 
+	// Local URLs the dev server serves on.
+	urls := "\n\n  " + AccentStyle.Render("Local URLs:") +
+		"\n    " + MutedStyle.Render("web  ") + orange.Render("http://localhost:3000")
+	if cfg.Backend != "none" {
+		urls += "\n    " + MutedStyle.Render("api  ") + orange.Render("http://localhost:8000")
+	}
+	cmds += urls
+
 	// Monorepo layout: explain the pnpm-workspace structure.
 	if cfg.Layout.IsMonorepo() {
 		ws := "\n\n  " + AccentStyle.Render("Workspace (pnpm):") +
