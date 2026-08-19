@@ -1,4 +1,5 @@
-{{- $urls := "" }}{{- if not .Base.IsVite }}{{- $urls = " ${{ steps.affected.outputs.urls }}" }}{{- end -}}
+{{- $urls := "" }}{{- if not .Base.IsVite }}{{- $urls = " ${{ steps.affected.outputs.urls }}" }}{{- end }}
+{{- $wd := "" }}{{- if .Layout.IsMonorepo }}{{- $wd = "\n        working-directory: apps/web" }}{{- end -}}
 name: Lighthouse CI
 
 # Pull requests only. GitHub runs this against the merge result rather than the branch
@@ -10,10 +11,19 @@ name: Lighthouse CI
 on:
   pull_request:
     branches: [main]
+{{- if .Layout.IsMonorepo }}
+    # An apps/api-only PR can't change frontend scores — skip the audit.
+    paths:
+      - 'apps/web/**'
+      - 'packages/**'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+{{- else }}
     paths-ignore:
       - '**/*.md'
       - 'LICENSE'
       - '.github/**'
+{{- end }}
   workflow_dispatch:
 
 # Only the newest tree is worth measuring. Without this, several pushes in quick
@@ -40,7 +50,7 @@ jobs:
         env:
           BASE_SHA: {{ "${{ github.event.pull_request.base.sha }}" }}
         run: |
-          pages_dir="{{ if .Base.IsNuxt }}app/pages{{ else }}src/pages{{ end }}"
+          pages_dir="{{ if .Layout.IsMonorepo }}apps/web/{{ end }}{{ if .Base.IsNuxt }}app/pages{{ else }}src/pages{{ end }}"
           git fetch --no-tags --depth=1 origin "$BASE_SHA"
           urls=""
           while IFS= read -r f; do
@@ -66,14 +76,14 @@ jobs:
           cache: pnpm
       - run: pnpm install
       - run: pnpm run build
-      - run: pnpx lhci autorun{{ $urls }}
+      - run: pnpx lhci autorun{{ $urls }}{{ $wd }}
         env:
           LHCI_GITHUB_APP_TOKEN: {{ "${{ secrets.LHCI_GITHUB_APP_TOKEN }}" }}
 {{- else if eq .PM "bun" }}
       - uses: oven-sh/setup-bun@v2
       - run: bun install
       - run: bun run build
-      - run: bunx lhci autorun{{ $urls }}
+      - run: bunx lhci autorun{{ $urls }}{{ $wd }}
         env:
           LHCI_GITHUB_APP_TOKEN: {{ "${{ secrets.LHCI_GITHUB_APP_TOKEN }}" }}
 {{- else if eq .PM "yarn" }}
@@ -83,7 +93,7 @@ jobs:
           cache: yarn
       - run: yarn install
       - run: yarn build
-      - run: yarn dlx @lhci/cli@0.15.x autorun{{ $urls }}
+      - run: yarn dlx @lhci/cli@0.15.x autorun{{ $urls }}{{ $wd }}
         env:
           LHCI_GITHUB_APP_TOKEN: {{ "${{ secrets.LHCI_GITHUB_APP_TOKEN }}" }}
 {{- else }}
@@ -93,7 +103,7 @@ jobs:
           cache: npm
       - run: npm install
       - run: npm run build
-      - run: npx --package=@lhci/cli@0.15.x lhci autorun{{ $urls }}
+      - run: npx --package=@lhci/cli@0.15.x lhci autorun{{ $urls }}{{ $wd }}
         env:
           LHCI_GITHUB_APP_TOKEN: {{ "${{ secrets.LHCI_GITHUB_APP_TOKEN }}" }}
 {{- end }}

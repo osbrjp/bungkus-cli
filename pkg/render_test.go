@@ -74,6 +74,12 @@ func TestScaffoldRenders(t *testing.T) {
 		c.PM, c.Layout, c.Desktop = "pnpm", LayoutMonorepo, "tauri"
 		return c
 	}
+	lhciMonorepo := func() ProjectConfig {
+		c := NewProjectConfig()
+		c.Base, c.Backend, c.ORM, c.Database = "astro-react", "hono", "drizzle", "sqlite"
+		c.PM, c.Layout, c.Audit = "pnpm", LayoutMonorepo, "lhci"
+		return c
+	}
 
 	cases := []struct {
 		name string
@@ -158,6 +164,21 @@ func TestScaffoldRenders(t *testing.T) {
 			contains: map[string][]string{
 				"src-tauri/tauri.conf.json": {"pnpm run generate"},
 				"nuxt.config.ts":            {"ssr: false"},
+			},
+		},
+		{
+			// #115: the workflow must land at the workspace root (GitHub reads
+			// nothing else), run lhci inside apps/web, and diff apps/web paths.
+			name:    "lhci_monorepo",
+			cfg:     lhciMonorepo(),
+			present: []string{".github/workflows/lhci.yml", "apps/web/lighthouserc.json"},
+			absent:  []string{"apps/web/.github"},
+			contains: map[string][]string{
+				".github/workflows/lhci.yml": {
+					"working-directory: apps/web",
+					`pages_dir="apps/web/src/pages"`,
+					"- 'apps/web/**'",
+				},
 			},
 		},
 		{
