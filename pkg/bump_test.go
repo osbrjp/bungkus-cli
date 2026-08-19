@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"encoding/json"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -147,5 +148,55 @@ func TestBumpRegistryDesktop(t *testing.T) {
 	}
 	if want := `"@tauri-apps/cli": "^2.12.0"`; !contains(res.Content, want) {
 		t.Errorf("content missing %q", want)
+	}
+}
+
+func TestBumpRegistryScansBackendOrmDatabase(t *testing.T) {
+	// #122: these categories were missing from the pin collection, silently
+	// freezing hono/drizzle/driver pins out of the freshness policy.
+	content := `{
+  "backend": [
+    { "value": "hono", "packages": { "dependencies": { "hono": "^4.6.14" } } }
+  ],
+  "orm": [
+    { "value": "drizzle", "packages": { "dependencies": { "drizzle-orm": "^0.38.0" } } }
+  ],
+  "database": [
+    { "value": "postgres", "packages": { "dependencies": { "pg": "^8.13.1" } } }
+  ]
+}`
+	bumped := map[string]string{"hono": "4.7.0", "drizzle-orm": "0.39.0", "pg": "8.14.0"}
+	resolve := func(name string) (string, bool) {
+		v, ok := bumped[name]
+		return v, ok
+	}
+	res, err := BumpRegistry(content, resolve)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Changes) != len(bumped) {
+		t.Fatalf("changes = %+v; want one per backend/orm/database pin", res.Changes)
+	}
+	for _, want := range []string{`"hono": "^4.7.0"`, `"drizzle-orm": "^0.39.0"`, `"pg": "^8.14.0"`} {
+		if !contains(res.Content, want) {
+			t.Errorf("content missing %q", want)
+		}
+	}
+}
+
+func TestOptionGroupsCoverRegistry(t *testing.T) {
+	// Guards the #122 class of bug: every []OptionEntry field of Registry must
+	// be returned by optionGroups(), so adding a category to the struct without
+	// wiring it into the all-options scan fails here instead of silently
+	// freezing its pins.
+	var fields int
+	rt := reflect.TypeOf(Registry{})
+	for i := 0; i < rt.NumField(); i++ {
+		if rt.Field(i).Type == reflect.TypeOf([]OptionEntry{}) {
+			fields++
+		}
+	}
+	if groups := (&Registry{}).optionGroups(); len(groups) != fields {
+		t.Errorf("optionGroups() returns %d groups but Registry has %d []OptionEntry fields — a category is missing from the all-options scan", len(groups), fields)
 	}
 }

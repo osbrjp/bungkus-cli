@@ -75,6 +75,18 @@ type Registry struct {
 	Database        []OptionEntry `json:"database"`
 }
 
+// optionGroups returns every []OptionEntry category of the registry. Anything
+// that scans "all options" (e.g. bump's pin collection) must go through this —
+// TestOptionGroupsCoverRegistry asserts it stays in sync with the struct, so a
+// new category can't silently fall out of the freshness policy again (#122).
+func (r *Registry) optionGroups() [][]OptionEntry {
+	return [][]OptionEntry{
+		r.CSS, r.Formatters, r.Linters, r.Validation, r.Form,
+		r.Query, r.State, r.CMS, r.Test, r.Audit, r.Deployment, r.CICD,
+		r.Desktop, r.Backend, r.ORM, r.Database,
+	}
+}
+
 var globalRegistry *Registry
 
 func InitRegistry(data []byte) error {
