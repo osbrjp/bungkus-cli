@@ -6,6 +6,7 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -266,5 +267,38 @@ func TestTauriIconsRGBA(t *testing.T) {
 			t.Fatalf("open %s: %v", name, err)
 		}
 		f.Close()
+	}
+}
+
+// TestAstroConfigCommas guards the astro.config.mjs template's comma wiring:
+// astro-react/astro-vue used to render the env block's `}` with no comma
+// before `integrations:`, and the tailwind branch appended a second comma
+// after the integrations list (`react()],,`), so every scaffolded astro
+// integration project failed its very first build.
+func TestAstroConfigCommas(t *testing.T) {
+	setupRegistry(t)
+	missingComma := regexp.MustCompile(`\}\n\s*(integrations|vite):`)
+	for _, base := range []BaseFramework{"astro", "astro-react", "astro-vue"} {
+		for _, css := range []CSSFramework{"vanilla", "tailwindcss"} {
+			t.Run(string(base)+"_"+string(css), func(t *testing.T) {
+				c := NewProjectConfig()
+				c.Base, c.CSS = base, css
+				dir := t.TempDir()
+				if err := Scaffold(dir, config.Templates, c); err != nil {
+					t.Fatalf("Scaffold: %v", err)
+				}
+				b, err := os.ReadFile(filepath.Join(dir, "astro.config.mjs"))
+				if err != nil {
+					t.Fatal(err)
+				}
+				s := string(b)
+				if strings.Contains(s, ",,") {
+					t.Errorf("doubled comma in astro.config.mjs:\n%s", s)
+				}
+				if missingComma.MatchString(s) {
+					t.Errorf("missing comma before top-level key in astro.config.mjs:\n%s", s)
+				}
+			})
+		}
 	}
 }
