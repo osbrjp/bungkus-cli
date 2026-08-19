@@ -1,9 +1,12 @@
+{{- $paths := "\n    # An apps/api-only change can't affect the deployed web app — skip the run.\n    paths:\n      - 'apps/web/**'\n      - 'packages/**'\n      - 'pnpm-lock.yaml'\n      - 'package.json'" -}}
 name: Deploy to Cloudflare Workers
 on:
   push:
     branches: [main]
+{{- if .Layout.IsMonorepo }}{{ $paths }}{{- end }}
   pull_request:
     branches: [main]
+{{- if .Layout.IsMonorepo }}{{ $paths }}{{- end }}
 
 jobs:
   deploy:
@@ -33,6 +36,9 @@ jobs:
         with:
           apiToken: {{ "${{ secrets.CLOUDFLARE_API_TOKEN }}" }}
           accountId: {{ "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" }}
+{{- if .Layout.IsMonorepo }}
+          workingDirectory: apps/web
+{{- end }}
           gitHubToken: {{ "${{ secrets.GITHUB_TOKEN }}" }}
         env:
           NITRO_PRESET: cloudflare_module

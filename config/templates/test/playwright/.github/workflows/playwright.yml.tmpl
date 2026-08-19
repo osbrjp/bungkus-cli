@@ -1,9 +1,13 @@
+{{- $wd := "" }}{{- if .Layout.IsMonorepo }}{{- $wd = "\n      working-directory: apps/web" }}{{- end }}
+{{- $paths := "\n    # An apps/api-only change can't affect the web app — skip the run.\n    paths:\n      - 'apps/web/**'\n      - 'packages/**'\n      - 'pnpm-lock.yaml'\n      - 'package.json'" -}}
 name: Playwright Tests
 on:
   push:
     branches: [ main, dev, staging, test ]
+{{- if .Layout.IsMonorepo }}{{ $paths }}{{- end }}
   pull_request:
     branches: [ main, dev, staging, test ]
+{{- if .Layout.IsMonorepo }}{{ $paths }}{{- end }}
 jobs:
   test:
     timeout-minutes: 60
@@ -17,34 +21,33 @@ jobs:
         node-version: 22
         cache: pnpm
     - run: pnpm install
-    - run: pnpm exec playwright install --with-deps
-    - run: pnpm exec playwright test
+    - run: pnpm exec playwright install --with-deps{{ $wd }}
+    - run: pnpm exec playwright test{{ $wd }}
 {{- else if eq .PM "bun" }}
     - uses: oven-sh/setup-bun@v2
     - run: bun install
-    - run: bunx playwright install --with-deps
-    - run: bunx playwright test
+    - run: bunx playwright install --with-deps{{ $wd }}
+    - run: bunx playwright test{{ $wd }}
 {{- else if eq .PM "yarn" }}
     - uses: actions/setup-node@v4
       with:
         node-version: 22
         cache: yarn
     - run: yarn install
-    - run: yarn playwright install --with-deps
-    - run: yarn playwright test
+    - run: yarn playwright install --with-deps{{ $wd }}
+    - run: yarn playwright test{{ $wd }}
 {{- else }}
     - uses: actions/setup-node@v4
       with:
         node-version: 22
         cache: npm
     - run: npm install
-    - run: npx playwright install --with-deps
-    - run: npx playwright test
+    - run: npx playwright install --with-deps{{ $wd }}
+    - run: npx playwright test{{ $wd }}
 {{- end }}
     - uses: actions/upload-artifact@v4
       if: {{"${{ !cancelled() }}"}}
       with:
         name: playwright-report
-        path: playwright-report/
+        path: {{ if .Layout.IsMonorepo }}apps/web/{{ end }}playwright-report/
         retention-days: 30
-
