@@ -122,6 +122,15 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 		}
 	}
 
+	// The test/audit/cicd sets render into the web app, but their configs
+	// (playwright.config, lighthouserc, ...) and workflows split in a
+	// monorepo: the workflow must live at the workspace root or GitHub never
+	// runs it (#115, #125), while everything else stays in apps/web.
+	ghRoot := ""
+	if cfg.Layout.IsMonorepo() {
+		ghRoot = destDir
+	}
+
 	if cfg.Test != "none" {
 		testDir := "templates/test/" + string(cfg.Test)
 		if _, err := fs.Stat(templates, testDir); err == nil {
@@ -129,7 +138,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 			if err != nil {
 				return fmt.Errorf("failed to read test templates: %w", err)
 			}
-			if err := copyDir(testFS, webDir, cfg, "", nil, ""); err != nil {
+			if err := copyDir(testFS, webDir, cfg, "", nil, ghRoot); err != nil {
 				return err
 			}
 		}
@@ -141,13 +150,6 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 			auditFS, err := fs.Sub(templates, auditDir)
 			if err != nil {
 				return fmt.Errorf("failed to read audit templates: %w", err)
-			}
-			// In a monorepo the audit config (lighthouserc.json) belongs to
-			// apps/web, but its workflow must live at the workspace root or
-			// GitHub never runs it (#115).
-			ghRoot := ""
-			if cfg.Layout.IsMonorepo() {
-				ghRoot = destDir
 			}
 			if err := copyDir(auditFS, webDir, cfg, "", nil, ghRoot); err != nil {
 				return err
@@ -195,7 +197,7 @@ func Scaffold(destDir string, templates fs.FS, cfg ProjectConfig) error {
 			if err != nil {
 				return fmt.Errorf("failed to read cicd templates: %w", err)
 			}
-			if err := copyDir(cicdFS, webDir, cfg, "", nil, ""); err != nil {
+			if err := copyDir(cicdFS, webDir, cfg, "", nil, ghRoot); err != nil {
 				return err
 			}
 		}

@@ -1,9 +1,12 @@
+{{- $paths := "\n    # An apps/api-only change can't affect the deployed web app — skip the run.\n    paths:\n      - 'apps/web/**'\n      - 'packages/**'\n      - 'pnpm-lock.yaml'\n      - 'package.json'" -}}
 name: Deploy to Cloudflare Pages
 on:
   push:
     branches: [main]
+{{- if .Layout.IsMonorepo }}{{ $paths }}{{- end }}
   pull_request:
     branches: [main]
+{{- if .Layout.IsMonorepo }}{{ $paths }}{{- end }}
 
 jobs:
   deploy:
@@ -29,6 +32,10 @@ jobs:
         run: {{.PM}} run build
       - name: Create Pages project (if not exists)
         run: pnpm exec wrangler pages project create {{ "${{ github.event.repository.name }}" }} --production-branch main || true
+{{- if .Layout.IsMonorepo }}
+        # wrangler is a devDependency of the web app, not the workspace root.
+        working-directory: apps/web
+{{- end }}
         env:
           CLOUDFLARE_API_TOKEN: {{ "${{ secrets.CLOUDFLARE_API_TOKEN }}" }}
           CLOUDFLARE_ACCOUNT_ID: {{ "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" }}
@@ -38,6 +45,9 @@ jobs:
         with:
           apiToken: {{ "${{ secrets.CLOUDFLARE_API_TOKEN }}" }}
           accountId: {{ "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" }}
+{{- if .Layout.IsMonorepo }}
+          workingDirectory: apps/web
+{{- end }}
           command: pages deploy dist
           gitHubToken: {{ "${{ secrets.GITHUB_TOKEN }}" }}
       - name: Comment deployment URL on PR

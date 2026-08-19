@@ -80,6 +80,13 @@ func TestScaffoldRenders(t *testing.T) {
 		c.PM, c.Layout, c.Audit = "pnpm", LayoutMonorepo, "lhci"
 		return c
 	}
+	ciMonorepo := func() ProjectConfig {
+		c := NewProjectConfig()
+		c.Base, c.Backend, c.ORM, c.Database = "astro-react", "hono", "drizzle", "sqlite"
+		c.PM, c.Layout = "pnpm", LayoutMonorepo
+		c.Test, c.Deployment, c.CICD = "playwright", "cloudflare-pages", "github-actions"
+		return c
+	}
 
 	cases := []struct {
 		name string
@@ -177,6 +184,32 @@ func TestScaffoldRenders(t *testing.T) {
 				".github/workflows/lhci.yml": {
 					"working-directory: apps/web",
 					`pages_dir="apps/web/src/pages"`,
+					"- 'apps/web/**'",
+				},
+			},
+		},
+		{
+			// #125: same class as #115 — the playwright and deploy workflows
+			// must land at the workspace root (GitHub reads nothing else) with
+			// their app-scoped steps running inside apps/web, while
+			// playwright.config.ts stays in the web app.
+			name: "ci_monorepo",
+			cfg:  ciMonorepo(),
+			present: []string{
+				".github/workflows/playwright.yml",
+				".github/workflows/deploy.yml",
+				"apps/web/playwright.config.ts",
+			},
+			absent: []string{"apps/web/.github"},
+			contains: map[string][]string{
+				".github/workflows/playwright.yml": {
+					"working-directory: apps/web",
+					"path: apps/web/playwright-report/",
+					"- 'apps/web/**'",
+				},
+				".github/workflows/deploy.yml": {
+					"workingDirectory: apps/web",
+					"working-directory: apps/web",
 					"- 'apps/web/**'",
 				},
 			},
