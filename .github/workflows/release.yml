@@ -68,7 +68,7 @@ jobs:
         with:
           ref: ${{ needs.semantic-release.outputs.new_release_git_tag }}
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
 
