@@ -15,7 +15,7 @@ import (
 
 const (
 	// Repo is the GitHub repository releases are published to.
-	Repo = "spencer-osbrjp/bungkus-cli"
+	Repo = "osbrjp/bungkus-cli"
 	// InstallScriptURL is the installer bungkus-cli update re-runs; it owns
 	// asset resolution, checksum verification, and the atomic replace.
 	InstallScriptURL = "https://raw.githubusercontent.com/" + Repo + "/main/install.sh"

@@ -65,5 +65,5 @@ Flags (see `--help` for full list): `--base`, `--css`, `--fmt`, `--linter`, `--v
 
 - Commit messages: conventional commits (`feat:`, `fix:`, `test:`, `chore:`)
 - Branch naming: `i{issue#}-{date}-{seq}` (e.g. `i37-20260414-1741`)
-- GitHub repo: `spencer-osbrjp/bungkus-cli`
+- GitHub repo: `osbrjp/bungkus-cli`
 - Tests live next to the code (`pkg/config_test.go`, `pkg/packagejson_test.go`). Table-driven; they exercise the real embedded registry so changes to `registry.json` are covered automatically.
