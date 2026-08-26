@@ -9,9 +9,9 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/spencer-osbrjp/bungkus-cli/config"
-	"github.com/spencer-osbrjp/bungkus-cli/internal/tui"
-	"github.com/spencer-osbrjp/bungkus-cli/pkg"
+	"github.com/osbrjp/bungkus-cli/config"
+	"github.com/osbrjp/bungkus-cli/internal/tui"
+	"github.com/osbrjp/bungkus-cli/pkg"
 	"github.com/spf13/cobra"
 )
 

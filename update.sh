@@ -4,5 +4,5 @@
 # already current; for now, always fetches the latest.
 set -euo pipefail
 
-REPO="spencer-osbrjp/bungkus-cli"
+REPO="osbrjp/bungkus-cli"
 exec curl -fsSL "https://raw.githubusercontent.com/${REPO}/main/install.sh" | bash

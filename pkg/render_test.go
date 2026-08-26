@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/spencer-osbrjp/bungkus-cli/config"
+	"github.com/osbrjp/bungkus-cli/config"
 )
 
 // goTemplateMarkers are fragments that only appear in an *unrendered* Go

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/spencer-osbrjp/bungkus-cli/config"
+	"github.com/osbrjp/bungkus-cli/config"
 )
 
 var importSpecRE = regexp.MustCompile(`(?m)^\s*import\s+(?:[^'"]*?\sfrom\s+)?['"]([^'"]+)['"]`)

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"charm.land/lipgloss/v2"
-	"github.com/spencer-osbrjp/bungkus-cli/pkg"
+	"github.com/osbrjp/bungkus-cli/pkg"
 )
 
 // PrintCICDSkipped prints a styled warning that CI/CD was skipped because no

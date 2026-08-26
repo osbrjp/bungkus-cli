@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="spencer-osbrjp/bungkus-cli"
+REPO="osbrjp/bungkus-cli"
 BIN_NAME="bungkus-cli"
 INSTALL_DIR="${BUNGKUS_INSTALL_DIR:-/usr/local/bin}"
 
