@@ -531,7 +531,7 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.prevScreen = m.screen
 				m.screen = screenSummary
 				return m, nil
-			case "[", "shift+tab":
+			case "[", "]", "tab", "shift+tab":
 				m.screen = screenWizard
 				return m, nil
 			case "down", "j":
@@ -549,12 +549,11 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Wizard screen key handling
 		switch msg.String() {
-		case "]":
-			// Switch to the backend tab (unless typing the project name)
-			if m.focus != focusProjectName {
-				m.screen = screenBackend
-				return m, nil
-			}
+		case "[", "]":
+			// Switch to the backend tab. Brackets are never valid in a project
+			// name, so this works even while the name field has focus.
+			m.screen = screenBackend
+			return m, nil
 		case "q":
 			// Quit, unless typing into the project name field
 			if m.focus != focusProjectName {
@@ -934,7 +933,7 @@ func (m WizardModel) footerView() string {
 
 	if m.screen == screenBackend {
 		line := strings.Join([]string{
-			key("[ / ]", "switch tab"),
+			key("[ / ]", "Frontend ⇄ Backend"),
 			key("↑/↓", "move"),
 			key("space", "select"),
 			key("enter", "confirm"),
@@ -944,7 +943,7 @@ func (m WizardModel) footerView() string {
 	}
 
 	bindings := []string{
-		key("[ / ]", "switch tab"),
+		key("[ / ]", "Frontend ⇄ Backend"),
 		key("tab/shift+tab", "navigate"),
 	}
 
