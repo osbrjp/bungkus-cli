@@ -11,7 +11,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/spencer-osbrjp/bungkus-cli/pkg"
+	"github.com/osbrjp/bungkus-cli/pkg"
 	"github.com/spf13/cobra"
 )
 

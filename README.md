@@ -35,12 +35,8 @@ bungkus-cli --version
 If you have Go installed and prefer to build from source:
 
 ```bash
-go install github.com/spencer-osbrjp/bungkus-cli@latest
+go install github.com/osbrjp/bungkus-cli@latest
 ```
-
-The import path keeps the pre-move owner — it is the declared module path in
-`go.mod`, so it is the one `go install` resolves. Everything else points at
-[osbrjp/bungkus-cli](https://github.com/osbrjp/bungkus-cli).
 
 ### Updating
 

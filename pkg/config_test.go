@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/spencer-osbrjp/bungkus-cli/config"
+	"github.com/osbrjp/bungkus-cli/config"
 )
 
 func setupRegistry(t *testing.T) {
