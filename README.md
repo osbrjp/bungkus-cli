@@ -38,6 +38,19 @@ If you have Go installed and prefer to build from source:
 go install github.com/spencer-osbrjp/bungkus-cli@latest
 ```
 
+### Updating
+
+```bash
+bungkus-cli update          # replace this binary with the latest release
+bungkus-cli update --check  # report what is available, install nothing
+```
+
+`update` re-runs the install script above, so downloads stay checksum-verified.
+
+Once a day, other commands check for a newer release in the background and
+print a one-line hint when one exists. The check never blocks or fails a
+command; set `BUNGKUS_NO_UPDATE_CHECK=1` to turn it off.
+
 ### Usage
 
 Run the interactive wizard:

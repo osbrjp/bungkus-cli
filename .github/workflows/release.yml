@@ -33,6 +33,18 @@ jobs:
         with:
           fetch-depth: 0
 
+      # A squashed promotion collapses main's fix:/feat: commits into one
+      # chore: commit, so semantic-release silently cuts no stable release
+      # (this happened with PR #107). Fail loudly instead.
+      - name: "Guard: release must contain main's history"
+        if: github.ref == 'refs/heads/release'
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor origin/main HEAD || {
+            echo "::error::release does not contain main's commit history — was the promotion PR squashed? Merge it with a merge commit so semantic-release can read the fix:/feat: commits."
+            exit 1
+          }
+
       - uses: actions/setup-node@v7
         with:
           node-version: 22
