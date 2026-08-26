@@ -3,8 +3,8 @@ package cmd
 import (
 	"testing"
 
-	"github.com/spencer-osbrjp/bungkus-cli/config"
-	"github.com/spencer-osbrjp/bungkus-cli/pkg"
+	"github.com/osbrjp/bungkus-cli/config"
+	"github.com/osbrjp/bungkus-cli/pkg"
 )
 
 // TestTemplatePresetsAreValid runs every preset through the same enum checks

@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spencer-osbrjp/bungkus-cli/cmd"
-	"github.com/spencer-osbrjp/bungkus-cli/config"
-	"github.com/spencer-osbrjp/bungkus-cli/pkg"
+	"github.com/osbrjp/bungkus-cli/cmd"
+	"github.com/osbrjp/bungkus-cli/config"
+	"github.com/osbrjp/bungkus-cli/pkg"
 )
 
 func main() {

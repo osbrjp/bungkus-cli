@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/spencer-osbrjp/bungkus-cli/config"
-	"github.com/spencer-osbrjp/bungkus-cli/pkg"
+	"github.com/osbrjp/bungkus-cli/config"
+	"github.com/osbrjp/bungkus-cli/pkg"
 	"github.com/spf13/cobra"
 )
 

@@ -1,4 +1,4 @@
-module github.com/spencer-osbrjp/bungkus-cli
+module github.com/osbrjp/bungkus-cli
 
 go 1.25.0
 
