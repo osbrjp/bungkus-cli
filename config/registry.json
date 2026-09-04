@@ -510,7 +510,7 @@
       "label": "Cloudflare Pages",
       "packages": {
         "devDependencies": {
-          "wrangler": "^4.123.0"
+          "wrangler": "^4.125.0"
         },
         "scripts": {
           "deploy": "wrangler pages deploy dist"
@@ -522,7 +522,7 @@
       "label": "Cloudflare Workers",
       "packages": {
         "devDependencies": {
-          "wrangler": "^4.123.0"
+          "wrangler": "^4.125.0"
         },
         "scripts": {
           "deploy": "wrangler deploy"
