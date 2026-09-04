@@ -578,7 +578,7 @@
       "label": "Hono",
       "packages": {
         "dependencies": {
-          "hono": "^4.13.2",
+          "hono": "^4.13.3",
           "@hono/node-server": "^2.1.1"
         },
         "devDependencies": {
