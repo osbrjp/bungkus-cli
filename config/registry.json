@@ -222,7 +222,7 @@
           "format": "oxfmt ."
         },
         "devDependencies": {
-          "oxlint": "^1.78.0"
+          "oxlint": "^1.79.0"
         }
       }
     }
@@ -266,7 +266,7 @@
           "lint": "oxlint ."
         },
         "devDependencies": {
-          "oxlint": "^1.78.0"
+          "oxlint": "^1.79.0"
         }
       }
     }
