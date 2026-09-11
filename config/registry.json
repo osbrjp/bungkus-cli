@@ -364,7 +364,7 @@
       "integrationPackages": {
         "react": {
           "dependencies": {
-            "@tanstack/react-query": "^5.101.4"
+            "@tanstack/react-query": "^5.102.8"
           }
         },
         "vue": {
