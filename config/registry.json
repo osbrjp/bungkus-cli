@@ -594,7 +594,7 @@
       "label": "Elysia",
       "packages": {
         "dependencies": {
-          "elysia": "^1.4.29"
+          "elysia": "^1.4.30"
         },
         "scripts": {
           "dev:server": "bun run --watch server/index.ts"
