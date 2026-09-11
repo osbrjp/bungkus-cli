@@ -301,7 +301,7 @@
       ],
       "packages": {
         "dependencies": {
-          "react-hook-form": "^7.85.0"
+          "react-hook-form": "^7.86.0"
         }
       }
     },
