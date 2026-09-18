@@ -464,7 +464,7 @@
       ],
       "packages": {
         "dependencies": {
-          "microcms-js-sdk": "^3.4.0"
+          "microcms-js-sdk": "^3.5.0"
         }
       }
     }
