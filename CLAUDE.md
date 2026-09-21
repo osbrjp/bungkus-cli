@@ -6,7 +6,7 @@
 
 ## Tech Stack
 
-- **Go 1.24+** — CLI, orchestration, template rendering
+- **Go 1.26+** — CLI, orchestration, template rendering
 - **Cobra** — CLI command framework
 - **BubbleTea / Lip Gloss** — interactive TUI
 - **Sprig** — template functions for `text/template`
