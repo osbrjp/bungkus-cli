@@ -10,7 +10,6 @@ datasource db {
 {{- else }}
   provider = "sqlite"
 {{- end }}
-  url      = env("DATABASE_URL")
 }
 
 model User {
