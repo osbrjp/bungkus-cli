@@ -55,7 +55,7 @@
         },
         "dependencies": {
           "astro": "^7.2.4",
-          "@astrojs/react": "^6.0.2",
+          "@astrojs/react": "^6.0.4",
           "react": "^19.2.8",
           "react-dom": "^19.2.8"
         },
@@ -83,7 +83,7 @@
         "dependencies": {
           "nuxt": "4.5.2",
           "vue": "^3.5.42",
-          "vue-router": "^5.2.0"
+          "vue-router": "^5.3.0"
         },
         "devDependencies": {
           "@types/node": "^26.4.0"
@@ -131,7 +131,7 @@
         "devDependencies": {
           "typescript": "~7.0.2",
           "vite": "^8.2.2",
-          "@vitejs/plugin-react": "^6.0.5",
+          "@vitejs/plugin-react": "^6.1.0",
           "@types/react": "^19.2.18",
           "@types/react-dom": "^19.2.5"
         }
@@ -222,7 +222,7 @@
           "format": "oxfmt ."
         },
         "devDependencies": {
-          "oxlint": "^1.78.0"
+          "oxlint": "^1.79.0"
         }
       }
     }
@@ -251,7 +251,7 @@
           "eslint": "^10.9.1",
           "@eslint/js": "^10.0.1",
           "globals": "^17.12.0",
-          "typescript-eslint": "^8.67.0"
+          "typescript-eslint": "^8.68.0"
         }
       }
     },
@@ -266,7 +266,7 @@
           "lint": "oxlint ."
         },
         "devDependencies": {
-          "oxlint": "^1.78.0"
+          "oxlint": "^1.79.0"
         }
       }
     }
@@ -439,7 +439,7 @@
       "integrationPackages": {
         "react": {
           "dependencies": {
-            "@nanostores/react": "^1.1.0"
+            "@nanostores/react": "^2.0.1"
           }
         },
         "vue": {
@@ -510,7 +510,7 @@
       "label": "Cloudflare Pages",
       "packages": {
         "devDependencies": {
-          "wrangler": "^4.123.0"
+          "wrangler": "^4.125.0"
         },
         "scripts": {
           "deploy": "wrangler pages deploy dist"
@@ -522,7 +522,7 @@
       "label": "Cloudflare Workers",
       "packages": {
         "devDependencies": {
-          "wrangler": "^4.123.0"
+          "wrangler": "^4.125.0"
         },
         "scripts": {
           "deploy": "wrangler deploy"
