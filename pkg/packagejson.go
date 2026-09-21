@@ -356,6 +356,15 @@ func applyCrossCuttingRules(pkg *packageJSON, cfg ProjectConfig) {
 		pkg.Dependencies["@hookform/resolvers"] = "^5.2.2"
 	}
 
+	// eslint + typescript 7 → run TS 6 side by side. typescript-eslint needs the
+	// TS 6 JavaScript API (peer: typescript <6.1), so `typescript` is aliased to
+	// the official TS 6 package while `tsc` stays on the native TS 7 compiler.
+	// ponytail: drop once typescript-eslint supports TS 7 (typescript-eslint#10940).
+	if ts, ok := pkg.DevDependencies["typescript"]; ok && cfg.Linter == "eslint" && strings.Contains(ts, "7.") {
+		pkg.DevDependencies["@typescript/native"] = "npm:typescript@" + ts
+		pkg.DevDependencies["typescript"] = "npm:@typescript/typescript6@^6.0.2"
+	}
+
 	// pnpm + astro → vite as devDep
 	if cfg.PM == "pnpm" && cfg.Base.IsAstro() {
 		pkg.DevDependencies["vite"] = "^6.3.5"
