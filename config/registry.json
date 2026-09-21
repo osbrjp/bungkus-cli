@@ -14,7 +14,7 @@
           "astro": "astro"
         },
         "dependencies": {
-          "astro": "^7.2.4"
+          "astro": "^7.3.1"
         }
       }
     },
@@ -33,7 +33,7 @@
           "astro": "astro"
         },
         "dependencies": {
-          "astro": "^7.2.4",
+          "astro": "^7.3.1",
           "@astrojs/vue": "^7.0.2",
           "vue": "^3.5.42"
         }
@@ -54,14 +54,14 @@
           "astro": "astro"
         },
         "dependencies": {
-          "astro": "^7.2.4",
-          "@astrojs/react": "^6.0.4",
+          "astro": "^7.3.1",
+          "@astrojs/react": "^6.0.5",
           "react": "^19.2.8",
           "react-dom": "^19.2.8"
         },
         "devDependencies": {
           "@types/react": "^19.2.18",
-          "@types/react-dom": "^19.2.5"
+          "@types/react-dom": "^19.2.7"
         }
       }
     },
@@ -83,10 +83,10 @@
         "dependencies": {
           "nuxt": "4.5.2",
           "vue": "^3.5.42",
-          "vue-router": "^5.3.0"
+          "vue-router": "^5.3.1"
         },
         "devDependencies": {
-          "@types/node": "^26.4.0"
+          "@types/node": "^26.4.1"
         }
       }
     },
@@ -131,9 +131,9 @@
         "devDependencies": {
           "typescript": "~7.0.2",
           "vite": "^8.2.2",
-          "@vitejs/plugin-react": "^6.1.0",
+          "@vitejs/plugin-react": "^6.1.1",
           "@types/react": "^19.2.18",
-          "@types/react-dom": "^19.2.5"
+          "@types/react-dom": "^19.2.7"
         }
       }
     },
@@ -195,7 +195,7 @@
           "format": "biome format --write ."
         },
         "devDependencies": {
-          "@biomejs/biome": "2.5.9"
+          "@biomejs/biome": "2.5.12"
         }
       }
     },
@@ -222,7 +222,7 @@
           "format": "oxfmt ."
         },
         "devDependencies": {
-          "oxlint": "^1.79.0"
+          "oxlint": "^1.81.0"
         }
       }
     }
@@ -236,7 +236,7 @@
           "lint": "biome lint ."
         },
         "devDependencies": {
-          "@biomejs/biome": "2.5.9"
+          "@biomejs/biome": "2.5.12"
         }
       }
     },
@@ -248,10 +248,10 @@
           "lint": "eslint ."
         },
         "devDependencies": {
-          "eslint": "^10.9.1",
+          "eslint": "^10.10.0",
           "@eslint/js": "^10.0.1",
           "globals": "^17.12.0",
-          "typescript-eslint": "^8.68.0"
+          "typescript-eslint": "^8.69.0"
         }
       }
     },
@@ -266,7 +266,7 @@
           "lint": "oxlint ."
         },
         "devDependencies": {
-          "oxlint": "^1.79.0"
+          "oxlint": "^1.81.0"
         }
       }
     }
@@ -282,7 +282,7 @@
       "label": "Zod",
       "packages": {
         "dependencies": {
-          "zod": "^4.4.3"
+          "zod": "^4.5.4"
         }
       }
     }
@@ -301,7 +301,7 @@
       ],
       "packages": {
         "dependencies": {
-          "react-hook-form": "^7.86.0"
+          "react-hook-form": "^7.87.0"
         }
       }
     },
@@ -433,7 +433,7 @@
       ],
       "packages": {
         "dependencies": {
-          "nanostores": "^1.5.2"
+          "nanostores": "^1.5.3"
         }
       },
       "integrationPackages": {
@@ -482,7 +482,7 @@
           "test:e2e": "playwright test"
         },
         "devDependencies": {
-          "@playwright/test": "^1.62.1"
+          "@playwright/test": "^1.63.0"
         }
       }
     }
@@ -510,7 +510,7 @@
       "label": "Cloudflare Pages",
       "packages": {
         "devDependencies": {
-          "wrangler": "^4.125.0"
+          "wrangler": "^4.129.0"
         },
         "scripts": {
           "deploy": "wrangler pages deploy dist"
@@ -522,7 +522,7 @@
       "label": "Cloudflare Workers",
       "packages": {
         "devDependencies": {
-          "wrangler": "^4.125.0"
+          "wrangler": "^4.129.0"
         },
         "scripts": {
           "deploy": "wrangler deploy"
@@ -578,11 +578,11 @@
       "label": "Hono",
       "packages": {
         "dependencies": {
-          "hono": "^4.13.3",
+          "hono": "^4.13.7",
           "@hono/node-server": "^2.1.1"
         },
         "devDependencies": {
-          "tsx": "^4.23.12"
+          "tsx": "^4.23.13"
         },
         "scripts": {
           "dev:server": "tsx watch --env-file-if-exists=.env server/index.ts"
@@ -617,7 +617,7 @@
         },
         "devDependencies": {
           "drizzle-kit": "^0.31.10",
-          "tsx": "^4.23.12"
+          "tsx": "^4.23.13"
         },
         "scripts": {
           "db:generate": "drizzle-kit generate",
@@ -632,11 +632,11 @@
       "label": "Prisma",
       "packages": {
         "dependencies": {
-          "@prisma/client": "~7.9.1"
+          "@prisma/client": "~7.10.0"
         },
         "devDependencies": {
-          "prisma": "~7.9.1",
-          "tsx": "^4.23.12"
+          "prisma": "~7.10.0",
+          "tsx": "^4.23.13"
         },
         "scripts": {
           "db:generate": "prisma generate",
