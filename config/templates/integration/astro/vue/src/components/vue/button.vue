@@ -15,6 +15,6 @@ const handleClick = () => {
       Count: {{ count }} 
     </span>
 
-    <button @click="handleClick">Click me</button>
+    <button type="button" @click="handleClick">Click me</button>
   </div>
 </template>

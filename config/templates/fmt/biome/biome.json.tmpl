@@ -1,9 +1,10 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.15/schema.json",
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "files": {
     "includes": [
       "**",
-      "!dist"
+      "!dist",
+      "!public"
       {{- if .Base.IsAstro}}, "!.astro"{{- end}}
       {{- if .Base.IsNuxt}}, "!.nuxt", "!.output", "!.nitro"{{- end}}
       {{- if .Base.IsVite}}, "!dist-ssr"{{- end}}
@@ -18,7 +19,7 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true
+      "preset": "recommended"
     }
   },
   {{- if or (.Base.IsAstro)  (.Base.IsNuxt)}}
