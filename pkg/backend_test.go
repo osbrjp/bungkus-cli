@@ -63,11 +63,17 @@ func TestBackendORMPackageJSON(t *testing.T) {
 			forbidDep: []string{"better-sqlite3", "pg", "mysql2"},
 		},
 		{
-			name:      "prisma bundles its own engine, no drizzle driver",
+			name:      "prisma gets its driver adapter, no drizzle driver",
 			cfg:       func() ProjectConfig { c := baseCfg(); c.ORM = "prisma"; c.Database = "postgres"; return c },
-			wantDep:   []string{"@prisma/client"},
+			wantDep:   []string{"@prisma/client", "@prisma/adapter-pg"},
 			wantDev:   []string{"prisma"},
 			forbidDep: []string{"pg", "better-sqlite3", "drizzle-orm"},
+		},
+		{
+			name:      "prisma + sqlite gets the better-sqlite3 adapter",
+			cfg:       func() ProjectConfig { c := baseCfg(); c.ORM = "prisma"; c.Database = "sqlite"; return c },
+			wantDep:   []string{"@prisma/client", "@prisma/adapter-better-sqlite3"},
+			forbidDep: []string{"@prisma/adapter-pg", "drizzle-orm"},
 		},
 		{
 			name:      "defaults add no backend/orm packages",

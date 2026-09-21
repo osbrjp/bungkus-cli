@@ -232,7 +232,7 @@ func BuildAPIPackageJSON(cfg ProjectConfig) ([]byte, error) {
 			mergePackages(&pkg, orm.Packages)
 		}
 	}
-	applyDrizzleDriver(&pkg, cfg)
+	applyDBDriver(&pkg, cfg)
 
 	// Alias the framework's watch script to "dev" so `pnpm -r run dev` starts
 	// the api alongside the web app.
@@ -363,14 +363,18 @@ func applyCrossCuttingRules(pkg *packageJSON, cfg ProjectConfig) {
 
 	// In a monorepo the orm/driver belong to apps/api, not the frontend.
 	if !cfg.Layout.IsMonorepo() {
-		applyDrizzleDriver(pkg, cfg)
+		applyDBDriver(pkg, cfg)
 	}
 }
 
-// applyDrizzleDriver adds the DB driver drizzle needs; prisma bundles its own
-// engine. An empty/none DB defaults to sqlite so the generated
-// drizzle.config/db client (which falls back to sqlite too) stays consistent.
-func applyDrizzleDriver(pkg *packageJSON, cfg ProjectConfig) {
+// applyDBDriver adds the DB driver the ORM needs. An empty/none DB defaults to
+// sqlite so the generated config/db client (which falls back to sqlite too)
+// stays consistent.
+func applyDBDriver(pkg *packageJSON, cfg ProjectConfig) {
+	if cfg.ORM == "prisma" {
+		applyPrismaAdapter(pkg, cfg)
+		return
+	}
 	if cfg.ORM != "drizzle" {
 		return
 	}
@@ -387,5 +391,22 @@ func applyDrizzleDriver(pkg *packageJSON, cfg ProjectConfig) {
 	default: // sqlite / none
 		pkg.Dependencies["better-sqlite3"] = "^11.7.0"
 		pkg.DevDependencies["@types/better-sqlite3"] = "^7.6.12"
+	}
+}
+
+// applyPrismaAdapter adds the driver adapter Prisma 7 requires. It reuses the
+// @prisma/client version so the adapter can never drift from the client.
+func applyPrismaAdapter(pkg *packageJSON, cfg ProjectConfig) {
+	v, ok := pkg.Dependencies["@prisma/client"]
+	if !ok {
+		return
+	}
+	switch cfg.Database {
+	case "postgres":
+		pkg.Dependencies["@prisma/adapter-pg"] = v
+	case "mysql":
+		pkg.Dependencies["@prisma/adapter-mariadb"] = v
+	default: // sqlite / none
+		pkg.Dependencies["@prisma/adapter-better-sqlite3"] = v
 	}
 }
