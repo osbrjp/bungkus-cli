@@ -399,7 +399,9 @@ func (m WizardModel) key(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if k == "left" || k == "h" {
 			d = -1
 		}
-		if m.focus == paneOptions && steps[m.step].kind == kindAdvanced && (k == "left" || k == "right") {
+		// In the advanced step h/l and ←/→ change the row's value, like vim
+		// motions everywhere else; esc and tab still leave the pane.
+		if m.focus == paneOptions && steps[m.step].kind == kindAdvanced {
 			m.advanced.shift(d)
 			return m, m.refresh()
 		}

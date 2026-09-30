@@ -330,7 +330,7 @@ func nameCallToAction(valid, focused bool, next string) string {
 func (m WizardModel) optionsLines(iw int) (lines []string, from, to int) {
 	s := steps[m.step]
 	focused := m.focus == paneOptions
-	head := map[stepKind]string{kindChoice: "pick one", kindName: "type a name", kindAdvanced: "←/→ change", kindReview: "check and create"}
+	head := map[stepKind]string{kindChoice: "pick one", kindName: "type a name", kindAdvanced: "h/l ←/→ change", kindReview: "check and create"}
 	lines = []string{" " + FooterDescStyle.Render(s.name+" · "+head[s.kind]), ""}
 
 	switch s.kind {
@@ -592,7 +592,7 @@ func (m WizardModel) statusBar() string {
 		case kindName:
 			keys = [][2]string{{"type", "name"}, {"enter", "next"}, {"esc", "back"}, {"tab", "pane"}}
 		case kindAdvanced:
-			keys = [][2]string{{"j/k", "row"}, {"←/→", "change"}, {"enter", "next"}, {"esc", "back"}, {"?", "help"}}
+			keys = [][2]string{{"j/k", "row"}, {"h/l ←/→", "change"}, {"enter", "next"}, {"esc", "back"}, {"?", "help"}}
 		case kindReview:
 			keys = [][2]string{{"enter", "create"}, {"esc", "back"}, {"?", "help"}, {"q", "quit"}}
 		default:
@@ -614,7 +614,7 @@ func helpLines() []string {
 	keys := [][2]string{
 		{"j/k  ↓/↑", "move within the pane"},
 		{"h/l  ←/→  tab", "switch pane"},
-		{"←/→", "change a value (advanced step)"},
+		{"h/l ←/→", "change a value (advanced step; esc/tab leave)"},
 		{"space", "pick the option under the cursor"},
 		{"enter", "steps: open · options: pick and next · review: create"},
 		{"r", "jump to review"},

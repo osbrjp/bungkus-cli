@@ -620,3 +620,23 @@ func TestNameStepShowsHowToContinue(t *testing.T) {
 		})
 	}
 }
+
+func TestAdvancedStepHLChangeValue(t *testing.T) {
+	m := newTestModel(t, 110, 40)
+	m.setStep(slices.IndexFunc(steps, func(s stepDef) bool { return s.kind == kindAdvanced }))
+	next, _ := m.focusPane(paneOptions)
+	m = next.(WizardModel)
+	before := m.advanced.items[m.advanced.row].cursor
+	for _, k := range []string{"l", "h", "l"} {
+		m = press(m, k)
+		if m.focus != paneOptions {
+			t.Fatalf("%q left the options pane on the advanced step", k)
+		}
+	}
+	if m.advanced.items[m.advanced.row].cursor == before {
+		t.Error("h/l did not change the advanced value")
+	}
+	if m = press(m, "esc"); m.focus != paneSteps {
+		t.Error("esc should return to the steps pane")
+	}
+}
