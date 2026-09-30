@@ -65,7 +65,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m model) View() tea.View {
 	if m.step == stepDone {
 		if m.err != nil {
-			return tea.NewView(ErrorStyle.Render("✘ "+m.err.Error()) + "\n")
+			return paint(tea.NewView(ErrorStyle.Render("✘ "+m.err.Error()) + "\n"))
 		}
 
 		header := PrimaryStyle.Render("✔ ") + "Project scaffolded at " + AccentStyle.Render(m.cfg.ProjectName)
@@ -76,8 +76,8 @@ func (m model) View() tea.View {
 			lipgloss.NewStyle().Foreground(ColorAccent).Render(m.cfg.PM.InstallCmd()),
 			lipgloss.NewStyle().Foreground(ColorAccent).Render(m.cfg.PM.RunCmd()),
 		)
-		return tea.NewView(BoxStyle.Render(header+hint) + "\n")
+		return paint(tea.NewView(BoxStyle.Render(header+hint) + "\n"))
 	}
 
-	return tea.NewView(m.spinner.View() + " Scaffolding project...\n")
+	return paint(tea.NewView(m.spinner.View() + " Scaffolding project...\n"))
 }
