@@ -22,11 +22,16 @@ func PrintSkippedIntegration(lib, base string) {
 	fmt.Println(msg)
 }
 
-// successLines returns the success block shown beside the mascot: the
-// "Wrapped!" line, a blank line, and the commands that start the project
-// (without "cd" when it was scaffolded into the current directory).
+// successLines returns the success block shown beside the mascot: "Wrapped!",
+// "<name> is ready.", a blank line, and the commands that start the project
+// (without "cd" when it was scaffolded into the current directory). The two
+// short headline lines keep the block readable in a narrow preview pane.
 func successLines(cfg pkg.ProjectConfig) []string {
-	lines := []string{okStyle.Bold(true).Render("Wrapped! " + cfg.ProjectName + " is ready."), ""}
+	lines := []string{
+		okStyle.Bold(true).Render("Wrapped!"),
+		okStyle.Render(cfg.ProjectName + " is ready."),
+		"",
+	}
 	if cfg.DestDir != "." {
 		lines = append(lines, cmdStyle.Render("cd "+cfg.ProjectName))
 	}

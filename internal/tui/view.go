@@ -17,7 +17,7 @@ const (
 	minWidth     = 60         // narrower than this, only a notice is drawn
 	minHeight    = 20         // shorter than this, only a notice is drawn
 	wideWidth    = 100        // from this width all three panes show side by side
-	stepsWidth   = 22         // outer width of the steps pane
+	stepsWidth   = 32         // outer width of the steps pane
 	optionsWidth = 38         // outer width of the options pane
 	headerRows   = mascotRows // the header text sits beside the mascot
 	statusRows   = 1

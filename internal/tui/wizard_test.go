@@ -555,7 +555,7 @@ func TestMascotOnInstructionScreens(t *testing.T) {
 	}
 	cfg := pkg.NewProjectConfig()
 	out := ansi.Strip(successText(cfg))
-	for _, want := range []string{"▄▀██▀▄", "┛  ┛", "Wrapped! my-app is ready.", "cd my-app", cfg.PM.InstallCmd(), cfg.PM.RunCmd()} {
+	for _, want := range []string{"▄▀██▀▄", "┛  ┛", "Wrapped!", "my-app is ready.", "cd my-app", cfg.PM.InstallCmd(), cfg.PM.RunCmd()} {
 		if !strings.Contains(out, want) {
 			t.Errorf("success output lacks %q:\n%s", want, out)
 		}
@@ -563,8 +563,9 @@ func TestMascotOnInstructionScreens(t *testing.T) {
 
 	next, _ := newTestModel(t, 110, 40).Update(scaffoldedMsg{})
 	lines := strings.Split(screen(next.(WizardModel)), "\n")
-	i := slices.IndexFunc(lines, func(l string) bool { return strings.Contains(l, "Wrapped! my-app is ready.") })
-	if i < headerRows || !strings.Contains(lines[i], "▄██▄") || !strings.Contains(lines[i+2], "▀▀▀▀▀▀▀▀") || !strings.Contains(lines[i+2], "cd my-app") {
+	i := slices.IndexFunc(lines, func(l string) bool { return strings.Contains(l, "Wrapped!") })
+	if i < headerRows || !strings.Contains(lines[i], "▄██▄") || !strings.Contains(lines[i+1], "my-app is ready.") ||
+		!strings.Contains(lines[i+3], "┛  ┛") || !strings.Contains(lines[i+3], "cd my-app") {
 		t.Errorf("preview pane lacks the mascot beside the success block:\n%s", strings.Join(lines, "\n"))
 	}
 
