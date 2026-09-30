@@ -332,6 +332,12 @@ func (m WizardModel) optionsLines(iw int) (lines []string, from, to int) {
 	focused := m.focus == paneOptions
 	head := map[stepKind]string{kindChoice: "pick one", kindName: "type a name", kindAdvanced: "h/l ←/→ change", kindReview: "check and create"}
 	lines = []string{" " + FooterDescStyle.Render(s.name+" · "+head[s.kind]), ""}
+	if m.note != "" {
+		for _, l := range strings.Split(ansi.Wrap(m.note, iw-2, ""), "\n") {
+			lines = append(lines, " "+WarnStyle.Render(l))
+		}
+		lines = append(lines, "")
+	}
 
 	switch s.kind {
 	case kindName:

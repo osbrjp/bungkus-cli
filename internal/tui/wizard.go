@@ -138,6 +138,7 @@ type WizardModel struct {
 	help          bool
 	phase         phase
 	blocked       string // why the last create was refused
+	note          string // why the previous step kept its value; shown on the next step
 	name          textinput.Model
 	advanced      advancedModel
 	spin          spinner.Model
@@ -443,18 +444,34 @@ func (m WizardModel) enter() (tea.Model, tea.Cmd) {
 		if s.kind == kindReview {
 			return m.create()
 		}
-		if s.kind == kindChoice && choices(s, m.Cfg)[m.opt].reason != "" {
-			return m, nil
-		}
 		var cmd tea.Cmd
+		note := ""
 		if s.kind == kindChoice {
-			cmd = m.pick()
+			if c := choices(s, m.Cfg)[m.opt]; c.reason != "" {
+				note = keptNote(s, m.Cfg, c)
+			} else {
+				cmd = m.pick()
+			}
 		}
 		m.setStep(m.step + 1)
+		m.note = note
 		next, focusCmd := m.focusPane(paneOptions)
 		return next, tea.Batch(cmd, focusCmd)
 	}
 	return m, nil
+}
+
+// keptNote explains why enter on an option the stack can't use moved on
+// without picking it, e.g. "React Hook Form needs React · kept None".
+func keptNote(s stepDef, cfg pkg.ProjectConfig, c choice) string {
+	kept := s.get(cfg)
+	for _, o := range choices(s, cfg) {
+		if o.value == kept {
+			kept = o.label
+			break
+		}
+	}
+	return c.label + " " + c.reason + " · kept " + kept
 }
 
 // setStep selects step i (clamped) and puts the options cursor on that
@@ -464,6 +481,7 @@ func (m *WizardModel) setStep(i int) {
 	m.opt = 0
 	m.advanced.row = 0
 	m.blocked = ""
+	m.note = ""
 	if s := steps[m.step]; s.kind == kindChoice {
 		v := s.get(m.Cfg)
 		m.opt = max(0, slices.IndexFunc(choices(s, m.Cfg), func(c choice) bool { return c.value == v }))

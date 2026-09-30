@@ -154,9 +154,20 @@ func TestIncompatibleOptionCannotBePicked(t *testing.T) {
 	m.setStep(form)
 	m.focus = paneOptions
 	m = press(m, "j") // React Hook Form, which needs React
-	m = press(m, "space", "enter")
-	if m.Cfg.Form != "none" || m.step != form {
-		t.Errorf("picked an incompatible option: form=%s step=%d", m.Cfg.Form, m.step)
+	if m = press(m, "space"); m.Cfg.Form != "none" || m.step != form {
+		t.Errorf("space picked an incompatible option: form=%s step=%d", m.Cfg.Form, m.step)
+	}
+	if m = press(m, "enter"); m.Cfg.Form != "none" || m.step != form+1 {
+		t.Errorf("enter should keep form=none and move on: form=%s step=%d", m.Cfg.Form, m.step)
+	}
+	if want := "React Hook Form needs React · kept None"; m.note != want {
+		t.Errorf("note = %q, want %q", m.note, want)
+	}
+	if !strings.Contains(screen(m), "needs React · kept") {
+		t.Error("the note is not shown on the next step")
+	}
+	if m.setStep(m.step + 1); m.note != "" {
+		t.Error("the note should clear when the step changes")
 	}
 }
 
