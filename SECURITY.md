@@ -62,12 +62,11 @@ Security-sensitive operations and their safeguards:
   absolute paths and `..` traversal are rejected before any write.
 - **Outbound HTTP** — see "External communication" above.
 
-## Shared code with bungkus-mcc
+## Shared with bungkus-mc
 
-bungkus-mcc copies this repo's updater (`pkg/update.go`, `cmd/update.go`),
-`install.sh` and palette (`internal/tui/styles.go`), each marked with a
-`// copied from osbrjp/bungkus-cli@<sha>` header. Security fixes to the
-updater or installer must be applied to both repositories.
+bungkus-mc (Rust) reuses this repo's `install.sh` and ports the updater
+logic from `pkg/update.go` / `cmd/update.go`. Security fixes to the
+installer or updater must be applied to both repositories.
 
 ## Risky components
 

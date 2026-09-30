@@ -9,7 +9,7 @@ import (
 	"github.com/charmbracelet/colorprofile"
 )
 
-// Daun Pisang palette (dark), shared with bungkus-mcc — see its docs/DESIGN.md.
+// Daun Pisang palette (dark): the token spec lives in bungkus-mc docs/DESIGN.md §2.
 // Rules: never paint a background; primary text is the terminal's default
 // foreground; every colour carries explicit 16/256 values because automatic
 // downsampling collapses accent, warn and err into the same red.
