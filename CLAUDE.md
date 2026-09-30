@@ -60,6 +60,7 @@ Flags (see `--help` for full list): `--base`, `--css`, `--fmt`, `--linter`, `--v
 - **Template presets**: `cmd/create.go` defines named factory functions (e.g. `astro-react`, `nuxt`, `vite-vue`). Each starts from `pkg.NewProjectConfig()` and overrides fields, so new ProjectConfig fields inherit defaults automatically.
 - **Flag/template interaction**: flags only override template/default values when the user explicitly types them (`cmd.Flags().Changed(name)`), so cobra defaults can't silently clobber a preset.
 - **TUI launches** when no subcommand/path is provided; `wm.Cfg` is handed to `pkg.Scaffold` on confirm.
+- **TUI keys**: `j/k` move, `h/l`/`tab` switch pane, `space` picks, `enter` picks and moves on, `r` jumps to review, `?` shows help. Steps are numbered; typing a number (digits within ~700 ms combine, e.g. `1` `6` → 16) in the steps or options pane jumps to that step, except while the name field is being edited.
 
 ## Conventions
 

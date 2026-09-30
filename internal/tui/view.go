@@ -17,8 +17,10 @@ const (
 	minWidth     = 60         // narrower than this, only a notice is drawn
 	minHeight    = 20         // shorter than this, only a notice is drawn
 	wideWidth    = 100        // from this width all three panes show side by side
-	stepsWidth   = 32         // outer width of the steps pane
-	optionsWidth = 38         // outer width of the options pane
+	stepsWidth   = 36         // outer width of the steps pane
+	previewMin   = 30         // narrowest outer width of the preview pane
+	previewMax   = 40         // widest outer width of the preview pane
+	optionsIdeal = 38         // options width the preview gives way to before shrinking
 	headerRows   = mascotRows // the header text sits beside the mascot
 	statusRows   = 1
 	maxPkgLines  = 3 // packages listed under an option before "…"
@@ -102,20 +104,22 @@ func (m WizardModel) View() tea.View {
 	return frame(strings.Join(rows, "\n"))
 }
 
-// paneBox returns the outer size of pane p: the fixed steps and options
-// widths with the preview taking the rest, or the full width in single-pane
-// mode. Every pane is as tall as the space between header and status bar.
+// paneBox returns the outer size of pane p, or the full width in single-pane
+// mode. The steps pane is fixed; the preview is 40 wide and shrinks toward 30
+// once the options pane would drop under 38; the options pane takes the rest.
+// Every pane is as tall as the space between header and status bar.
 func (m WizardModel) paneBox(p pane) (w, h int) {
 	h = m.height - headerRows - statusRows
+	preview := min(previewMax, max(previewMin, m.width-stepsWidth-optionsIdeal))
 	switch {
 	case m.width < wideWidth:
 		return m.width, h
 	case p == paneSteps:
 		return stepsWidth, h
 	case p == paneOptions:
-		return optionsWidth, h
+		return m.width - stepsWidth - preview, h
 	}
-	return m.width - stepsWidth - optionsWidth, h
+	return preview, h
 }
 
 // paneContent returns pane p's title, body lines for an inner width iw, and
@@ -294,16 +298,19 @@ func (m WizardModel) stepsLines(iw int) (lines []string, from, to int) {
 		if s.kind != kindReview && !isSet(v) {
 			v = "-"
 		}
-		row := spread(s.name, ansi.Truncate(v, iw-3-ansi.StringWidth(s.name), "…"), iw-2)
+		// The index fills columns 1-2 beside the cursor marker in column 0,
+		// right-aligned so 9 and 16 line up; digits jump to it.
+		idx := fmt.Sprintf("%2d  ", i+1)
+		row := spread(s.name, ansi.Truncate(v, iw-2-len(idx)-ansi.StringWidth(s.name), "…"), iw-1-len(idx))
 		switch {
 		case i == m.step && m.focus == paneSteps:
 			from, to = len(lines), len(lines)
-			row = CursorStyle.Render(fit("> "+row, iw))
+			row = CursorStyle.Render(fit(">"+idx+row, iw))
 		case i == m.step:
 			from, to = len(lines), len(lines)
-			row = okStyle.Render("> ") + BoldStyle.Render(row)
+			row = okStyle.Render(">") + FooterDescStyle.Render(idx) + BoldStyle.Render(row)
 		default:
-			row = "  " + row
+			row = " " + FooterDescStyle.Render(idx) + row
 		}
 		lines = append(lines, row)
 	}
@@ -590,7 +597,7 @@ func (m WizardModel) statusBar() string {
 	case m.phase == phaseDone:
 		keys = [][2]string{{"enter", "exit"}}
 	case m.focus == paneSteps:
-		keys = [][2]string{{"j/k", "move"}, {"l/enter", "open"}, {"r", "review"}, {"?", "help"}, {"q", "quit"}}
+		keys = [][2]string{{"j/k", "move"}, {"l/enter", "open"}, {jumpKeys(), "jump"}, {"r", "review"}, {"?", "help"}, {"q", "quit"}}
 	case m.focus == panePreview:
 		keys = [][2]string{{"j/k", "scroll"}, {"h", "back"}, {"?", "help"}}
 	default:
@@ -614,6 +621,11 @@ func (m WizardModel) statusBar() string {
 	return spread(left, FooterDescStyle.Render(fmt.Sprintf("%d/%d set", n, total)), m.width)
 }
 
+// jumpKeys names the digit keys that jump to a step, e.g. "1–21".
+func jumpKeys() string {
+	return fmt.Sprintf("1–%d", len(steps))
+}
+
 // helpLines lists every key of the wizard for the help overlay, beside the
 // mascot.
 func helpLines() []string {
@@ -623,6 +635,7 @@ func helpLines() []string {
 		{"h/l ←/→", "change a value (advanced step; esc/tab leave)"},
 		{"space", "pick the option under the cursor"},
 		{"enter", "steps: open · options: pick and next · review: create"},
+		{jumpKeys(), "jump to a step (steps and options panes)"},
 		{"r", "jump to review"},
 		{"esc", "back one level"},
 		{"?", "this help"},

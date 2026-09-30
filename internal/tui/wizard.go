@@ -146,6 +146,8 @@ type WizardModel struct {
 	wd, home      string
 	quote         int // index into quotes shown in the header
 	duck          int // position in duckLoop while scaffolding
+	jumpBuf       int // step number typed so far; 0 when no jump is pending
+	jumpSeq       int // identifies the latest digit so older expiry ticks are ignored
 }
 
 // NewWizardModel returns the wizard on its first step with a random header
@@ -197,6 +199,13 @@ type depsMsg struct {
 
 // scaffoldedMsg reports the end of pkg.Scaffold.
 type scaffoldedMsg struct{ err error }
+
+// jumpWindow is how long after a digit a second digit extends the step
+// number instead of starting a new one.
+const jumpWindow = 700 * time.Millisecond
+
+// jumpExpiredMsg ends the digit window opened by the digit numbered seq.
+type jumpExpiredMsg struct{ seq int }
 
 // duckMsg advances the header mascot's duck animation by one frame.
 type duckMsg struct{}
@@ -328,6 +337,11 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Err = msg.err
 		m.Created = msg.err == nil
 		return m, nil
+	case jumpExpiredMsg:
+		if msg.seq == m.jumpSeq {
+			m.jumpBuf = 0
+		}
+		return m, nil
 	case tea.KeyPressMsg:
 		return m.key(msg)
 	}
@@ -378,6 +392,11 @@ func (m WizardModel) key(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	if len(k) == 1 && k[0] >= '0' && k[0] <= '9' && m.focus != panePreview {
+		return m.jump(int(k[0] - '0'))
+	}
+	m.jumpBuf = 0
+
 	switch k {
 	case "q":
 		if m.focus != panePreview {
@@ -419,6 +438,23 @@ func (m WizardModel) key(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.enter()
 	}
 	return m, nil
+}
+
+// jump handles a digit typed in the steps or options pane. Within jumpWindow
+// of the previous digit it extends the number (1 then 6 is 16), otherwise it
+// starts a new one. A number naming a step selects it and focuses the steps
+// pane; one out of range (or 0) leaves the last jump in place.
+func (m WizardModel) jump(d int) (tea.Model, tea.Cmd) {
+	m.jumpBuf = m.jumpBuf*10 + d
+	m.jumpSeq++
+	seq := m.jumpSeq
+	expire := tea.Tick(jumpWindow, func(time.Time) tea.Msg { return jumpExpiredMsg{seq} })
+	if m.jumpBuf < 1 || m.jumpBuf > len(steps) {
+		return m, expire
+	}
+	m.setStep(m.jumpBuf - 1)
+	next, cmd := m.focusPane(paneSteps)
+	return next, tea.Batch(cmd, expire)
 }
 
 // focusPane moves focus to p and focuses or blurs the name field to match.

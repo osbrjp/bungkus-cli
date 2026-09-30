@@ -130,7 +130,8 @@ func TestOptionRendering(t *testing.T) {
 			normalize(&m.Cfg)
 			m.setStep(stepIndex(t, tc.step))
 			m.focus = paneOptions
-			lines, _, _ := m.optionsLines(optionsWidth - 2)
+			ow, _ := m.paneBox(paneOptions)
+			lines, _, _ := m.optionsLines(ow - 2)
 			out := ansi.Strip(strings.Join(lines, "\n"))
 			for _, w := range tc.want {
 				if !strings.Contains(out, w) {
@@ -280,7 +281,7 @@ func TestFrameFitsTerminal(t *testing.T) {
 		{"steps cursor on review", func(m WizardModel) WizardModel {
 			m.setStep(len(steps) - 1)
 			return m
-		}, "> review"},
+		}, ">21  review"},
 		{"options cursor on the last base", func(m WizardModel) WizardModel {
 			m.setStep(stepIndex(t, "base"))
 			m.focus = paneOptions
@@ -673,6 +674,105 @@ func TestSuccessTextMonorepoPerPM(t *testing.T) {
 			if !strings.Contains(out, want) {
 				t.Errorf("%s: success output lacks %q:\n%s", pm, want, out)
 			}
+		}
+	}
+}
+
+// expire ends the pending digit window of m as its jumpWindow tick would.
+func expire(m WizardModel) WizardModel {
+	next, _ := m.Update(jumpExpiredMsg{seq: m.jumpSeq})
+	return next.(WizardModel)
+}
+
+// Digits jump to a step by its 1-based number and focus the steps pane.
+func TestJumpByNumber(t *testing.T) {
+	cases := []struct {
+		name  string
+		start pane
+		keys  []string // "wait" lets the digit window expire
+		want  int      // 1-based step number
+	}{
+		{"single digit", paneSteps, []string{"3"}, 3},
+		{"from the options pane", paneOptions, []string{"5"}, 5},
+		{"two digits within the window", paneSteps, []string{"1", "6"}, 16},
+		{"two digits after the window", paneSteps, []string{"1", "wait", "6"}, 6},
+		{"out of range keeps the last jump", paneSteps, []string{"4", "9"}, 4},
+		{"zero alone does nothing", paneSteps, []string{"0"}, 1},
+		{"another key ends the number", paneSteps, []string{"1", "k", "2"}, 2},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := newTestModel(t, 120, 40)
+			if tc.start == paneOptions {
+				m.setStep(stepIndex(t, "styling"))
+			}
+			m.focus = tc.start
+			for _, k := range tc.keys {
+				if k == "wait" {
+					m = expire(m)
+					continue
+				}
+				m = press(m, k)
+			}
+			if m.step+1 != tc.want || m.focus != paneSteps {
+				t.Errorf("step %d focus %d, want step %d in the steps pane", m.step+1, m.focus, tc.want)
+			}
+		})
+	}
+}
+
+// While the name field has focus digits are part of the name.
+func TestJumpIgnoredWhileEditingName(t *testing.T) {
+	m := press(newTestModel(t, 120, 40), "enter")
+	if !m.editingName() {
+		t.Fatal("enter on the name step should focus the name field")
+	}
+	m = press(m, "a", "1", "2")
+	if m.step != 0 || m.focus != paneOptions || m.name.Value() != "a12" {
+		t.Errorf("step %d focus %d name %q, want name a12 on step 1", m.step+1, m.focus, m.name.Value())
+	}
+}
+
+// A tick from an earlier digit must not cut the window of a later one short.
+func TestJumpStaleTickIgnored(t *testing.T) {
+	m := press(newTestModel(t, 120, 40), "1")
+	stale := m.jumpSeq
+	m = press(expire(m), "1")
+	next, _ := m.Update(jumpExpiredMsg{seq: stale})
+	m = press(next.(WizardModel), "7")
+	if m.step+1 != 17 {
+		t.Errorf("step %d, want 17: a stale tick reset the pending digit", m.step+1)
+	}
+}
+
+// The steps pane is fixed, the preview shrinks from 40 toward 30 and the
+// options pane takes the rest; the three always fill the width.
+func TestPaneWidths(t *testing.T) {
+	cases := []struct{ width, steps, options, preview int }{
+		{140, 36, 64, 40},
+		{120, 36, 44, 40},
+		{110, 36, 38, 36},
+		{100, 36, 34, 30},
+	}
+	for _, tc := range cases {
+		m := newTestModel(t, tc.width, 40)
+		s, _ := m.paneBox(paneSteps)
+		o, _ := m.paneBox(paneOptions)
+		p, _ := m.paneBox(panePreview)
+		if s != tc.steps || o != tc.options || p != tc.preview {
+			t.Errorf("width %d: steps/options/preview = %d/%d/%d, want %d/%d/%d", tc.width, s, o, p, tc.steps, tc.options, tc.preview)
+		}
+	}
+}
+
+// Every step row carries its right-aligned number; group headings do not.
+func TestStepsNumbered(t *testing.T) {
+	m := newTestModel(t, 120, 40)
+	lines, _, _ := m.stepsLines(stepsWidth - 2)
+	out := ansi.Strip(strings.Join(lines, "\n"))
+	for _, want := range []string{"> 1  name", "  9  form", " 16  framework", "\n frontend\n"} {
+		if !strings.Contains("\n"+out+"\n", want) {
+			t.Errorf("steps pane lacks %q:\n%s", want, out)
 		}
 	}
 }
