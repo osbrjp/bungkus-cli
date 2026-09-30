@@ -71,7 +71,7 @@ options pane (incompatible options stay visible, greyed, with the reason), and
 previews the equivalent `bungkus-cli create …` command, layout and
 dependencies. Keys: `j/k` or arrows move, `h/l` or `tab` switch pane, `space`
 picks, `enter` picks and moves on, typing a step's number (`1`–`21`, shown
-beside each step) jumps to it, `r` jumps to review, `?` lists every key.
+beside each step) jumps to it, `0` or `r` jumps to review, `?` lists every key.
 Under 100 columns it shows one pane at a time.
 
 Or use the `create` command with flags:

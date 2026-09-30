@@ -281,7 +281,7 @@ func TestFrameFitsTerminal(t *testing.T) {
 		{"steps cursor on review", func(m WizardModel) WizardModel {
 			m.setStep(len(steps) - 1)
 			return m
-		}, ">21  review"},
+		}, "> 0  review"},
 		{"options cursor on the last base", func(m WizardModel) WizardModel {
 			m.setStep(stepIndex(t, "base"))
 			m.focus = paneOptions
@@ -697,7 +697,10 @@ func TestJumpByNumber(t *testing.T) {
 		{"two digits within the window", paneSteps, []string{"1", "6"}, 16},
 		{"two digits after the window", paneSteps, []string{"1", "wait", "6"}, 6},
 		{"out of range keeps the last jump", paneSteps, []string{"4", "9"}, 4},
-		{"zero alone does nothing", paneSteps, []string{"0"}, 1},
+		{"zero jumps to review", paneSteps, []string{"0"}, len(steps)},
+		{"zero from the options pane", paneOptions, []string{"0"}, len(steps)},
+		{"1 then 0 is step 10", paneSteps, []string{"1", "0"}, 10},
+		{"21 is out of range, review is 0", paneSteps, []string{"2", "1"}, 2},
 		{"another key ends the number", paneSteps, []string{"1", "k", "2"}, 2},
 	}
 	for _, tc := range cases {

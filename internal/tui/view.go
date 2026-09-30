@@ -299,8 +299,12 @@ func (m WizardModel) stepsLines(iw int) (lines []string, from, to int) {
 			v = "-"
 		}
 		// The index fills columns 1-2 beside the cursor marker in column 0,
-		// right-aligned so 9 and 16 line up; digits jump to it.
-		idx := fmt.Sprintf("%2d  ", i+1)
+		// right-aligned so 9 and 16 line up; digits jump to it. Review is 0.
+		n := i + 1
+		if s.kind == kindReview {
+			n = 0
+		}
+		idx := fmt.Sprintf("%2d  ", n)
 		row := spread(s.name, ansi.Truncate(v, iw-2-len(idx)-ansi.StringWidth(s.name), "…"), iw-1-len(idx))
 		switch {
 		case i == m.step && m.focus == paneSteps:
@@ -591,7 +595,7 @@ func (m WizardModel) statusBar() string {
 	case m.phase == phaseDone:
 		keys = [][2]string{{"enter", "exit"}}
 	case m.focus == paneSteps:
-		keys = [][2]string{{"j/k", "move"}, {"l/enter", "open"}, {jumpKeys(), "jump"}, {"r", "review"}, {"?", "help"}, {"q", "quit"}}
+		keys = [][2]string{{"j/k", "move"}, {"l/enter", "open"}, {jumpKeys(), "jump"}, {"0/r", "review"}, {"?", "help"}, {"q", "quit"}}
 	case m.focus == panePreview:
 		keys = [][2]string{{"j/k", "scroll"}, {"h", "back"}, {"?", "help"}}
 	default:
@@ -615,9 +619,10 @@ func (m WizardModel) statusBar() string {
 	return spread(left, FooterDescStyle.Render(fmt.Sprintf("%d/%d set", n, total)), m.width)
 }
 
-// jumpKeys names the digit keys that jump to a step, e.g. "1–21".
+// jumpKeys names the digit keys that jump to a step, e.g. "1–20"; review
+// is 0 and listed separately.
 func jumpKeys() string {
-	return fmt.Sprintf("1–%d", len(steps))
+	return fmt.Sprintf("1–%d", len(steps)-1)
 }
 
 // helpLines lists every key of the wizard for the help overlay, beside the
@@ -630,7 +635,7 @@ func helpLines() []string {
 		{"space", "pick the option under the cursor"},
 		{"enter", "steps: open · options: pick and next · review: create"},
 		{jumpKeys(), "jump to a step (steps and options panes)"},
-		{"r", "jump to review"},
+		{"0  r", "jump to review"},
 		{"esc", "back one level"},
 		{"?", "this help"},
 		{"q", "quit (steps and options panes)"},

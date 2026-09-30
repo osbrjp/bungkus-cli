@@ -443,13 +443,18 @@ func (m WizardModel) key(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 // jump handles a digit typed in the steps or options pane. Within jumpWindow
 // of the previous digit it extends the number (1 then 6 is 16), otherwise it
 // starts a new one. A number naming a step selects it and focuses the steps
-// pane; one out of range (or 0) leaves the last jump in place.
+// pane; one out of range leaves the last jump in place. 0 as the first digit
+// jumps to review, which is numbered 0.
 func (m WizardModel) jump(d int) (tea.Model, tea.Cmd) {
+	if d == 0 && m.jumpBuf == 0 {
+		m.setStep(len(steps) - 1)
+		return m.focusPane(paneSteps)
+	}
 	m.jumpBuf = m.jumpBuf*10 + d
 	m.jumpSeq++
 	seq := m.jumpSeq
 	expire := tea.Tick(jumpWindow, func(time.Time) tea.Msg { return jumpExpiredMsg{seq} })
-	if m.jumpBuf < 1 || m.jumpBuf > len(steps) {
+	if m.jumpBuf < 1 || m.jumpBuf > len(steps)-1 {
 		return m, expire
 	}
 	m.setStep(m.jumpBuf - 1)
