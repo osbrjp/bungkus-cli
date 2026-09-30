@@ -164,7 +164,7 @@ func TestIncompatibleOptionCannotBePicked(t *testing.T) {
 	if want := "React Hook Form needs React · kept None"; m.note != want {
 		t.Errorf("note = %q, want %q", m.note, want)
 	}
-	if !strings.Contains(screen(m), "needs React · kept") {
+	if !strings.Contains(screen(m), "needs React ·") || !strings.Contains(screen(m), "kept None") {
 		t.Error("the note is not shown on the next step")
 	}
 	if m.setStep(m.step + 1); m.note != "" {
@@ -745,14 +745,14 @@ func TestJumpStaleTickIgnored(t *testing.T) {
 	}
 }
 
-// The steps pane is fixed, the preview shrinks from 40 toward 30 and the
-// options pane takes the rest; the three always fill the width.
+// The steps pane is fixed, the options pane gets 40% of the rest within
+// 34..48 and the preview takes the remainder; the three always fill the width.
 func TestPaneWidths(t *testing.T) {
 	cases := []struct{ width, steps, options, preview int }{
-		{140, 36, 64, 40},
-		{120, 36, 44, 40},
-		{110, 36, 38, 36},
 		{100, 36, 34, 30},
+		{120, 36, 34, 50},
+		{150, 36, 46, 68},
+		{220, 36, 48, 136},
 	}
 	for _, tc := range cases {
 		m := newTestModel(t, tc.width, 40)
@@ -774,5 +774,76 @@ func TestStepsNumbered(t *testing.T) {
 		if !strings.Contains("\n"+out+"\n", want) {
 			t.Errorf("steps pane lacks %q:\n%s", want, out)
 		}
+	}
+}
+
+// monorepoPreview returns a w×h wizard on a full-stack monorepo config with
+// its dependency preview loaded, focused on the preview pane.
+func monorepoPreview(t *testing.T, w, h int) WizardModel {
+	m := newTestModel(t, w, h)
+	m.Cfg.Base, m.Cfg.Backend, m.Cfg.ORM, m.Cfg.Database = "astro-react", "hono", "drizzle", "sqlite"
+	normalize(&m.Cfg)
+	next, _ := m.Update(loadDeps(m.Cfg)())
+	m = next.(WizardModel)
+	m.focus = panePreview
+	return m
+}
+
+// Each dependency gets its own line with the versions of a group in one
+// column, however many there are.
+func TestPreviewDependencyList(t *testing.T) {
+	m := monorepoPreview(t, 220, 55)
+	w, _ := m.paneBox(panePreview)
+	lines := strings.Split(ansi.Strip(strings.Join(m.previewLines(w-2), "\n")), "\n")
+	for _, a := range m.deps.apps {
+		head := slices.IndexFunc(lines, func(l string) bool { return strings.HasPrefix(l, " "+a.name+" dependencies") })
+		if head < 0 {
+			t.Fatalf("no heading for %s", a.name)
+		}
+		col := -1
+		for i, p := range a.pkgs {
+			l := lines[head+1+i]
+			if !strings.HasPrefix(l, "   "+p[0]+" ") || !strings.HasSuffix(l, p[1]) {
+				t.Errorf("%s line %d = %q, want %s then %s", a.name, i, l, p[0], p[1])
+			}
+			c := strings.LastIndex(l, p[1])
+			if col < 0 {
+				col = c
+			} else if c != col {
+				t.Errorf("%s: version of %s at column %d, want %d", a.name, p[0], c, col)
+			}
+		}
+	}
+}
+
+// A long name is cut with "…" so the version column still fits.
+func TestDepLinesTruncateNames(t *testing.T) {
+	lines := depLines([][2]string{{"a-very-long-package-name", "^1.0.0"}, {"b", "^22.0.0"}}, 20, "")
+	for _, l := range lines {
+		l = ansi.Strip(l)
+		if ansi.StringWidth(l) > 20 {
+			t.Errorf("line %q wider than 20", l)
+		}
+	}
+	if got := ansi.Strip(lines[0]); !strings.Contains(got, "…") || !strings.HasSuffix(got, "^1.0.0") {
+		t.Errorf("long name not truncated before the version: %q", got)
+	}
+}
+
+// j in the preview pane scrolls far enough to show the last dependency.
+func TestPreviewScrollsToLastDependency(t *testing.T) {
+	m := monorepoPreview(t, 120, 40)
+	w, h := m.paneBox(panePreview)
+	lines := m.previewLines(w - 2)
+	if len(lines) <= h-2 {
+		t.Fatalf("preview has %d lines for %d rows; the test needs it longer than the pane", len(lines), h-2)
+	}
+	for range len(lines) {
+		m = press(m, "j")
+	}
+	body := strings.Split(screen(m), "\n")
+	bottom := body[len(body)-3] // the last body row sits above the border and status bar
+	if want := strings.TrimSpace(ansi.Strip(lines[len(lines)-1])); !strings.Contains(bottom, want) {
+		t.Errorf("last body row %q does not show the final dependency %q", bottom, want)
 	}
 }

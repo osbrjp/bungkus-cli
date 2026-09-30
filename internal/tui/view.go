@@ -14,17 +14,15 @@ import (
 
 // Layout constants of the bento screen.
 const (
-	minWidth     = 60         // narrower than this, only a notice is drawn
-	minHeight    = 20         // shorter than this, only a notice is drawn
-	wideWidth    = 100        // from this width all three panes show side by side
-	stepsWidth   = 36         // outer width of the steps pane
-	previewMin   = 30         // narrowest outer width of the preview pane
-	previewMax   = 40         // widest outer width of the preview pane
-	optionsIdeal = 38         // options width the preview gives way to before shrinking
-	headerRows   = mascotRows // the header text sits beside the mascot
-	statusRows   = 1
-	maxPkgLines  = 3 // packages listed under an option before "…"
-	maxDepLines  = 4 // wrapped dependency lines per app before "…"
+	minWidth    = 60         // narrower than this, only a notice is drawn
+	minHeight   = 20         // shorter than this, only a notice is drawn
+	wideWidth   = 100        // from this width all three panes show side by side
+	stepsWidth  = 36         // outer width of the steps pane
+	optionsMin  = 34         // narrowest outer width of the options pane
+	optionsMax  = 48         // widest outer width of the options pane
+	headerRows  = mascotRows // the header text sits beside the mascot
+	statusRows  = 1
+	maxPkgLines = 3 // packages listed under an option before "…"
 )
 
 // quotes are the header's line-4 texts when no update is announced; one is
@@ -105,21 +103,23 @@ func (m WizardModel) View() tea.View {
 }
 
 // paneBox returns the outer size of pane p, or the full width in single-pane
-// mode. The steps pane is fixed; the preview is 40 wide and shrinks toward 30
-// once the options pane would drop under 38; the options pane takes the rest.
+// mode. The steps pane is fixed; the options pane gets 40% of the rest,
+// between 34 and 48 columns; the preview takes what remains, which is at
+// least 30 from the 100-column wide layout up.
 // Every pane is as tall as the space between header and status bar.
 func (m WizardModel) paneBox(p pane) (w, h int) {
 	h = m.height - headerRows - statusRows
-	preview := min(previewMax, max(previewMin, m.width-stepsWidth-optionsIdeal))
+	rest := m.width - stepsWidth
+	options := min(optionsMax, max(optionsMin, (rest*4+5)/10))
 	switch {
 	case m.width < wideWidth:
 		return m.width, h
 	case p == paneSteps:
 		return stepsWidth, h
 	case p == paneOptions:
-		return m.width - stepsWidth - preview, h
+		return options, h
 	}
-	return preview, h
+	return rest - options, h
 }
 
 // paneContent returns pane p's title, body lines for an inner width iw, and
@@ -308,9 +308,9 @@ func (m WizardModel) stepsLines(iw int) (lines []string, from, to int) {
 			row = CursorStyle.Render(fit(">"+idx+row, iw))
 		case i == m.step:
 			from, to = len(lines), len(lines)
-			row = okStyle.Render(">") + FooterDescStyle.Render(idx) + BoldStyle.Render(row)
+			row = okStyle.Render(">"+idx) + BoldStyle.Render(row)
 		default:
-			row = " " + FooterDescStyle.Render(idx) + row
+			row = " " + okStyle.Render(idx) + row
 		}
 		lines = append(lines, row)
 	}
@@ -511,43 +511,37 @@ func (m WizardModel) previewLines(iw int) []string {
 	case m.deps.err != nil:
 		lines = append(lines, " "+ErrorStyle.Render("✘ "+m.deps.err.Error()))
 	default:
-		for _, a := range m.deps.apps {
+		for i, a := range m.deps.apps {
+			if i > 0 {
+				lines = append(lines, "")
+			}
 			title := "dependencies"
 			if m.Cfg.Layout.IsMonorepo() {
 				title = a.name + " dependencies"
 			}
 			lines = append(lines, " "+headingStyle.Render(title)+FooterDescStyle.Render(fmt.Sprintf("  (%d)", len(a.pkgs))))
-			lines = append(lines, flow(a.pkgs, iw-3, maxDepLines, "   ")...)
+			lines = append(lines, depLines(a.pkgs, iw-3, "   ")...)
 		}
 	}
 	return lines
 }
 
-// flow joins items with " · " into lines of at most w columns, each
-// prefixed with indent, keeping at most max lines; a cut list ends in "…".
-func flow(items []string, w, maxLines int, indent string) []string {
-	var out []string
-	cur := ""
-	for _, it := range items {
-		switch {
-		case cur == "":
-			cur = it
-		case ansi.StringWidth(cur)+3+ansi.StringWidth(it) > w:
-			out = append(out, cur)
-			cur = it
-		default:
-			cur += " · " + it
-		}
+// depLines renders one line per package, prefixed with indent and at most w
+// columns wide: the name padded to the group's longest, then the version in
+// an aligned column. Names too long to leave room for the longest version
+// are truncated with "…".
+func depLines(pkgs [][2]string, w int, indent string) []string {
+	nameW, verW := 0, 0
+	for _, p := range pkgs {
+		nameW = max(nameW, ansi.StringWidth(p[0]))
+		verW = max(verW, ansi.StringWidth(p[1]))
 	}
-	if cur != "" {
-		out = append(out, cur)
-	}
-	if len(out) > maxLines {
-		out = out[:maxLines]
-		out[maxLines-1] = ansi.Truncate(out[maxLines-1], w-2, "") + " …"
-	}
-	for i, l := range out {
-		out[i] = indent + FooterDescStyle.Render(l)
+	nameW = max(1, min(nameW, w-2-verW))
+	out := make([]string, len(pkgs))
+	for i, p := range pkgs {
+		name := ansi.Truncate(p[0], nameW, "…")
+		name += strings.Repeat(" ", nameW-ansi.StringWidth(name))
+		out[i] = indent + ansi.Truncate(name+"  "+FooterDescStyle.Render(p[1]), w, "…")
 	}
 	return out
 }

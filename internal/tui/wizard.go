@@ -183,10 +183,10 @@ func (m WizardModel) Init() tea.Cmd {
 }
 
 // appDeps is one package.json of the preview: its app name and its
-// dependencies then devDependencies, each sorted by name, as "name version".
+// dependencies then devDependencies, each sorted by name, as {name, version}.
 type appDeps struct {
 	name string
-	pkgs []string
+	pkgs [][2]string
 }
 
 // depsMsg carries the package.json preview built for cfg.
@@ -250,7 +250,7 @@ func loadDeps(cfg pkg.ProjectConfig) tea.Cmd {
 			app := appDeps{name: b.name}
 			for _, set := range []map[string]string{p.Dependencies, p.DevDependencies} {
 				for _, n := range slices.Sorted(maps.Keys(set)) {
-					app.pkgs = append(app.pkgs, n+" "+set[n])
+					app.pkgs = append(app.pkgs, [2]string{n, set[n]})
 				}
 			}
 			msg.apps = append(msg.apps, app)
