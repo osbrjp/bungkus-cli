@@ -66,6 +66,13 @@ Run the interactive wizard:
 bungkus-cli
 ```
 
+The wizard lists every choice in a steps pane, edits the selected one in an
+options pane (incompatible options stay visible, greyed, with the reason), and
+previews the equivalent `bungkus-cli create …` command, layout and
+dependencies. Keys: `j/k` or arrows move, `h/l` or `tab` switch pane, `space`
+picks, `enter` picks and moves on, `r` jumps to review, `?` lists every key.
+Under 100 columns it shows one pane at a time.
+
 Or use the `create` command with flags:
 
 ```bash
@@ -182,11 +189,12 @@ config/
     shared/                     # Shared files (husky, CLAUDE.md, AGENTS.md)
 internal/
   tui/
-    wizard.go                   # BubbleTea interactive wizard (Frontend / Backend tabs)
-    loading.go                  # Spinner during scaffolding
+    wizard.go                   # BubbleTea wizard model: keys, picks, in-pane scaffolding
+    steps.go                    # Step list, registry-derived options, equivalent create command
+    view.go                     # Bento layout: header, steps/options/preview panes, status bar
+    mascot.go                   # Half-block mascot and its ducking animation
     success.go                  # Post-scaffold success box + warn helpers
     styles.go                   # Lip Gloss styles and color palette
-    colors.go                   # Color tokens
 pkg/
   config.go                     # ProjectConfig + typed enums
   registry.go                   # Registry schema and global loader
