@@ -601,3 +601,22 @@ func TestWizardDefaultsMatchPreviousWizard(t *testing.T) {
 		t.Errorf("defaults count %d/%d set, want 5/18", n, total)
 	}
 }
+
+func TestNameStepShowsHowToContinue(t *testing.T) {
+	cases := []struct {
+		name           string
+		valid, focused bool
+		want           string
+	}{
+		{"typing a valid name", true, true, "↵ enter  next: base"},
+		{"not yet opened", true, false, "enter to edit"},
+		{"invalid name", false, true, "fix the name to continue"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := ansi.Strip(nameCallToAction(tc.valid, tc.focused, "base")); !strings.Contains(got, tc.want) {
+				t.Errorf("nameCallToAction(%v, %v) = %q, want it to contain %q", tc.valid, tc.focused, got, tc.want)
+			}
+		})
+	}
+}

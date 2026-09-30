@@ -312,6 +312,21 @@ func (m WizardModel) stepsLines(iw int) (lines []string, from, to int) {
 
 // optionsLines renders the options pane for the selected step at inner width
 // iw, and the line range of the cursor.
+// nameCallToAction is the line under the name input that says how to move on:
+// a highlighted enter badge and the next step while a valid name is being
+// typed, a hint to open the field when it isn't focused, or a reminder to fix
+// an invalid name first.
+func nameCallToAction(valid, focused bool, next string) string {
+	switch {
+	case !valid:
+		return FooterDescStyle.Render("fix the name to continue")
+	case !focused:
+		return FooterKeyStyle.Render("enter") + FooterDescStyle.Render(" to edit")
+	default:
+		return StatusModeStyle.Render(" ↵ enter ") + FooterDescStyle.Render(" next: "+next)
+	}
+}
+
 func (m WizardModel) optionsLines(iw int) (lines []string, from, to int) {
 	s := steps[m.step]
 	focused := m.focus == paneOptions
@@ -335,6 +350,7 @@ func (m WizardModel) optionsLines(iw int) (lines []string, from, to int) {
 		default:
 			lines = append(lines, " "+okStyle.Render("✔ "+msg))
 		}
+		lines = append(lines, "", " "+nameCallToAction(ok, focused, steps[m.step+1].name))
 
 	case kindChoice:
 		cur := s.get(m.Cfg)
