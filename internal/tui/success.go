@@ -40,10 +40,10 @@ func PrintSuccess(cfg pkg.ProjectConfig) {
 	// Only show "cd <name>" when scaffolded into a new subfolder, not when using ".".
 	var cdLine string
 	if cfg.DestDir != "." {
-		cdLine = "\n    " + lipgloss.NewStyle().Foreground(ColorOrange).Render("cd "+cfg.ProjectName)
+		cdLine = "\n    " + lipgloss.NewStyle().Foreground(ColorAccent).Render("cd "+cfg.ProjectName)
 	}
 
-	orange := lipgloss.NewStyle().Foreground(ColorOrange)
+	orange := lipgloss.NewStyle().Foreground(ColorAccent)
 
 	// In a monorepo the deploy script lives in apps/web, so target it directly.
 	deployRun := string(cfg.PM) + " run deploy"

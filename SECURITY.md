@@ -62,6 +62,13 @@ Security-sensitive operations and their safeguards:
   absolute paths and `..` traversal are rejected before any write.
 - **Outbound HTTP** — see "External communication" above.
 
+## Shared code with bungkus-mcc
+
+bungkus-mcc copies this repo's updater (`pkg/update.go`, `cmd/update.go`),
+`install.sh` and palette (`internal/tui/styles.go`), each marked with a
+`// copied from osbrjp/bungkus-cli@<sha>` header. Security fixes to the
+updater or installer must be applied to both repositories.
+
 ## Risky components
 
 Reviewed 2026-07-23 against `go.mod`: no unmaintained, end-of-life, or

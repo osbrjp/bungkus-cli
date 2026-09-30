@@ -72,9 +72,9 @@ func (m model) View() tea.View {
 		hint := fmt.Sprintf(
 			"\n\n  %s\n\n    %s\n    %s\n    %s",
 			AccentStyle.Render("Get started:"),
-			lipgloss.NewStyle().Foreground(ColorOrange).Render("cd "+m.cfg.ProjectName),
-			lipgloss.NewStyle().Foreground(ColorOrange).Render(m.cfg.PM.InstallCmd()),
-			lipgloss.NewStyle().Foreground(ColorOrange).Render(m.cfg.PM.RunCmd()),
+			lipgloss.NewStyle().Foreground(ColorAccent).Render("cd "+m.cfg.ProjectName),
+			lipgloss.NewStyle().Foreground(ColorAccent).Render(m.cfg.PM.InstallCmd()),
+			lipgloss.NewStyle().Foreground(ColorAccent).Render(m.cfg.PM.RunCmd()),
 		)
 		return tea.NewView(BoxStyle.Render(header+hint) + "\n")
 	}
