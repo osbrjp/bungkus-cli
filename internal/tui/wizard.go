@@ -750,18 +750,18 @@ func (m WizardModel) View() tea.View {
 	}
 
 	if m.screen == screenSummary {
-		return tea.NewView(m.centered(m.summaryPopup()))
+		return paint(tea.NewView(m.centered(m.summaryPopup())))
 	}
 
 	if m.screen == screenBackend {
 		layout := lipgloss.JoinVertical(lipgloss.Top, m.tabBar(), m.backendView(), m.footerView())
-		return tea.NewView(layout)
+		return paint(tea.NewView(layout))
 	}
 
 	lists := m.middleRow()
 	layout := lipgloss.JoinVertical(lipgloss.Top, m.tabBar(), m.projectNameInputView(), lists, m.pmView(), m.advancedView(), m.footerView())
 
-	return tea.NewView(layout)
+	return paint(tea.NewView(layout))
 }
 
 // centered places an overlay in the middle of the terminal.
@@ -831,7 +831,7 @@ func (m WizardModel) summaryPopup() string {
 		key("q/esc", "quit")
 
 	popup := lipgloss.NewStyle().
-		Border(lipgloss.ASCIIBorder()).
+		Border(inactiveShape).
 		BorderForeground(ColorMuted).
 		Padding(1, 2).
 		Render(title + body + footer)
@@ -939,7 +939,7 @@ func (m WizardModel) footerView() string {
 			key("enter", "confirm"),
 			key("q/esc", "quit"),
 		}, FooterSepStyle.Render("  •  "))
-		return FooterBarStyle.Render(line)
+		return FooterBarStyle.Render(StatusModeStyle.Render(" CREATE ") + "  " + line)
 	}
 
 	bindings := []string{
@@ -966,7 +966,7 @@ func (m WizardModel) footerView() string {
 
 	bindings = append(bindings, key("enter", "confirm"), key("q/esc", "quit"))
 
-	line := strings.Join(bindings, FooterSepStyle.Render("  •  "))
+	line := StatusModeStyle.Render(" CREATE ") + "  " + strings.Join(bindings, FooterSepStyle.Render("  •  "))
 	line += "\n" + FooterDescStyle.Render("* recommended")
 
 	return FooterBarStyle.Render(line)

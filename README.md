@@ -51,6 +51,13 @@ Once a day, other commands check for a newer release in the background and
 print a one-line hint when one exists. The check never blocks or fails a
 command; set `BUNGKUS_NO_UPDATE_CHECK=1` to turn it off.
 
+### Colours
+
+On truecolor terminals the wizard paints the Daun Pisang leaf-green
+background while it runs and restores your terminal's colours on exit.
+Set `BUNGKUS_BACKGROUND=terminal` to keep your own background. 256- and
+16-colour terminals always keep their own background.
+
 ### Usage
 
 Run the interactive wizard:
