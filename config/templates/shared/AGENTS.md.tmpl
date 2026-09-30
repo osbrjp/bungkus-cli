@@ -32,7 +32,7 @@ This is a **{{ .PM }} workspace monorepo**:
 ```
 apps/web         frontend ({{ .Base }})
 {{ if ne (printf "%s" .Backend) "none" }}apps/api         backend ({{ .Backend }}{{ if ne (printf "%s" .ORM) "none" }} + {{ .ORM }}{{ end }})
-{{ end }}packages/domain  shared types / schemas (a workspace dependency of web + api)
+{{ end }}packages/domain  shared types / schemas (`@repo/domain`, a workspace dependency of web + api)
 ```
 
 ```bash

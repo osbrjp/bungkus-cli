@@ -186,10 +186,10 @@ func BuildPackageJSON(cfg ProjectConfig) ([]byte, error) {
 	}
 
 	// The domain link is not a registry version, so the rewrite above must not
-	// see it: npm/yarn's "*" would otherwise become "latest" and install the
-	// unrelated "domain" package from npm.
+	// see it: npm/yarn's "*" would otherwise become "latest" and resolve from
+	// the registry instead of the workspace.
 	if cfg.Layout.IsMonorepo() {
-		pkg.Dependencies["domain"] = cfg.PM.WorkspaceDep()
+		pkg.Dependencies[DomainPackage] = cfg.PM.WorkspaceDep()
 	}
 
 	return marshalPkg(pkg)
@@ -205,6 +205,11 @@ func marshalPkg(pkg packageJSON) ([]byte, error) {
 	}
 	return buf.Bytes(), nil
 }
+
+// DomainPackage is the package name of the shared packages/domain workspace.
+// It is scoped because a bare "domain" is Node's built-in domain module, which
+// Node and @types/node resolve first, so apps/api could never import it.
+const DomainPackage = "@repo/domain"
 
 func newWorkspacePkg(name string) packageJSON {
 	return packageJSON{
@@ -245,7 +250,7 @@ func BuildAPIPackageJSON(cfg ProjectConfig) ([]byte, error) {
 	pkg.Scripts["build"] = "tsc"
 	pkg.DevDependencies["typescript"] = "^5.7.2"
 	pkg.DevDependencies["@types/node"] = "^22.10.2"
-	pkg.Dependencies["domain"] = cfg.PM.WorkspaceDep()
+	pkg.Dependencies[DomainPackage] = cfg.PM.WorkspaceDep()
 
 	return marshalPkg(pkg)
 }
@@ -253,7 +258,7 @@ func BuildAPIPackageJSON(cfg ProjectConfig) ([]byte, error) {
 // BuildDomainPackageJSON builds packages/domain/package.json — the shared
 // contract. It carries zod only when zod validation is selected.
 func BuildDomainPackageJSON(cfg ProjectConfig) ([]byte, error) {
-	pkg := newWorkspacePkg("domain")
+	pkg := newWorkspacePkg(DomainPackage)
 	// point main/types at the source so consumers resolve without a build step
 	pkg.Main = "src/index.ts"
 	pkg.Types = "src/index.ts"
@@ -307,9 +312,9 @@ func BuildRootPackageJSON(cfg ProjectConfig) ([]byte, error) {
 		}
 		// yarn classic's `workspaces run` is gone in Berry; chaining
 		// `yarn workspace` calls works on both.
-		builds := []string{"domain", "web"}
+		builds := []string{DomainPackage, "web"}
 		if cfg.Backend != "none" || cfg.ORM != "none" {
-			builds = []string{"domain", "api", "web"}
+			builds = []string{DomainPackage, "api", "web"}
 		}
 		for i, ws := range builds {
 			builds[i] = cfg.PM.WorkspaceRun(ws, "build")

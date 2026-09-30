@@ -259,7 +259,7 @@ func loadDeps(cfg pkg.ProjectConfig) tea.Cmd {
 // with zod, a database driver, …). The result is sorted.
 func comboExtras(cfg pkg.ProjectConfig, sets ...map[string]string) []string {
 	common := pkg.GetRegistry().CommonPackages
-	known := map[string]bool{"domain": true}
+	known := map[string]bool{pkg.DomainPackage: true}
 	for n := range common.Dependencies {
 		known[n] = true
 	}

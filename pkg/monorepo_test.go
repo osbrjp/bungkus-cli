@@ -35,8 +35,8 @@ func TestMonorepoFrontendPackageOmitsBackend(t *testing.T) {
 		}
 	}
 	// but it should depend on the shared domain package
-	if p.Dependencies["domain"] != "workspace:*" {
-		t.Errorf("frontend should depend on domain workspace:*, got %q", p.Dependencies["domain"])
+	if p.Dependencies[DomainPackage] != "workspace:*" {
+		t.Errorf("frontend should depend on domain workspace:*, got %q", p.Dependencies[DomainPackage])
 	}
 	// and keep its own FE deps
 	if !has(p.Dependencies, "react-hook-form") {
@@ -49,8 +49,8 @@ func TestChannelLatestPreservesWorkspaceDeps(t *testing.T) {
 	c := monoCfg()
 	c.Channel = ChannelLatest
 	p := buildAndParse(t, c)
-	if p.Dependencies["domain"] != "workspace:*" {
-		t.Errorf("channel=latest must not rewrite workspace deps, got domain=%q", p.Dependencies["domain"])
+	if p.Dependencies[DomainPackage] != "workspace:*" {
+		t.Errorf("channel=latest must not rewrite workspace deps, got domain=%q", p.Dependencies[DomainPackage])
 	}
 	if p.Dependencies["astro"] != "latest" {
 		t.Errorf("channel=latest should still pin normal deps to latest, got astro=%q", p.Dependencies["astro"])
@@ -80,7 +80,7 @@ func TestBuildAPIPackageJSON(t *testing.T) {
 			t.Errorf("api missing dependency %q", dep)
 		}
 	}
-	if p.Dependencies["domain"] != "workspace:*" {
+	if p.Dependencies[DomainPackage] != "workspace:*" {
 		t.Error("api should depend on domain workspace:*")
 	}
 	if p.Scripts["dev"] == "" {
@@ -102,7 +102,7 @@ func TestBuildDomainPackageJSON(t *testing.T) {
 		Dependencies map[string]string `json:"dependencies"`
 	}
 	json.Unmarshal(data, &p)
-	if p.Name != "domain" || p.Main == "" {
+	if p.Name != DomainPackage || p.Main == "" {
 		t.Errorf("domain pkg name/main wrong: %q %q", p.Name, p.Main)
 	}
 	if _, ok := p.Dependencies["zod"]; !ok {
@@ -181,7 +181,7 @@ func TestMonorepoPerPM(t *testing.T) {
 			"npm run build --workspaces --if-present", true},
 		{"yarn", "*", []string{"apps/*", "packages/*"}, false,
 			`concurrently -n web,api "yarn workspace web run dev" "yarn workspace api run dev"`,
-			"yarn workspace domain run build && yarn workspace api run build && yarn workspace web run build", true},
+			"yarn workspace @repo/domain run build && yarn workspace api run build && yarn workspace web run build", true},
 	}
 	type pj struct {
 		Workspaces      []string          `json:"workspaces"`
@@ -225,7 +225,7 @@ func TestMonorepoPerPM(t *testing.T) {
 			}
 
 			for _, app := range []string{"apps/web", "apps/api"} {
-				if got := read(t, filepath.Join(dir, app, "package.json")).Dependencies["domain"]; got != tc.dep {
+				if got := read(t, filepath.Join(dir, app, "package.json")).Dependencies[DomainPackage]; got != tc.dep {
 					t.Errorf("%s domain dep = %q, want %q", app, got, tc.dep)
 				}
 			}
@@ -258,7 +258,7 @@ func TestRootScriptsWithoutBackend(t *testing.T) {
 	if p.Scripts["dev"] != "yarn workspace web run dev" {
 		t.Errorf("dev = %q", p.Scripts["dev"])
 	}
-	if p.Scripts["build"] != "yarn workspace domain run build && yarn workspace web run build" {
+	if p.Scripts["build"] != "yarn workspace @repo/domain run build && yarn workspace web run build" {
 		t.Errorf("build = %q", p.Scripts["build"])
 	}
 	if _, ok := p.DevDependencies["concurrently"]; ok {
@@ -267,13 +267,13 @@ func TestRootScriptsWithoutBackend(t *testing.T) {
 }
 
 // The latest channel must not turn npm/yarn's "*" domain link into "latest",
-// which would install the unrelated "domain" package from the registry.
+// which would resolve it from the registry instead of the workspace.
 func TestChannelLatestKeepsDomainLink(t *testing.T) {
 	setupRegistry(t)
 	for _, pm := range []PackageManager{"npm", "yarn"} {
 		c := monoCfg()
 		c.PM, c.Channel = pm, ChannelLatest
-		if got := buildAndParse(t, c).Dependencies["domain"]; got != "*" {
+		if got := buildAndParse(t, c).Dependencies[DomainPackage]; got != "*" {
 			t.Errorf("%s: domain = %q, want *", pm, got)
 		}
 	}
