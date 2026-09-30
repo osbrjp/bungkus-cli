@@ -59,6 +59,21 @@ func TestBuildPackageJSON(t *testing.T) {
 			wantDep: []string{"react-hook-form", "zod", "@hookform/resolvers", "react"},
 		},
 		{
+			name: "vite-react + eslint runs TS 6 side by side for typescript-eslint",
+			cfg: func() ProjectConfig {
+				c := baseCfg("vite-react")
+				c.Linter = "eslint"
+				return c
+			},
+			wantDev: []string{"typescript", "@typescript/native", "typescript-eslint"},
+		},
+		{
+			name:      "vite-react + biome keeps plain TS 7",
+			cfg:       func() ProjectConfig { return baseCfg("vite-react") },
+			wantDev:   []string{"typescript"},
+			forbidDev: []string{"@typescript/native"},
+		},
+		{
 			name: "nuxt + veevalidate + zod installs vee-validate/zod and nuxt module",
 			cfg: func() ProjectConfig {
 				c := baseCfg("nuxt")

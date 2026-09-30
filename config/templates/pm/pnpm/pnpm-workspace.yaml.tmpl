@@ -22,10 +22,12 @@ allowBuilds:
   {{- end}}
   esbuild: true
   sharp: true
+  # postinstall only swaps Vue 2/3 shims; the Vue 3 default is already right
+  vue-demi: false
   {{- if or (eq .Deployment "cloudflare-pages") (eq .Deployment "cloudflare-workers")}}
   workerd: true
   {{- end}}
-  {{- if and (eq .ORM "drizzle") (or (eq .Database "sqlite") (eq .Database "none"))}}
+  {{- if and (or (eq .ORM "drizzle") (eq .ORM "prisma")) (or (eq .Database "sqlite") (eq .Database "none"))}}
   better-sqlite3: true
   {{- end}}
   {{- if eq .ORM "prisma"}}

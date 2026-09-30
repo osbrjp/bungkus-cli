@@ -1,0 +1,13 @@
+import { defineConfig } from "prisma/config";
+
+// Prisma 7 no longer loads .env for the CLI (generate / migrate / db push).
+try {
+  process.loadEnvFile();
+} catch {
+  // no .env — rely on the real environment
+}
+
+export default defineConfig({
+  schema: "prisma/schema.prisma",
+  datasource: { url: process.env.DATABASE_URL{{ if not (or (eq (printf "%s" .Database) "postgres") (eq (printf "%s" .Database) "mysql")) }} ?? "file:./dev.db"{{ end }} },
+});

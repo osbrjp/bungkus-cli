@@ -63,13 +63,13 @@ func (p *PMModel) View(active bool) string {
 		isSelected := i == p.selected
 		switch {
 		case active && i == p.cursor && isSelected:
-			style = style.Background(ColorGreen).Foreground(ColorGray1).Bold(true)
+			style = style.Foreground(ColorOK).Reverse(true).Bold(true)
 		case active && i == p.cursor:
-			style = style.Background(ColorGray3).Foreground(ColorLuster).Bold(true)
+			style = style.Reverse(true).Bold(true)
 		case isSelected:
-			style = style.Background(ColorGreen).Foreground(ColorGray1)
+			style = style.Foreground(ColorOK).Reverse(true)
 		default:
-			style = style.Foreground(ColorLack)
+			style = style.Foreground(ColorMuted)
 		}
 
 		parts = append(parts, style.Render(opt.Label))
@@ -143,13 +143,13 @@ func (a AdvancedModel) View(active bool) string {
 			focused := active && i == a.row
 			switch {
 			case focused && selected:
-				style = style.Background(ColorGreen).Foreground(ColorGray1).Bold(true)
+				style = style.Foreground(ColorOK).Reverse(true).Bold(true)
 			case selected:
-				style = style.Background(ColorGreen).Foreground(ColorGray1)
+				style = style.Foreground(ColorOK).Reverse(true)
 			case focused:
-				style = style.Foreground(ColorLuster)
+				// terminal default foreground
 			default:
-				style = style.Foreground(ColorLack)
+				style = style.Foreground(ColorMuted)
 			}
 			b.WriteString(style.Render(opt.label))
 		}
@@ -215,9 +215,9 @@ func (d optionDelegate) Render(w io.Writer, m list.Model, index int, listItem li
 	width := m.Width()
 	var line string
 	if index == m.Index() {
-		line = lipgloss.NewStyle().Width(width).Background(ColorGray3).Foreground(ColorLuster).Bold(true).Render(" " + o.label)
+		line = lipgloss.NewStyle().Width(width).Reverse(true).Bold(true).Render(" " + o.label)
 	} else {
-		line = lipgloss.NewStyle().Width(width).Foreground(ColorLack).Render(" " + o.label)
+		line = lipgloss.NewStyle().Width(width).Foreground(ColorMuted).Render(" " + o.label)
 	}
 
 	fmt.Fprint(w, line)
@@ -319,7 +319,7 @@ func (a *AddOnsModel) View(active bool, width int) string {
 			s.WriteString(MutedStyle.Render(g.name) + "\n")
 			for _, opt := range g.options {
 				text := " ◦ " + opt.label
-				s.WriteString(lipgloss.NewStyle().Width(width).Foreground(ColorGray3).Render(text) + "\n")
+				s.WriteString(lipgloss.NewStyle().Width(width).Foreground(ColorDim).Render(text) + "\n")
 				flatIdx++
 			}
 			continue
@@ -339,13 +339,13 @@ func (a *AddOnsModel) View(active bool, width int) string {
 
 			switch {
 			case active && flatIdx == a.cursor && isSelected:
-				style = style.Background(ColorGreen).Foreground(ColorGray1).Bold(true)
+				style = style.Foreground(ColorOK).Reverse(true).Bold(true)
 			case active && flatIdx == a.cursor:
-				style = style.Background(ColorGray3).Foreground(ColorLuster).Bold(true)
+				style = style.Reverse(true).Bold(true)
 			case isSelected:
-				style = style.Background(ColorGreen).Foreground(ColorGray1)
+				style = style.Foreground(ColorOK).Reverse(true)
 			default:
-				style = style.Foreground(ColorLack)
+				style = style.Foreground(ColorMuted)
 			}
 
 			s.WriteString(style.Render(text) + "\n")
@@ -832,7 +832,7 @@ func (m WizardModel) summaryPopup() string {
 
 	popup := lipgloss.NewStyle().
 		Border(lipgloss.ASCIIBorder()).
-		BorderForeground(ColorLack).
+		BorderForeground(ColorMuted).
 		Padding(1, 2).
 		Render(title + body + footer)
 
@@ -888,9 +888,9 @@ func (m WizardModel) tabBar() string {
 	tab := func(label string, active bool) string {
 		style := lipgloss.NewStyle().Padding(0, 3)
 		if active {
-			return style.Background(ColorGreen).Foreground(ColorGray1).Bold(true).Render(label)
+			return style.Foreground(ColorOK).Reverse(true).Bold(true).Render(label)
 		}
-		return style.Foreground(ColorLack).Render(label)
+		return style.Foreground(ColorMuted).Render(label)
 	}
 	bar := lipgloss.JoinHorizontal(lipgloss.Top,
 		tab("Frontend", m.screen == screenWizard),

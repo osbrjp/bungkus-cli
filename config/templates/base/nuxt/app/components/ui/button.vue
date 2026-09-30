@@ -9,7 +9,7 @@
 </script>
 
 <template>
-  <button class="bg-black text-white">
+  <button type="button" class="bg-black text-white">
     <slot />
   </button>
 </template>
