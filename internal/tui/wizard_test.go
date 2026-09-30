@@ -117,7 +117,7 @@ func TestOptionRendering(t *testing.T) {
 		{"excluded group", "astro", "format",
 			[]string{"OxFmt", "not on Astro", "Prettier", "+ prettier"}, nil},
 		{"packages, cut and recommended", "astro", "styling",
-			[]string{"(*) Vanilla", "TailwindCSS", "+ @tailwindcss/vite", "…", "* recommended"}, []string{"TailwindCSS *"}},
+			[]string{"(*) TailwindCSS", "( ) Vanilla", "+ @tailwindcss/vite", "…", "* recommended"}, []string{"TailwindCSS *"}},
 		{"ci/cd needs a deploy target", "astro", "ci/cd",
 			[]string{"GitHub Actions", "needs a deploy target"}, nil},
 		{"database needs an orm", "astro", "database",
@@ -571,5 +571,32 @@ func TestMascotOnInstructionScreens(t *testing.T) {
 	help := strings.Split(screen(press(newTestModel(t, 110, 40), "?")), "\n")
 	if body := strings.Join(help[headerRows:], "\n"); !strings.Contains(body, "▄▀██▀▄") || !strings.Contains(body, "switch pane") {
 		t.Errorf("help overlay lacks the mascot or the keys:\n%s", body)
+	}
+}
+
+// The wizard's untouched config must match what the tabbed wizard of
+// v1.8.0 produced (NewWizardModel + collectConfig on origin/main): the first
+// option of every group, which is the recommended one where the registry
+// marks one.
+func TestWizardDefaultsMatchPreviousWizard(t *testing.T) {
+	m := newTestModel(t, 110, 40)
+	want := pkg.NewProjectConfig()
+	want.Base, want.CSS, want.Fmt, want.Linter = "astro", "tailwindcss", "biome", "biome"
+	want.Test, want.Audit = "none", "none"
+	want.Validation, want.Form, want.Query, want.State, want.CMS = "none", "none", "none", "none", "none"
+	want.Deployment, want.CICD, want.Desktop = "none", "none", "none"
+	want.Backend, want.ORM, want.Database = "none", "none", "none"
+	want.PM, want.Layout = "pnpm", pkg.LayoutFlat
+	want.Channel, want.Pin, want.Install, want.GitInit, want.NodeEngine = pkg.ChannelPinned, pkg.PinDefault, false, true, pkg.DefaultNodeEngine
+	got := m.Cfg
+	got.Date, want.Date = "", ""
+	if got != want {
+		t.Errorf("wizard defaults\n got %+v\nwant %+v", got, want)
+	}
+	if cmd := strings.Join(CreateArgs(m.Cfg), " "); cmd != "create my-app --base astro --css tailwindcss --fmt biome --linter biome --pm pnpm" {
+		t.Errorf("default command = %q", cmd)
+	}
+	if n, total := m.setCount(); n != 5 || total != 18 {
+		t.Errorf("defaults count %d/%d set, want 5/18", n, total)
 	}
 }

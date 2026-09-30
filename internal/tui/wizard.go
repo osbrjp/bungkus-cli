@@ -147,8 +147,9 @@ type WizardModel struct {
 	duck          int // position in duckLoop while scaffolding
 }
 
-// NewWizardModel returns the wizard on its first step with the defaults of
-// pkg.NewProjectConfig and a random header quote. templates is the template
+// NewWizardModel returns the wizard on its first step with a random header
+// quote, starting from pkg.NewProjectConfig with every choice on its
+// recommended or first option (see initialPicks). templates is the template
 // tree pkg.Scaffold renders from when the user creates the project.
 func NewWizardModel(templates fs.FS) WizardModel {
 	ti := textinput.New()
@@ -169,7 +170,7 @@ func NewWizardModel(templates fs.FS) WizardModel {
 		home:      home,
 		quote:     rand.IntN(len(quotes)),
 	}
-	normalize(&m.Cfg)
+	initialPicks(&m.Cfg)
 	return m
 }
 

@@ -248,6 +248,28 @@ func normalize(cfg *pkg.ProjectConfig) {
 	cfg.ApplyDefaultLayout()
 }
 
+// initialPicks sets every choice field of cfg to the option the wizard
+// starts on: the registry's recommended option when it can be picked,
+// otherwise the first option that can. Fields are visited in step order, so
+// later options are judged against the earlier picks. The layout is then
+// derived as normalize does.
+func initialPicks(cfg *pkg.ProjectConfig) {
+	for _, s := range steps {
+		if s.kind != kindChoice {
+			continue
+		}
+		cs := choices(s, *cfg)
+		i := slices.IndexFunc(cs, func(c choice) bool { return c.recommended && c.reason == "" })
+		if i < 0 {
+			i = slices.IndexFunc(cs, func(c choice) bool { return c.reason == "" })
+		}
+		if i >= 0 {
+			s.set(cfg, cs[i].value)
+		}
+	}
+	normalize(cfg)
+}
+
 // isSet reports whether a step's value counts toward the status bar's
 // "N/M set": anything but empty or "none".
 func isSet(v string) bool { return v != "" && v != "none" }
