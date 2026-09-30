@@ -117,3 +117,88 @@ jobs:
             sleep 2
           done
           echo "FAIL: /health-check never came up"; cat server.log; exit 1
+
+  # Scaffold the backend monorepo with every package manager, install it, and
+  # prove both apps import @repo/domain: the root build compiles web and api,
+  # and the root dev script serves both with the probe in place.
+  monorepo-smoke:
+    if: |
+      (github.event.action == 'review_requested' ||
+      (github.event.action == 'labeled' && github.event.label.name == 'ci-testing') ||
+      (github.event.action == 'synchronize' && contains(github.event.pull_request.labels.*.name, 'ci-testing'))) ||
+      (github.event_name == 'push')
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - pm: pnpm
+            api: pnpm --filter api run
+          - pm: bun
+            api: bun run --filter api
+          - pm: npm
+            api: npm run -w api
+          - pm: yarn
+            api: yarn workspace api run
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.26.x"
+          check-latest: true
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - uses: pnpm/action-setup@v6
+        if: matrix.pm == 'pnpm'
+        with:
+          version: 10
+      - uses: oven-sh/setup-bun@v2
+        if: matrix.pm == 'bun'
+        with:
+          bun-version: "1.2"
+      - name: Install yarn classic
+        if: matrix.pm == 'yarn'
+        run: npm install -g yarn@1.22.22
+      - name: Build CLI
+        run: go build -o bungkus-cli .
+      - name: Scaffold monorepo (${{ matrix.pm }})
+        # No --layout: a backend must default to the monorepo for every PM.
+        run: |
+          ./bungkus-cli create app --base astro-react --backend hono --orm drizzle --db sqlite --validation zod --pm ${{ matrix.pm }} --git=false
+          test -f app/apps/api/package.json
+      - name: Import @repo/domain from both apps
+        working-directory: app
+        run: |
+          printf '\nimport { UserSchema } from "@repo/domain";\nconsole.log("domain-probe:", UserSchema.parse({ id: 1, name: "api-ok" }).name);\n' >> apps/api/server/index.ts
+          perl -0pi -e 's/^---\n/---\nimport { UserSchema } from "\@repo\/domain";\nconst probe = UserSchema.parse({ id: 1, name: "web-ok" }).name;\n/m; s|</main>|<p>{probe}</p></main>|' apps/web/src/pages/index.astro
+      - name: Install and build
+        working-directory: app
+        run: |
+          ${{ matrix.pm }} install
+          ${{ matrix.pm }} run build
+          grep -q web-ok apps/web/dist/index.html
+      - name: Set up DB
+        working-directory: app
+        run: |
+          cp apps/api/.env.example apps/api/.env
+          ${{ matrix.api }} db:generate
+          ${{ matrix.api }} db:migrate
+          ${{ matrix.api }} db:seed
+      - name: Root dev serves web and api
+        working-directory: app
+        run: |
+          ${{ matrix.pm }} run dev > dev.log 2>&1 &
+          for i in $(seq 1 45); do
+            web=$(curl -s http://localhost:3000/ || true)
+            api=$(curl -s http://localhost:8000/health-check || true)
+            if echo "$web" | grep -q web-ok && echo "$api" | grep -q '"db":"connected"'; then
+              grep -q 'domain-probe: api-ok' dev.log || { echo "FAIL: api never logged the domain probe"; cat dev.log; exit 1; }
+              echo "health-check: $api"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "FAIL: web or api never came up"; cat dev.log; exit 1
