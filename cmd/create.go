@@ -99,131 +99,9 @@ that escape the current directory (absolute paths, "..") are rejected. Use "."
 to scaffold into the current directory.`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := pkg.NewProjectConfig()
-
-		if name, _ := cmd.Flags().GetString("template"); name != "" {
-			tmpl, ok := templates[name]
-			if !ok {
-				return fmt.Errorf("invalid template: %s", name)
-			}
-			fmt.Printf("Template selected: %s\n", name)
-			cfg = tmpl()
-		}
-
-		if len(args) > 0 {
-			if args[0] == "." {
-				cwd, err := os.Getwd()
-				if err != nil {
-					return fmt.Errorf("failed to get current working directory: %w", err)
-				}
-				cfg.ProjectName = filepath.Base(cwd)
-				cfg.DestDir = "."
-			} else {
-				if err := pkg.ValidateProjectName(args[0]); err != nil {
-					return err
-				}
-				cfg.ProjectName = args[0]
-			}
-		}
-
-		if cmd.Flags().Changed("base") {
-			v, _ := cmd.Flags().GetString("base")
-			cfg.Base = pkg.BaseFramework(v)
-		}
-		if cmd.Flags().Changed("css") {
-			v, _ := cmd.Flags().GetString("css")
-			cfg.CSS = pkg.CSSFramework(v)
-		}
-		if cmd.Flags().Changed("fmt") {
-			v, _ := cmd.Flags().GetString("fmt")
-			cfg.Fmt = pkg.Formatter(v)
-		}
-		if cmd.Flags().Changed("linter") {
-			v, _ := cmd.Flags().GetString("linter")
-			cfg.Linter = pkg.Linter(v)
-		}
-		if cmd.Flags().Changed("pm") {
-			v, _ := cmd.Flags().GetString("pm")
-			cfg.PM = pkg.PackageManager(v)
-		}
-		if cmd.Flags().Changed("validation") {
-			v, _ := cmd.Flags().GetString("validation")
-			cfg.Validation = pkg.ValidationLib(v)
-		}
-		if cmd.Flags().Changed("form") {
-			v, _ := cmd.Flags().GetString("form")
-			cfg.Form = pkg.FormLib(v)
-		}
-		if cmd.Flags().Changed("query") {
-			v, _ := cmd.Flags().GetString("query")
-			cfg.Query = pkg.QueryLib(v)
-		}
-		if cmd.Flags().Changed("state") {
-			v, _ := cmd.Flags().GetString("state")
-			cfg.State = pkg.StateLib(v)
-		}
-		if cmd.Flags().Changed("cms") {
-			v, _ := cmd.Flags().GetString("cms")
-			cfg.CMS = pkg.CMS(v)
-		}
-		if cmd.Flags().Changed("deploy") {
-			v, _ := cmd.Flags().GetString("deploy")
-			cfg.Deployment = pkg.DeployTarget(v)
-		}
-		if cmd.Flags().Changed("cicd") {
-			v, _ := cmd.Flags().GetString("cicd")
-			cfg.CICD = pkg.CICDProvider(v)
-		}
-		if cmd.Flags().Changed("test") {
-			v, _ := cmd.Flags().GetString("test")
-			cfg.Test = pkg.TestingFramework(v)
-		}
-		if cmd.Flags().Changed("audit") {
-			v, _ := cmd.Flags().GetString("audit")
-			cfg.Audit = pkg.AuditTool(v)
-		}
-		if cmd.Flags().Changed("desktop") {
-			v, _ := cmd.Flags().GetString("desktop")
-			cfg.Desktop = pkg.DesktopTarget(v)
-		}
-		if cmd.Flags().Changed("backend") {
-			v, _ := cmd.Flags().GetString("backend")
-			cfg.Backend = pkg.BackendLib(v)
-		}
-		if cmd.Flags().Changed("orm") {
-			v, _ := cmd.Flags().GetString("orm")
-			cfg.ORM = pkg.ORMLib(v)
-		}
-		if cmd.Flags().Changed("db") {
-			v, _ := cmd.Flags().GetString("db")
-			cfg.Database = pkg.Database(v)
-		}
-		if cmd.Flags().Changed("layout") {
-			v, _ := cmd.Flags().GetString("layout")
-			cfg.Layout = pkg.Layout(v)
-		}
-		if cmd.Flags().Changed("channel") {
-			v, _ := cmd.Flags().GetString("channel")
-			cfg.Channel = pkg.VersionChannel(v)
-		}
-		if cmd.Flags().Changed("pin") {
-			v, _ := cmd.Flags().GetString("pin")
-			cfg.Pin = pkg.PinStrategy(v)
-		}
-		if cmd.Flags().Changed("install") {
-			cfg.Install, _ = cmd.Flags().GetBool("install")
-		}
-		if cmd.Flags().Changed("git") {
-			cfg.GitInit, _ = cmd.Flags().GetBool("git")
-		}
-		if cmd.Flags().Changed("node-engine") {
-			cfg.NodeEngine, _ = cmd.Flags().GetString("node-engine")
-		}
-
-		// A selected backend defaults to the monorepo layout unless the user
-		// chose one explicitly (and only when pnpm, which monorepo requires).
-		if !cmd.Flags().Changed("layout") {
-			cfg.ApplyDefaultLayout()
+		cfg, err := configFromFlags(cmd, args)
+		if err != nil {
+			return err
 		}
 
 		if !cfg.Base.IsValid() {
@@ -326,31 +204,171 @@ to scaffold into the current directory.`,
 	},
 }
 
+// configFromFlags builds the ProjectConfig `create` would scaffold from its
+// arguments and flags: the -t preset (or the defaults), the project name, and
+// every flag the user typed, then the default layout unless --layout was
+// given. It rejects unknown presets and invalid names; enum and cross-field
+// validation stay with the caller.
+func configFromFlags(cmd *cobra.Command, args []string) (pkg.ProjectConfig, error) {
+	cfg := pkg.NewProjectConfig()
+
+	if name, _ := cmd.Flags().GetString("template"); name != "" {
+		tmpl, ok := templates[name]
+		if !ok {
+			return cfg, fmt.Errorf("invalid template: %s", name)
+		}
+		fmt.Printf("Template selected: %s\n", name)
+		cfg = tmpl()
+	}
+
+	if len(args) > 0 {
+		if args[0] == "." {
+			cwd, err := os.Getwd()
+			if err != nil {
+				return cfg, fmt.Errorf("failed to get current working directory: %w", err)
+			}
+			cfg.ProjectName = filepath.Base(cwd)
+			cfg.DestDir = "."
+		} else {
+			if err := pkg.ValidateProjectName(args[0]); err != nil {
+				return cfg, err
+			}
+			cfg.ProjectName = args[0]
+		}
+	}
+
+	if cmd.Flags().Changed("base") {
+		v, _ := cmd.Flags().GetString("base")
+		cfg.Base = pkg.BaseFramework(v)
+	}
+	if cmd.Flags().Changed("css") {
+		v, _ := cmd.Flags().GetString("css")
+		cfg.CSS = pkg.CSSFramework(v)
+	}
+	if cmd.Flags().Changed("fmt") {
+		v, _ := cmd.Flags().GetString("fmt")
+		cfg.Fmt = pkg.Formatter(v)
+	}
+	if cmd.Flags().Changed("linter") {
+		v, _ := cmd.Flags().GetString("linter")
+		cfg.Linter = pkg.Linter(v)
+	}
+	if cmd.Flags().Changed("pm") {
+		v, _ := cmd.Flags().GetString("pm")
+		cfg.PM = pkg.PackageManager(v)
+	}
+	if cmd.Flags().Changed("validation") {
+		v, _ := cmd.Flags().GetString("validation")
+		cfg.Validation = pkg.ValidationLib(v)
+	}
+	if cmd.Flags().Changed("form") {
+		v, _ := cmd.Flags().GetString("form")
+		cfg.Form = pkg.FormLib(v)
+	}
+	if cmd.Flags().Changed("query") {
+		v, _ := cmd.Flags().GetString("query")
+		cfg.Query = pkg.QueryLib(v)
+	}
+	if cmd.Flags().Changed("state") {
+		v, _ := cmd.Flags().GetString("state")
+		cfg.State = pkg.StateLib(v)
+	}
+	if cmd.Flags().Changed("cms") {
+		v, _ := cmd.Flags().GetString("cms")
+		cfg.CMS = pkg.CMS(v)
+	}
+	if cmd.Flags().Changed("deploy") {
+		v, _ := cmd.Flags().GetString("deploy")
+		cfg.Deployment = pkg.DeployTarget(v)
+	}
+	if cmd.Flags().Changed("cicd") {
+		v, _ := cmd.Flags().GetString("cicd")
+		cfg.CICD = pkg.CICDProvider(v)
+	}
+	if cmd.Flags().Changed("test") {
+		v, _ := cmd.Flags().GetString("test")
+		cfg.Test = pkg.TestingFramework(v)
+	}
+	if cmd.Flags().Changed("audit") {
+		v, _ := cmd.Flags().GetString("audit")
+		cfg.Audit = pkg.AuditTool(v)
+	}
+	if cmd.Flags().Changed("desktop") {
+		v, _ := cmd.Flags().GetString("desktop")
+		cfg.Desktop = pkg.DesktopTarget(v)
+	}
+	if cmd.Flags().Changed("backend") {
+		v, _ := cmd.Flags().GetString("backend")
+		cfg.Backend = pkg.BackendLib(v)
+	}
+	if cmd.Flags().Changed("orm") {
+		v, _ := cmd.Flags().GetString("orm")
+		cfg.ORM = pkg.ORMLib(v)
+	}
+	if cmd.Flags().Changed("db") {
+		v, _ := cmd.Flags().GetString("db")
+		cfg.Database = pkg.Database(v)
+	}
+	if cmd.Flags().Changed("layout") {
+		v, _ := cmd.Flags().GetString("layout")
+		cfg.Layout = pkg.Layout(v)
+	}
+	if cmd.Flags().Changed("channel") {
+		v, _ := cmd.Flags().GetString("channel")
+		cfg.Channel = pkg.VersionChannel(v)
+	}
+	if cmd.Flags().Changed("pin") {
+		v, _ := cmd.Flags().GetString("pin")
+		cfg.Pin = pkg.PinStrategy(v)
+	}
+	if cmd.Flags().Changed("install") {
+		cfg.Install, _ = cmd.Flags().GetBool("install")
+	}
+	if cmd.Flags().Changed("git") {
+		cfg.GitInit, _ = cmd.Flags().GetBool("git")
+	}
+	if cmd.Flags().Changed("node-engine") {
+		cfg.NodeEngine, _ = cmd.Flags().GetString("node-engine")
+	}
+
+	// A selected backend defaults to the monorepo layout unless the user
+	// chose one explicitly (and only when pnpm, which monorepo requires).
+	if !cmd.Flags().Changed("layout") {
+		cfg.ApplyDefaultLayout()
+	}
+	return cfg, nil
+}
+
 func init() {
 	rootCmd.AddCommand(createCmd)
-	createCmd.Flags().String("base", "astro", "Base framework (astro, vite)")
-	createCmd.Flags().String("css", "vanilla", "CSS framework (vanilla, tailwindcss)")
-	createCmd.Flags().String("fmt", "biome", "Formatter (prettier, biome, oxfmt)")
-	createCmd.Flags().String("linter", "biome", "Linter (biome, eslint, oxlint)")
-	createCmd.Flags().String("validation", "none", "Validation library (none, zod)")
-	createCmd.Flags().String("form", "none", "Form library (none, tanstack-form)")
-	createCmd.Flags().String("query", "none", "Query library (none, tanstack-query)")
-	createCmd.Flags().String("state", "none", "State management library (none, jotai, zustand, pinia, nanostores)")
-	createCmd.Flags().String("pm", "pnpm", "Package manager (bun, npm, yarn, pnpm)")
-	createCmd.Flags().String("cms", "none", "CMS (none, microcms)")
-	createCmd.Flags().String("test", "none", "Testing library (none, playwright)")
-	createCmd.Flags().String("audit", "none", "Audit / performance tool (none, lhci)")
-	createCmd.Flags().String("desktop", "none", "Desktop shell (none, tauri)")
-	createCmd.Flags().StringP("template", "t", "", "Predefined template (astro, astro-react, astro-vue, nuxt, vite, vite-react, vite-vue)")
-	createCmd.Flags().String("deploy", "none", "Deployment target (none, cloudflare-pages, cloudflare-workers)")
-	createCmd.Flags().String("cicd", "none", "CI/CD provider (none, github-actions)")
-	createCmd.Flags().String("backend", "none", "Backend framework (none, hono, elysia)")
-	createCmd.Flags().String("orm", "none", "ORM / database toolkit (none, drizzle, prisma)")
-	createCmd.Flags().String("db", "none", "Database, requires --orm (none, sqlite, postgres, mysql, d1). d1 needs --orm drizzle")
-	createCmd.Flags().String("layout", "flat", "Project layout (flat, monorepo). Defaults to monorepo when --backend is set with pnpm; monorepo splits apps/web + apps/api + packages/domain")
-	createCmd.Flags().String("channel", "pinned", "Dependency version channel: pinned (vetted, >=14d old & safe) or latest")
-	createCmd.Flags().String("pin", "default", "Pin strategy: default (as registry), caret, tilde, exact")
-	createCmd.Flags().Bool("install", false, "Run the package manager install after scaffolding")
-	createCmd.Flags().Bool("git", true, "Initialize a git repo with an initial commit")
-	createCmd.Flags().String("node-engine", pkg.DefaultNodeEngine, "package.json engines.node constraint")
+	addCreateFlags(createCmd)
+}
+
+// addCreateFlags declares the `create` flags on cmd.
+func addCreateFlags(cmd *cobra.Command) {
+	cmd.Flags().String("base", "astro", "Base framework (astro, vite)")
+	cmd.Flags().String("css", "vanilla", "CSS framework (vanilla, tailwindcss)")
+	cmd.Flags().String("fmt", "biome", "Formatter (prettier, biome, oxfmt)")
+	cmd.Flags().String("linter", "biome", "Linter (biome, eslint, oxlint)")
+	cmd.Flags().String("validation", "none", "Validation library (none, zod)")
+	cmd.Flags().String("form", "none", "Form library (none, tanstack-form)")
+	cmd.Flags().String("query", "none", "Query library (none, tanstack-query)")
+	cmd.Flags().String("state", "none", "State management library (none, jotai, zustand, pinia, nanostores)")
+	cmd.Flags().String("pm", "pnpm", "Package manager (bun, npm, yarn, pnpm)")
+	cmd.Flags().String("cms", "none", "CMS (none, microcms)")
+	cmd.Flags().String("test", "none", "Testing library (none, playwright)")
+	cmd.Flags().String("audit", "none", "Audit / performance tool (none, lhci)")
+	cmd.Flags().String("desktop", "none", "Desktop shell (none, tauri)")
+	cmd.Flags().StringP("template", "t", "", "Predefined template (astro, astro-react, astro-vue, nuxt, vite, vite-react, vite-vue)")
+	cmd.Flags().String("deploy", "none", "Deployment target (none, cloudflare-pages, cloudflare-workers)")
+	cmd.Flags().String("cicd", "none", "CI/CD provider (none, github-actions)")
+	cmd.Flags().String("backend", "none", "Backend framework (none, hono, elysia)")
+	cmd.Flags().String("orm", "none", "ORM / database toolkit (none, drizzle, prisma)")
+	cmd.Flags().String("db", "none", "Database, requires --orm (none, sqlite, postgres, mysql, d1). d1 needs --orm drizzle")
+	cmd.Flags().String("layout", "flat", "Project layout (flat, monorepo). Defaults to monorepo when --backend is set with pnpm; monorepo splits apps/web + apps/api + packages/domain")
+	cmd.Flags().String("channel", "pinned", "Dependency version channel: pinned (vetted, >=14d old & safe) or latest")
+	cmd.Flags().String("pin", "default", "Pin strategy: default (as registry), caret, tilde, exact")
+	cmd.Flags().Bool("install", false, "Run the package manager install after scaffolding")
+	cmd.Flags().Bool("git", true, "Initialize a git repo with an initial commit")
+	cmd.Flags().String("node-engine", pkg.DefaultNodeEngine, "package.json engines.node constraint")
 }
