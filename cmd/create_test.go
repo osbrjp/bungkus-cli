@@ -60,8 +60,14 @@ func TestWizardCommandReproducesConfig(t *testing.T) {
 		"monorepo": func(c *pkg.ProjectConfig) {
 			c.Base, c.Backend, c.ORM, c.Database, c.Layout = "nuxt", "hono", "drizzle", "postgres", pkg.LayoutMonorepo
 		},
-		"flat backend on bun": func(c *pkg.ProjectConfig) {
-			c.Base, c.Backend, c.ORM, c.Database, c.PM = "vite-vue", "elysia", "prisma", "sqlite", "bun"
+		"backend on bun": func(c *pkg.ProjectConfig) {
+			c.Base, c.Backend, c.ORM, c.Database, c.PM, c.Layout = "vite-vue", "elysia", "prisma", "sqlite", "bun", pkg.LayoutMonorepo
+		},
+		"backend on npm": func(c *pkg.ProjectConfig) {
+			c.Base, c.Backend, c.PM, c.Layout = "astro-react", "hono", "npm", pkg.LayoutMonorepo
+		},
+		"backend on yarn": func(c *pkg.ProjectConfig) {
+			c.Base, c.Backend, c.PM, c.Layout = "astro-react", "hono", "yarn", pkg.LayoutMonorepo
 		},
 		"advanced": func(c *pkg.ProjectConfig) {
 			c.Channel, c.Pin, c.Install, c.GitInit, c.NodeEngine = pkg.ChannelLatest, pkg.PinExact, true, false, ">=20.11.0"
@@ -88,6 +94,30 @@ func TestWizardCommandReproducesConfig(t *testing.T) {
 			got.Date, want.Date = "", ""
 			if got != want {
 				t.Errorf("args %q\n got %+v\nwant %+v", args, got, want)
+			}
+		})
+	}
+}
+
+// create accepts --layout monorepo for every package manager and scaffolds
+// the workspace pieces.
+func TestCreateMonorepoAllPMs(t *testing.T) {
+	if err := pkg.InitRegistry(config.RegistryJSON); err != nil {
+		t.Fatalf("InitRegistry: %v", err)
+	}
+	for _, pm := range []string{"pnpm", "bun", "npm", "yarn"} {
+		t.Run(pm, func(t *testing.T) {
+			t.Chdir(t.TempDir())
+			c := &cobra.Command{RunE: createCmd.RunE, SilenceUsage: true}
+			addCreateFlags(c)
+			c.SetArgs([]string{"demo", "--base", "astro-react", "--backend", "hono", "--layout", "monorepo", "--pm", pm, "--git=false"})
+			if err := c.Execute(); err != nil {
+				t.Fatalf("create --pm %s --layout monorepo: %v", pm, err)
+			}
+			for _, f := range []string{"package.json", "apps/web/package.json", "apps/api/package.json", "packages/domain/package.json"} {
+				if _, err := os.Stat(filepath.Join("demo", f)); err != nil {
+					t.Errorf("missing %s: %v", f, err)
+				}
 			}
 		})
 	}

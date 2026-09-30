@@ -69,8 +69,8 @@ func (p PinStrategy) IsValid() bool {
 }
 
 // Layouts control the on-disk shape of the generated project. "flat" (default)
-// is the original single-package layout. "monorepo" emits a pnpm-workspace with
-// apps/web (frontend), apps/api (backend, when selected) and packages/domain
+// is the original single-package layout. "monorepo" emits a workspace (for the
+// chosen package manager) with apps/web (frontend), apps/api (backend, when selected) and packages/domain
 // (shared zod/type contract) — the org's DDD-friendly FE+BE structure.
 const (
 	LayoutFlat     Layout = "flat"
@@ -86,12 +86,12 @@ func (l Layout) IsMonorepo() bool {
 }
 
 // ApplyDefaultLayout upgrades a flat layout to monorepo when a backend is
-// selected and pnpm is in use — the org default for FE+BE projects. No-op if a
-// non-flat layout was already chosen or the preconditions don't hold (monorepo
-// currently requires pnpm). Callers that expose an explicit layout choice
-// should only call this when the user left it unset.
+// selected — the org default for FE+BE projects, for every package manager.
+// No-op if a non-flat layout was already chosen or no backend is selected.
+// Callers that expose an explicit layout choice should only call this when the
+// user left it unset.
 func (c *ProjectConfig) ApplyDefaultLayout() {
-	if c.Layout == LayoutFlat && c.Backend != "none" && c.PM == "pnpm" {
+	if c.Layout == LayoutFlat && c.Backend != "none" {
 		c.Layout = LayoutMonorepo
 	}
 }
@@ -602,6 +602,41 @@ func (p PackageManager) RunCmd() string {
 		}
 	}
 	return string(p) + " dev"
+}
+
+// WorkspaceRun returns the command that runs script in one package of a
+// monorepo workspace, e.g. "pnpm --filter api run db:migrate". The yarn form
+// works on both classic (1.x) and Berry.
+func (p PackageManager) WorkspaceRun(workspace, script string) string {
+	switch p {
+	case "npm":
+		return "npm run " + script + " -w " + workspace
+	case "yarn":
+		return "yarn workspace " + workspace + " run " + script
+	case "bun":
+		// `bun --filter web run x` is rejected by bun 1.2; the filter must follow `run`.
+		return "bun run --filter " + workspace + " " + script
+	}
+	return string(p) + " --filter " + workspace + " run " + script
+}
+
+// WorkspaceDep returns the dependency spec that links a sibling workspace
+// package. pnpm and bun support the workspace: protocol; npm has none and
+// yarn classic rejects it, but both link a local workspace whose version
+// satisfies "*" (so does yarn Berry).
+func (p PackageManager) WorkspaceDep() string {
+	if p == "pnpm" || p == "bun" {
+		return "workspace:*"
+	}
+	return "*"
+}
+
+// Lockfile returns the lockfile name the package manager writes.
+func (p PackageManager) Lockfile() string {
+	if names := lockfileNames[string(p)]; len(names) > 0 {
+		return names[0]
+	}
+	return "package-lock.json"
 }
 
 type ProjectConfig struct {

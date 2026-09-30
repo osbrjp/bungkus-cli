@@ -16,7 +16,7 @@ on:
     paths:
       - 'apps/web/**'
       - 'packages/**'
-      - 'pnpm-lock.yaml'
+      - '{{ .PM.Lockfile }}'
       - 'package.json'
 {{- else }}
     paths-ignore:

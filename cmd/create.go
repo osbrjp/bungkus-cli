@@ -167,9 +167,6 @@ to scaffold into the current directory.`,
 		if !cfg.Layout.IsValid() {
 			return fmt.Errorf("invalid layout: %s (flat, monorepo)", cfg.Layout)
 		}
-		if cfg.Layout.IsMonorepo() && cfg.PM != "pnpm" {
-			return fmt.Errorf("--layout monorepo currently requires --pm pnpm")
-		}
 
 		if cfg.Form != "none" && !cfg.Form.IsValidIntegration(string(cfg.Base)) {
 			tui.PrintSkippedIntegration(string(cfg.Form), string(cfg.Base))
@@ -332,7 +329,7 @@ func configFromFlags(cmd *cobra.Command, args []string) (pkg.ProjectConfig, erro
 	}
 
 	// A selected backend defaults to the monorepo layout unless the user
-	// chose one explicitly (and only when pnpm, which monorepo requires).
+	// chose one explicitly.
 	if !cmd.Flags().Changed("layout") {
 		cfg.ApplyDefaultLayout()
 	}
@@ -365,7 +362,7 @@ func addCreateFlags(cmd *cobra.Command) {
 	cmd.Flags().String("backend", "none", "Backend framework (none, hono, elysia)")
 	cmd.Flags().String("orm", "none", "ORM / database toolkit (none, drizzle, prisma)")
 	cmd.Flags().String("db", "none", "Database, requires --orm (none, sqlite, postgres, mysql, d1). d1 needs --orm drizzle")
-	cmd.Flags().String("layout", "flat", "Project layout (flat, monorepo). Defaults to monorepo when --backend is set with pnpm; monorepo splits apps/web + apps/api + packages/domain")
+	cmd.Flags().String("layout", "flat", "Project layout (flat, monorepo). Defaults to monorepo when --backend is set; monorepo splits apps/web + apps/api + packages/domain")
 	cmd.Flags().String("channel", "pinned", "Dependency version channel: pinned (vetted, >=14d old & safe) or latest")
 	cmd.Flags().String("pin", "default", "Pin strategy: default (as registry), caret, tilde, exact")
 	cmd.Flags().Bool("install", false, "Run the package manager install after scaffolding")

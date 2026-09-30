@@ -651,3 +651,28 @@ func TestAdvancedStepHLChangeValue(t *testing.T) {
 		t.Error("esc should return to the steps pane")
 	}
 }
+
+// The monorepo success box names the chosen package manager and prints its
+// own workspace commands.
+func TestSuccessTextMonorepoPerPM(t *testing.T) {
+	if err := pkg.InitRegistry(config.RegistryJSON); err != nil {
+		t.Fatal(err)
+	}
+	cases := map[pkg.PackageManager]string{
+		"pnpm": "pnpm --filter api run db:migrate",
+		"bun":  "bun run --filter api db:migrate",
+		"npm":  "npm run db:migrate -w api",
+		"yarn": "yarn workspace api run db:migrate",
+	}
+	for pm, migrate := range cases {
+		cfg := pkg.NewProjectConfig()
+		cfg.PM, cfg.Backend, cfg.ORM, cfg.Database = pm, "hono", "drizzle", "sqlite"
+		cfg.ApplyDefaultLayout()
+		out := ansi.Strip(successText(cfg))
+		for _, want := range []string{"Workspace (" + string(pm) + "):", migrate} {
+			if !strings.Contains(out, want) {
+				t.Errorf("%s: success output lacks %q:\n%s", pm, want, out)
+			}
+		}
+	}
+}

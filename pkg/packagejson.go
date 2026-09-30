@@ -22,6 +22,7 @@ type packageJSON struct {
 	Main            string            `json:"main,omitempty"`
 	Types           string            `json:"types,omitempty"`
 	PackageManager  string            `json:"packageManager,omitempty"`
+	Workspaces      []string          `json:"workspaces,omitempty"`
 	Engines         map[string]string `json:"engines"`
 	Scripts         map[string]string `json:"scripts"`
 	Dependencies    map[string]string `json:"dependencies"`
@@ -137,10 +138,10 @@ func BuildPackageJSON(cfg ProjectConfig) ([]byte, error) {
 
 	// In a monorepo the backend/orm live in apps/api (see buildAPIPackageJSON),
 	// so the frontend package omits them and instead depends on the shared
-	// domain package. In the flat layout they are colocated here.
+	// domain package (added below, after the channel/pin rewrite). In the flat
+	// layout they are colocated here.
 	if cfg.Layout.IsMonorepo() {
 		pkg.Name = "web"
-		pkg.Dependencies["domain"] = "workspace:*"
 		// husky lives at the workspace root (where the .husky hooks and .git
 		// are), not in the web app — see BuildRootPackageJSON.
 		delete(pkg.Scripts, "prepare")
@@ -169,16 +170,11 @@ func BuildPackageJSON(cfg ProjectConfig) ([]byte, error) {
 	// explicit pin strategy rewrites every range operator.
 	switch {
 	case cfg.Channel == ChannelLatest:
-		// Leave workspace: protocol deps (e.g. the shared domain package) alone.
-		for name, v := range pkg.Dependencies {
-			if !strings.HasPrefix(v, "workspace:") {
-				pkg.Dependencies[name] = "latest"
-			}
+		for name := range pkg.Dependencies {
+			pkg.Dependencies[name] = "latest"
 		}
-		for name, v := range pkg.DevDependencies {
-			if !strings.HasPrefix(v, "workspace:") {
-				pkg.DevDependencies[name] = "latest"
-			}
+		for name := range pkg.DevDependencies {
+			pkg.DevDependencies[name] = "latest"
 		}
 	case cfg.Pin != "" && cfg.Pin != PinDefault:
 		for name, v := range pkg.Dependencies {
@@ -187,6 +183,13 @@ func BuildPackageJSON(cfg ProjectConfig) ([]byte, error) {
 		for name, v := range pkg.DevDependencies {
 			pkg.DevDependencies[name] = applyPinStrategy(v, cfg.Pin)
 		}
+	}
+
+	// The domain link is not a registry version, so the rewrite above must not
+	// see it: npm/yarn's "*" would otherwise become "latest" and install the
+	// unrelated "domain" package from npm.
+	if cfg.Layout.IsMonorepo() {
+		pkg.Dependencies["domain"] = cfg.PM.WorkspaceDep()
 	}
 
 	return marshalPkg(pkg)
@@ -234,7 +237,7 @@ func BuildAPIPackageJSON(cfg ProjectConfig) ([]byte, error) {
 	}
 	applyDBDriver(&pkg, cfg)
 
-	// Alias the framework's watch script to "dev" so `pnpm -r run dev` starts
+	// Alias the framework's watch script to "dev" so the root dev script starts
 	// the api alongside the web app.
 	if s, ok := pkg.Scripts["dev:server"]; ok {
 		pkg.Scripts["dev"] = s
@@ -242,7 +245,7 @@ func BuildAPIPackageJSON(cfg ProjectConfig) ([]byte, error) {
 	pkg.Scripts["build"] = "tsc"
 	pkg.DevDependencies["typescript"] = "^5.7.2"
 	pkg.DevDependencies["@types/node"] = "^22.10.2"
-	pkg.Dependencies["domain"] = "workspace:*"
+	pkg.Dependencies["domain"] = cfg.PM.WorkspaceDep()
 
 	return marshalPkg(pkg)
 }
@@ -262,14 +265,57 @@ func BuildDomainPackageJSON(cfg ProjectConfig) ([]byte, error) {
 	return marshalPkg(pkg)
 }
 
-// BuildRootPackageJSON builds the private workspace root package.json.
+// BuildRootPackageJSON builds the private workspace root package.json: the
+// workspace list (pnpm keeps its own in pnpm-workspace.yaml) and dev/build
+// scripts that fan out to every workspace package with cfg.PM.
 func BuildRootPackageJSON(cfg ProjectConfig) ([]byte, error) {
 	pkg := newWorkspacePkg(cfg.ProjectName)
 	// husky (prepare script + devDep) belongs at the workspace root, where the
 	// .husky hooks and .git live.
 	mergePackages(&pkg, GetRegistry().CommonPackages)
-	pkg.Scripts["dev"] = "pnpm --recursive --parallel run dev"
-	pkg.Scripts["build"] = "pnpm --recursive run build"
+
+	// Packages with a long-running dev script; api has one only via a backend.
+	devApps := []string{"web"}
+	if cfg.Backend != "none" {
+		devApps = append(devApps, "api")
+	}
+	switch cfg.PM {
+	case "pnpm":
+		pkg.Scripts["dev"] = "pnpm --recursive --parallel run dev"
+		pkg.Scripts["build"] = "pnpm --recursive run build"
+	case "bun":
+		pkg.Workspaces = []string{"apps/*", "packages/*"}
+		// bun --filter runs matching scripts concurrently (the root is excluded).
+		pkg.Scripts["dev"] = "bun run --filter '*' dev"
+		pkg.Scripts["build"] = "bun run --filter '*' build"
+	default: // npm, yarn
+		pkg.Workspaces = []string{"apps/*", "packages/*"}
+		// Neither runs workspace scripts in parallel, and the dev servers never
+		// exit, so a sequential run would start only the first one.
+		pkg.Scripts["dev"] = cfg.PM.WorkspaceRun("web", "dev")
+		if len(devApps) > 1 {
+			cmds := make([]string, len(devApps))
+			for i, app := range devApps {
+				cmds[i] = `"` + cfg.PM.WorkspaceRun(app, "dev") + `"`
+			}
+			pkg.Scripts["dev"] = "concurrently -n " + strings.Join(devApps, ",") + " " + strings.Join(cmds, " ")
+			pkg.DevDependencies["concurrently"] = "^10.0.5"
+		}
+		if cfg.PM == "npm" {
+			pkg.Scripts["build"] = "npm run build --workspaces --if-present"
+			break
+		}
+		// yarn classic's `workspaces run` is gone in Berry; chaining
+		// `yarn workspace` calls works on both.
+		builds := []string{"domain", "web"}
+		if cfg.Backend != "none" || cfg.ORM != "none" {
+			builds = []string{"domain", "api", "web"}
+		}
+		for i, ws := range builds {
+			builds[i] = cfg.PM.WorkspaceRun(ws, "build")
+		}
+		pkg.Scripts["build"] = strings.Join(builds, " && ")
+	}
 	if v, err := pmVersion(string(cfg.PM)); err == nil {
 		pkg.PackageManager = string(cfg.PM) + "@" + v
 	}

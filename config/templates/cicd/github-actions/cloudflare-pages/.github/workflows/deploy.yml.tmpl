@@ -1,4 +1,4 @@
-{{- $paths := "\n    # An apps/api-only change can't affect the deployed web app — skip the run.\n    paths:\n      - 'apps/web/**'\n      - 'packages/**'\n      - 'pnpm-lock.yaml'\n      - 'package.json'" -}}
+{{- $paths := printf "\n    # An apps/api-only change can't affect the deployed web app — skip the run.\n    paths:\n      - 'apps/web/**'\n      - 'packages/**'\n      - '%s'\n      - 'package.json'" .PM.Lockfile -}}
 name: Deploy to Cloudflare Pages
 on:
   push:
@@ -31,7 +31,7 @@ jobs:
       - name: Build
         run: {{.PM}} run build
       - name: Create Pages project (if not exists)
-        run: pnpm exec wrangler pages project create {{ "${{ github.event.repository.name }}" }} --production-branch main || true
+        run: {{ if eq .PM "pnpm" }}pnpm exec{{ else if eq .PM "bun" }}bunx{{ else if eq .PM "yarn" }}yarn{{ else }}npx{{ end }} wrangler pages project create {{ "${{ github.event.repository.name }}" }} --production-branch main || true
 {{- if .Layout.IsMonorepo }}
         # wrangler is a devDependency of the web app, not the workspace root.
         working-directory: apps/web

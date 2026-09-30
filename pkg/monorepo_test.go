@@ -2,7 +2,12 @@ package pkg
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
+	"slices"
 	"testing"
+
+	"github.com/osbrjp/bungkus-cli/config"
 )
 
 func monoCfg() ProjectConfig {
@@ -126,7 +131,10 @@ func TestApplyDefaultLayout(t *testing.T) {
 	}{
 		{"backend+pnpm upgrades", "hono", "pnpm", LayoutFlat, LayoutMonorepo},
 		{"no backend stays flat", "none", "pnpm", LayoutFlat, LayoutFlat},
-		{"backend+bun stays flat", "hono", "bun", LayoutFlat, LayoutFlat},
+		{"backend+bun upgrades", "hono", "bun", LayoutFlat, LayoutMonorepo},
+		{"backend+npm upgrades", "hono", "npm", LayoutFlat, LayoutMonorepo},
+		{"backend+yarn upgrades", "elysia", "yarn", LayoutFlat, LayoutMonorepo},
+		{"no backend on npm stays flat", "none", "npm", LayoutFlat, LayoutFlat},
 		{"already monorepo untouched", "hono", "pnpm", LayoutMonorepo, LayoutMonorepo},
 	}
 	for _, tc := range cases {
@@ -149,5 +157,138 @@ func TestLayoutIsValid(t *testing.T) {
 	}
 	if !LayoutMonorepo.IsMonorepo() || LayoutFlat.IsMonorepo() {
 		t.Error("IsMonorepo mismatch")
+	}
+}
+
+// TestMonorepoPerPM scaffolds the monorepo with each package manager and
+// checks the workspace list, the domain link and the root scripts.
+func TestMonorepoPerPM(t *testing.T) {
+	setupRegistry(t)
+	cases := []struct {
+		pm            PackageManager
+		dep           string
+		workspaces    []string
+		pnpmWorkspace bool
+		dev, build    string
+		concurrently  bool
+	}{
+		{"pnpm", "workspace:*", nil, true,
+			"pnpm --recursive --parallel run dev", "pnpm --recursive run build", false},
+		{"bun", "workspace:*", []string{"apps/*", "packages/*"}, false,
+			"bun run --filter '*' dev", "bun run --filter '*' build", false},
+		{"npm", "*", []string{"apps/*", "packages/*"}, false,
+			`concurrently -n web,api "npm run dev -w web" "npm run dev -w api"`,
+			"npm run build --workspaces --if-present", true},
+		{"yarn", "*", []string{"apps/*", "packages/*"}, false,
+			`concurrently -n web,api "yarn workspace web run dev" "yarn workspace api run dev"`,
+			"yarn workspace domain run build && yarn workspace api run build && yarn workspace web run build", true},
+	}
+	type pj struct {
+		Workspaces      []string          `json:"workspaces"`
+		Scripts         map[string]string `json:"scripts"`
+		Dependencies    map[string]string `json:"dependencies"`
+		DevDependencies map[string]string `json:"devDependencies"`
+	}
+	read := func(t *testing.T, path string) pj {
+		t.Helper()
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var p pj
+		if err := json.Unmarshal(data, &p); err != nil {
+			t.Fatalf("%s: %v", path, err)
+		}
+		return p
+	}
+	for _, tc := range cases {
+		t.Run(string(tc.pm), func(t *testing.T) {
+			cfg := monoCfg()
+			cfg.PM = tc.pm
+			dir := t.TempDir()
+			if err := Scaffold(dir, config.Templates, cfg); err != nil {
+				t.Fatalf("Scaffold: %v", err)
+			}
+
+			root := read(t, filepath.Join(dir, "package.json"))
+			if !slices.Equal(root.Workspaces, tc.workspaces) {
+				t.Errorf("workspaces = %v, want %v", root.Workspaces, tc.workspaces)
+			}
+			if root.Scripts["dev"] != tc.dev {
+				t.Errorf("dev = %q, want %q", root.Scripts["dev"], tc.dev)
+			}
+			if root.Scripts["build"] != tc.build {
+				t.Errorf("build = %q, want %q", root.Scripts["build"], tc.build)
+			}
+			if _, ok := root.DevDependencies["concurrently"]; ok != tc.concurrently {
+				t.Errorf("concurrently devDep present = %v, want %v", ok, tc.concurrently)
+			}
+
+			for _, app := range []string{"apps/web", "apps/api"} {
+				if got := read(t, filepath.Join(dir, app, "package.json")).Dependencies["domain"]; got != tc.dep {
+					t.Errorf("%s domain dep = %q, want %q", app, got, tc.dep)
+				}
+			}
+
+			_, err := os.Stat(filepath.Join(dir, "pnpm-workspace.yaml"))
+			if exists := err == nil; exists != tc.pnpmWorkspace {
+				t.Errorf("pnpm-workspace.yaml exists = %v, want %v", exists, tc.pnpmWorkspace)
+			}
+		})
+	}
+}
+
+// Without a backend there is only one dev server, so npm/yarn need no
+// concurrently and the build skips the absent api.
+func TestRootScriptsWithoutBackend(t *testing.T) {
+	setupRegistry(t)
+	cfg := monoCfg()
+	cfg.PM, cfg.Backend, cfg.ORM, cfg.Database = "yarn", "none", "none", "none"
+	data, err := BuildRootPackageJSON(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var p struct {
+		Scripts         map[string]string `json:"scripts"`
+		DevDependencies map[string]string `json:"devDependencies"`
+	}
+	if err := json.Unmarshal(data, &p); err != nil {
+		t.Fatal(err)
+	}
+	if p.Scripts["dev"] != "yarn workspace web run dev" {
+		t.Errorf("dev = %q", p.Scripts["dev"])
+	}
+	if p.Scripts["build"] != "yarn workspace domain run build && yarn workspace web run build" {
+		t.Errorf("build = %q", p.Scripts["build"])
+	}
+	if _, ok := p.DevDependencies["concurrently"]; ok {
+		t.Error("a single dev server needs no concurrently")
+	}
+}
+
+// The latest channel must not turn npm/yarn's "*" domain link into "latest",
+// which would install the unrelated "domain" package from the registry.
+func TestChannelLatestKeepsDomainLink(t *testing.T) {
+	setupRegistry(t)
+	for _, pm := range []PackageManager{"npm", "yarn"} {
+		c := monoCfg()
+		c.PM, c.Channel = pm, ChannelLatest
+		if got := buildAndParse(t, c).Dependencies["domain"]; got != "*" {
+			t.Errorf("%s: domain = %q, want *", pm, got)
+		}
+	}
+}
+
+func TestWorkspaceRun(t *testing.T) {
+	cases := map[PackageManager]string{
+		"pnpm": "pnpm --filter api run db:migrate",
+		"bun":  "bun run --filter api db:migrate",
+		"npm":  "npm run db:migrate -w api",
+		"yarn": "yarn workspace api run db:migrate",
+	}
+	for pm, want := range cases {
+		if got := pm.WorkspaceRun("api", "db:migrate"); got != want {
+			t.Errorf("%s: %q, want %q", pm, got, want)
+		}
 	}
 }

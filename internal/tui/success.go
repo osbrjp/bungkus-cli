@@ -53,7 +53,7 @@ func successText(cfg pkg.ProjectConfig) string {
 	// In a monorepo the deploy script lives in apps/web, so target it directly.
 	deployRun := string(cfg.PM) + " run deploy"
 	if cfg.Layout.IsMonorepo() {
-		deployRun = "pnpm --filter web run deploy"
+		deployRun = cfg.PM.WorkspaceRun("web", "deploy")
 	}
 
 	header := strings.Join(besideMascot(successLines(cfg)), "\n")
@@ -66,9 +66,9 @@ func successText(cfg pkg.ProjectConfig) string {
 	}
 	cmds := urls
 
-	// Monorepo layout: explain the pnpm-workspace structure.
+	// Monorepo layout: explain the workspace structure.
 	if cfg.Layout.IsMonorepo() {
-		ws := "\n\n  " + AccentStyle.Render("Workspace (pnpm):") +
+		ws := "\n\n  " + AccentStyle.Render("Workspace ("+string(cfg.PM)+"):") +
 			"\n    " + MutedStyle.Render("apps/web         frontend")
 		if cfg.Backend != "none" {
 			ws += "\n    " + MutedStyle.Render("apps/api         backend ("+string(cfg.Backend)+")")
@@ -87,7 +87,7 @@ func successText(cfg pkg.ProjectConfig) string {
 		if cfg.Layout.IsMonorepo() {
 			title = "Set up the database (apps/api):"
 			envSrc, envDst = "apps/api/.env.example", "apps/api/.env"
-			gen, migrate = "pnpm --filter api db:generate", "pnpm --filter api db:migrate"
+			gen, migrate = cfg.PM.WorkspaceRun("api", "db:generate"), cfg.PM.WorkspaceRun("api", "db:migrate")
 		}
 		db := "\n\n  " + AccentStyle.Render(title) +
 			"\n    " + orange.Render("cp "+envSrc+" "+envDst)
