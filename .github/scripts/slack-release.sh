@@ -5,10 +5,12 @@
 # Slack webhook; run it locally to preview the JSON.
 set -euo pipefail
 
-# GitHub markdown → Slack mrkdwn: drop the "# [x.y.z](compare) (date)" title,
+# GitHub markdown → Slack mrkdwn: drop the mascot <img> and the
+# "# [x.y.z](compare) (date)" title,
 # "### Features" → "*Features*", "* item" → "• item", "**b**" → "*b*",
 # "[text](url)" → "<url|text>", then squeeze blank lines.
 notes=$(printf '%s\n' "$BODY" | sed -E \
+  -e '/^<img /d' \
   -e '/^# /d' \
   -e 's/^### (.*)$/*\1*/' \
   -e 's/^\* /• /' \

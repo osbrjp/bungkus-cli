@@ -127,6 +127,17 @@ jobs:
         run: |
           gh release upload "${{ needs.semantic-release.outputs.new_release_git_tag }}" assets/* --repo "${{ github.repository }}"
 
+      - name: Add the mascot to the release notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.semantic-release.outputs.new_release_git_tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          body=$(gh release view "$TAG" --repo "$REPO" --json body --jq '.body // ""')
+          case "$body" in *assets/mascot.gif*) exit 0 ;; esac
+          mascot="<img src=\"https://raw.githubusercontent.com/$REPO/main/.github/assets/mascot.gif\" alt=\"bungkus mascot\" width=\"96\" align=\"right\">"
+          gh release edit "$TAG" --repo "$REPO" --notes "$mascot"$'\n\n'"$body"
+
   announce:
     name: Announce release on Slack
     needs: [semantic-release, upload-assets]
