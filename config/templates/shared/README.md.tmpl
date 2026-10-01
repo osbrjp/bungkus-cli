@@ -50,8 +50,8 @@ Requires the Rust toolchain (https://rustup.rs) and Tauri's platform
 prerequisites (https://tauri.app/start/prerequisites/).
 
 {{ if .Layout.IsMonorepo -}}
-- `{{ .PM }} --filter web tauri dev` — run the desktop app against the dev server
-- `{{ .PM }} --filter web tauri build` — bundle installers into `apps/web/src-tauri/target/release/bundle`
+- `{{ .PM.WorkspaceRun "web" "tauri dev" }}` — run the desktop app against the dev server
+- `{{ .PM.WorkspaceRun "web" "tauri build" }}` — bundle installers into `apps/web/src-tauri/target/release/bundle`
 {{- else -}}
 - `{{ .PM }} run tauri dev` — run the desktop app against the dev server
 - `{{ .PM }} run tauri build` — bundle installers into `src-tauri/target/release/bundle`

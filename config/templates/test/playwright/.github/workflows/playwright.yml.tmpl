@@ -1,5 +1,5 @@
 {{- $wd := "" }}{{- if .Layout.IsMonorepo }}{{- $wd = "\n      working-directory: apps/web" }}{{- end }}
-{{- $paths := "\n    # An apps/api-only change can't affect the web app — skip the run.\n    paths:\n      - 'apps/web/**'\n      - 'packages/**'\n      - 'pnpm-lock.yaml'\n      - 'package.json'" -}}
+{{- $paths := printf "\n    # An apps/api-only change can't affect the web app — skip the run.\n    paths:\n      - 'apps/web/**'\n      - 'packages/**'\n      - '%s'\n      - 'package.json'" .PM.Lockfile -}}
 name: Playwright Tests
 on:
   push:

@@ -86,3 +86,21 @@ func TestUTF8LocaleSelectsBoxDrawing(t *testing.T) {
 		t.Error("focused sections must get the heavy border on UTF-8 terminals")
 	}
 }
+
+// The mascot's parts must stay tellable apart when the terminal downgrades.
+func TestMascotColoursDistinctAtLowColor(t *testing.T) {
+	toks := map[string]token{"G": tokMascotBody, "E": tokMascotEyes, "T": tokMascotWrapL, "U": tokMascotWrapR, "L": tokMascotLegs}
+	for a, ta := range toks {
+		for b, tb := range toks {
+			if a >= b {
+				continue
+			}
+			if ta.ansi256 == tb.ansi256 {
+				t.Errorf("%s and %s share 256-colour index %d", a, b, ta.ansi256)
+			}
+			if ta.ansi == tb.ansi {
+				t.Errorf("%s and %s share 16-colour index %d", a, b, ta.ansi)
+			}
+		}
+	}
+}

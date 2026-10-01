@@ -10,6 +10,6 @@ Follow the conventions in `AGENTS.md`:
 - **Location**: pick the right folder under `/components` — `ui/` (primitives), `layout/` (header/footer/nav), `page/` (per-page sections), or `icon/`.
 - **JSDoc**: start every component with the JSDoc block from AGENTS.md (Module, @file, @description, @module).
 - **Types**: TypeScript `strict`; never `any` (use `unknown`); avoid `as` — prefer type guards. Prefer arrow functions and small, composable components.
-- Respect the formatter config; run `{{ .PM }} format` when done.
+- Respect the formatter config; run `{{ if .Layout.IsMonorepo }}{{ .PM.WorkspaceRun "web" "format" }}{{ else }}{{ .PM }} run format{{ end }}` when done.
 
 Show the created file path and a one-line summary.

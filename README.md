@@ -1,8 +1,8 @@
 # Bungkus-cli
 
 A scaffolding CLI for modern frontend projects — with an optional backend
-(Hono / Elysia), ORM + database (Drizzle / Prisma), and a pnpm-workspace
-monorepo layout when you build full-stack.
+(Hono / Elysia), ORM + database (Drizzle / Prisma), and a workspace
+monorepo layout (pnpm, bun, npm or yarn) when you build full-stack.
 
 ## Getting Started
 
@@ -66,6 +66,14 @@ Run the interactive wizard:
 bungkus-cli
 ```
 
+The wizard lists every choice in a steps pane, edits the selected one in an
+options pane (incompatible options stay visible, greyed, with the reason), and
+previews the equivalent `bungkus-cli create …` command, layout and
+dependencies. Keys: `j/k` or arrows move, `h/l` or `tab` switch pane, `space`
+picks, `enter` picks and moves on, typing a step's number (`1`–`21`, shown
+beside each step) jumps to it, `0` or `r` jumps to review, `?` lists every key.
+Under 100 columns it shows one pane at a time.
+
 Or use the `create` command with flags:
 
 ```bash
@@ -78,7 +86,7 @@ Start from a named template and override individual options with flags:
 bungkus-cli create my-app -t nuxt --pm bun
 ```
 
-Scaffold full-stack — a backend turns the project into a pnpm-workspace monorepo:
+Scaffold full-stack — a backend turns the project into a workspace monorepo:
 
 ```bash
 bungkus-cli create my-app --base astro-react --backend hono --orm drizzle --db postgres
@@ -119,18 +127,17 @@ Combination rules the CLI enforces:
 
 - `--cicd` requires `--deploy` (using `--cicd github-actions` without a deploy target is an error).
 - `--db` requires `--orm`; `--db d1` is only supported with `--orm drizzle`.
-- `--layout monorepo` currently requires `--pm pnpm`.
-- Selecting a `--backend` (with pnpm) defaults `--layout` to `monorepo`; pass `--layout flat` to keep everything in one package.
+- Selecting a `--backend` defaults `--layout` to `monorepo` (with any `--pm`); pass `--layout flat` to keep everything in one package.
 - `project-name` must be a valid npm package name (lowercase letters, digits, `.`, `-`, `_`, starting with a letter or digit); use `.` to scaffold into the current directory.
 
 ### Backend & full-stack (monorepo)
 
-When you select a `--backend`, the project is scaffolded as a **pnpm-workspace monorepo**:
+When you select a `--backend`, the project is scaffolded as a **workspace monorepo** for the chosen package manager:
 
 ```
 my-app/
-  package.json          # private workspace root (pnpm -r dev/build, husky)
-  pnpm-workspace.yaml
+  package.json          # private workspace root (dev/build for every app, husky)
+  pnpm-workspace.yaml   # pnpm only; bun/npm/yarn list workspaces in package.json
   apps/
     web/                 # the frontend (astro/nuxt/vite) + its tooling
     api/                 # the backend (hono/elysia) + orm/db
@@ -138,8 +145,18 @@ my-app/
     domain/              # shared contract: zod schemas (with --validation zod) or plain types
 ```
 
-- **`--backend hono`** runs on Node via `tsx`; **`--backend elysia`** runs on Bun. `pnpm dev` runs `apps/web` (`http://localhost:3000`) and `apps/api` (`http://localhost:8000`) together. Every backend exposes `GET /health-check`; with an ORM selected it also runs a read-only query against the database and returns the rows, so you can confirm the DB wiring end-to-end.
-- **`--orm drizzle` / `--orm prisma`** add the config, a `db/` client, `.env.example`, and `db:generate` / `db:migrate` / `db:seed` scripts under `apps/api`. `db:seed` inserts a couple of dummy rows so a fresh DB (and `/health-check`) returns real data. `web` and `api` both depend on `packages/domain` via `workspace:*`.
+- **`--backend hono`** runs on Node via `tsx`; **`--backend elysia`** runs on Bun. `<pm> run dev` runs `apps/web` (`http://localhost:3000`) and `apps/api` (`http://localhost:8000`) together. Every backend exposes `GET /health-check`; with an ORM selected it also runs a read-only query against the database and returns the rows, so you can confirm the DB wiring end-to-end.
+- **`--orm drizzle` / `--orm prisma`** add the config, a `db/` client, `.env.example`, and `db:generate` / `db:migrate` / `db:seed` scripts under `apps/api`. `db:seed` inserts a couple of dummy rows so a fresh DB (and `/health-check`) returns real data. `web` and `api` both depend on `packages/domain` (`@repo/domain`).
+- **Per package manager**: the root scripts and the `@repo/domain` link follow `--pm`.
+
+  | `--pm` | Workspace list        | `@repo/domain` | Root `dev`                                     | Run one app's script          |
+  | :----- | :-------------------- | :------------- | :--------------------------------------------- | :---------------------------- |
+  | pnpm   | `pnpm-workspace.yaml` | `workspace:*`  | `pnpm --recursive --parallel run dev`          | `pnpm --filter api run <s>`   |
+  | bun    | `workspaces` field    | `workspace:*`  | `bun run --filter '*' dev`                     | `bun run --filter api <s>`    |
+  | npm    | `workspaces` field    | `*`            | `concurrently` over `npm run dev -w <app>`     | `npm run <s> -w api`          |
+  | yarn   | `workspaces` field    | `*`            | `concurrently` over `yarn workspace <app> run dev` | `yarn workspace api run <s>` |
+
+  npm has no `workspace:` protocol and yarn 1 rejects it; `*` links the local workspace on npm and on yarn classic and Berry alike. npm and yarn run workspace scripts one at a time, so the root `dev` uses `concurrently` to keep both dev servers up.
 - **`--db postgres` / `--db mysql`** also generate a root `docker-compose.yml` whose credentials match `.env.example`, so `docker compose up -d` gives you a working database. `sqlite` needs nothing extra; `d1` targets Cloudflare Workers (pair with `--deploy cloudflare-workers`).
 
 The post-scaffold summary prints the get-started steps for your exact combo (install, dev, and — when a server database is selected — `docker compose up -d` plus the `db:generate` / `db:migrate` commands).
@@ -178,15 +195,16 @@ config/
     monorepo/                   # Workspace pieces (root, api tsconfig, domain src)
     deploy/                     # Deploy configs (wrangler.jsonc per target)
     cicd/                       # CI/CD workflows (github-actions/<target>/)
-    pm/                         # Package manager config (pnpm-workspace.yaml, .npmrc)
+    pm/                         # Package manager config (pnpm-workspace.yaml, .npmrc, .yarnrc.yml)
     shared/                     # Shared files (husky, CLAUDE.md, AGENTS.md)
 internal/
   tui/
-    wizard.go                   # BubbleTea interactive wizard (Frontend / Backend tabs)
-    loading.go                  # Spinner during scaffolding
+    wizard.go                   # BubbleTea wizard model: keys, picks, in-pane scaffolding
+    steps.go                    # Step list, registry-derived options, equivalent create command
+    view.go                     # Bento layout: header, steps/options/preview panes, status bar
+    mascot.go                   # Half-block mascot and its ducking animation
     success.go                  # Post-scaffold success box + warn helpers
     styles.go                   # Lip Gloss styles and color palette
-    colors.go                   # Color tokens
 pkg/
   config.go                     # ProjectConfig + typed enums
   registry.go                   # Registry schema and global loader

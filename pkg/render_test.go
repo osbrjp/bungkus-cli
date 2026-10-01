@@ -222,7 +222,7 @@ func TestScaffoldRenders(t *testing.T) {
 			},
 			contains: map[string][]string{
 				"apps/web/package.json": {"@tauri-apps/cli"},
-				"README.md":             {"--filter web tauri dev"},
+				"README.md":             {"pnpm --filter web run tauri dev"},
 			},
 		},
 	}

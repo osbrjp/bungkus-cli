@@ -9,9 +9,11 @@
       "Bash({{ .PM }} test:*)",
       "Bash({{ .PM }} format)",
       "Bash({{ .PM }} lint)",
-{{- if .Layout.IsMonorepo }}
+{{- if and .Layout.IsMonorepo (eq .PM "pnpm") }}
       "Bash({{ .PM }} --filter:*)",
       "Bash({{ .PM }} -r:*)",
+{{- else if and .Layout.IsMonorepo (eq .PM "yarn") }}
+      "Bash(yarn workspace:*)",
 {{- end }}
 {{- if or (eq (printf "%s" .Database) "postgres") (eq (printf "%s" .Database) "mysql") }}
       "Bash(docker compose:*)",
