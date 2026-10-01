@@ -46,6 +46,17 @@ If you have Go installed and prefer to build from source:
 go install github.com/osbrjp/bungkus-cli@latest
 ```
 
+This puts the binary in `$GOBIN` (default `~/go/bin`). Keep one install
+method: if bungkus-cli is also installed with the script above, only the copy
+that comes first on your `PATH` runs (check with `type -a bungkus-cli` in fish,
+`which -a bungkus-cli` in zsh/bash). `bungkus-cli update` lists the copies when
+there is more than one. For local development, build without installing so the
+dev build never shadows the real one:
+
+```bash
+go build -o /tmp/bk . && /tmp/bk
+```
+
 ### Updating
 
 ```bash
@@ -53,7 +64,16 @@ bungkus-cli update          # replace this binary with the latest release
 bungkus-cli update --check  # report what is available, install nothing
 ```
 
-`update` re-runs the install script above, so downloads stay checksum-verified.
+`update` updates the way bungkus-cli was installed:
+
+- **Install script:** re-runs it, so downloads stay checksum-verified and the
+  copy you run is replaced in place (no `sudo`; see Install).
+- **`go install`:** runs `go install github.com/osbrjp/bungkus-cli@<latest>`,
+  which updates the copy in `$GOBIN`. Without `go` on `PATH` it prints that
+  command instead.
+
+`bungkus-cli --version` reports the release version for both; a local
+`go build` reports `dev`.
 
 Once a day, other commands check for a newer release in the background and
 print a one-line hint when one exists. The check never blocks or fails a

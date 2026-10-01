@@ -211,7 +211,7 @@ func (m WizardModel) header() []string {
 	}
 	last := quoteStyle.Render(`"` + quotes[m.quote%len(quotes)] + `"`)
 	if UpdateAvailable != "" {
-		last = WarnStyle.Render("update available: " + UpdateAvailable + " · bungkus-cli update")
+		last = WarnStyle.Render("update available: " + UpdateAvailable + " · " + UpdateCommand)
 	}
 	text := []string{first, muted.Render("by spencer · osbr"), muted.Render(tildePath(m.wd, m.home)), last}
 	sprite := mascot()
