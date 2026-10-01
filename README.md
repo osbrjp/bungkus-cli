@@ -14,11 +14,19 @@ Download the latest release binary for your platform (`darwin`/`linux` × `arm64
 curl -fsSL https://raw.githubusercontent.com/osbrjp/bungkus-cli/main/install.sh | bash
 ```
 
-Defaults to `/usr/local/bin/bungkus-cli` (uses `sudo` if needed). Override with `BUNGKUS_INSTALL_DIR`:
+Installs to `~/.local/bin/bungkus-cli`, so no `sudo` is needed; if that folder
+isn't on your `PATH`, the installer prints the line to add. When bungkus-cli is
+already installed, it updates that copy in place. Choose another folder with
+`BUNGKUS_INSTALL_DIR` (set it on `bash`, which runs the script):
 
 ```bash
-BUNGKUS_INSTALL_DIR=$HOME/.local/bin curl -fsSL https://raw.githubusercontent.com/osbrjp/bungkus-cli/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/osbrjp/bungkus-cli/main/install.sh | BUNGKUS_INSTALL_DIR=/opt/bin bash
 ```
+
+Installed in `/usr/local/bin` by an older installer? The next update goes to
+`~/.local/bin` instead of asking for `sudo`, as long as `~/.local/bin` comes
+before `/usr/local/bin` on your `PATH`, and tells you how to remove the old copy.
+Otherwise it updates `/usr/local/bin` with `sudo`, as before.
 
 Update to the latest release:
 
