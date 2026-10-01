@@ -2,22 +2,11 @@ package tui
 
 import (
 	"fmt"
+	"strings"
 
 	"charm.land/lipgloss/v2"
 	"github.com/osbrjp/bungkus-cli/pkg"
 )
-
-// PrintCICDSkipped prints a styled warning that CI/CD was skipped because no
-// deploy target was selected.
-func PrintCICDSkipped() {
-	tag := WarnStyle.Render(" WARN ")
-	msg := fmt.Sprintf(
-		"%s %s requires a deploy target — skipping CI/CD workflow",
-		tag,
-		AccentStyle.Render("CI/CD"),
-	)
-	fmt.Println(msg)
-}
 
 // PrintSkippedIntegration prints a styled warning that a library is skipped
 // because it's not compatible with the chosen base framework.
@@ -33,36 +22,41 @@ func PrintSkippedIntegration(lib, base string) {
 	fmt.Println(msg)
 }
 
-// PrintSuccess prints a styled success box with get-started instructions.
-func PrintSuccess(cfg pkg.ProjectConfig) {
-	header := PrimaryStyle.Render("✔ ") + "Project scaffolded at " + AccentStyle.Render(cfg.ProjectName)
-
-	// Only show "cd <name>" when scaffolded into a new subfolder, not when using ".".
-	var cdLine string
-	if cfg.DestDir != "." {
-		cdLine = "\n    " + lipgloss.NewStyle().Foreground(ColorAccent).Render("cd "+cfg.ProjectName)
+// successLines returns the success block shown beside the mascot: "Wrapped!",
+// "<name> is ready.", a blank line, and the commands that start the project
+// (without "cd" when it was scaffolded into the current directory). The two
+// short headline lines keep the block readable in a narrow preview pane.
+func successLines(cfg pkg.ProjectConfig) []string {
+	lines := []string{
+		okStyle.Bold(true).Render("Wrapped!"),
+		okStyle.Render(cfg.ProjectName + " is ready."),
+		"",
 	}
+	if cfg.DestDir != "." {
+		lines = append(lines, cmdStyle.Render("cd "+cfg.ProjectName))
+	}
+	return append(lines, cmdStyle.Render(cfg.PM.InstallCmd()), cmdStyle.Render(cfg.PM.RunCmd()))
+}
 
+// PrintSuccess prints the success box: the mascot beside the "Wrapped!"
+// block, then the local URLs, the workspace layout, database setup and
+// deploy steps that apply to cfg. Colours are dropped when stdout is not a
+// terminal.
+func PrintSuccess(cfg pkg.ProjectConfig) {
+	_, _ = lipgloss.Println(successText(cfg))
+}
+
+// successText renders the box PrintSuccess prints.
+func successText(cfg pkg.ProjectConfig) string {
 	orange := lipgloss.NewStyle().Foreground(ColorAccent)
 
 	// In a monorepo the deploy script lives in apps/web, so target it directly.
 	deployRun := string(cfg.PM) + " run deploy"
 	if cfg.Layout.IsMonorepo() {
-		deployRun = "pnpm --filter web run deploy"
+		deployRun = cfg.PM.WorkspaceRun("web", "deploy")
 	}
 
-	runLine := orange.Render(cfg.PM.RunCmd())
-	if cfg.Layout.IsMonorepo() && cfg.Backend != "none" {
-		runLine += MutedStyle.Render("   # runs apps/web + apps/api")
-	}
-
-	cmds := fmt.Sprintf(
-		"\n\n  %s%s\n    %s\n    %s",
-		AccentStyle.Render("Get started:"),
-		cdLine,
-		orange.Render(cfg.PM.InstallCmd()),
-		runLine,
-	)
+	header := strings.Join(besideMascot(successLines(cfg)), "\n")
 
 	// Local URLs the dev server serves on.
 	urls := "\n\n  " + AccentStyle.Render("Local URLs:") +
@@ -70,11 +64,11 @@ func PrintSuccess(cfg pkg.ProjectConfig) {
 	if cfg.Backend != "none" {
 		urls += "\n    " + MutedStyle.Render("api  ") + orange.Render("http://localhost:8000")
 	}
-	cmds += urls
+	cmds := urls
 
-	// Monorepo layout: explain the pnpm-workspace structure.
+	// Monorepo layout: explain the workspace structure.
 	if cfg.Layout.IsMonorepo() {
-		ws := "\n\n  " + AccentStyle.Render("Workspace (pnpm):") +
+		ws := "\n\n  " + AccentStyle.Render("Workspace ("+string(cfg.PM)+"):") +
 			"\n    " + MutedStyle.Render("apps/web         frontend")
 		if cfg.Backend != "none" {
 			ws += "\n    " + MutedStyle.Render("apps/api         backend ("+string(cfg.Backend)+")")
@@ -93,7 +87,7 @@ func PrintSuccess(cfg pkg.ProjectConfig) {
 		if cfg.Layout.IsMonorepo() {
 			title = "Set up the database (apps/api):"
 			envSrc, envDst = "apps/api/.env.example", "apps/api/.env"
-			gen, migrate = "pnpm --filter api db:generate", "pnpm --filter api db:migrate"
+			gen, migrate = cfg.PM.WorkspaceRun("api", "db:generate"), cfg.PM.WorkspaceRun("api", "db:migrate")
 		}
 		db := "\n\n  " + AccentStyle.Render(title) +
 			"\n    " + orange.Render("cp "+envSrc+" "+envDst)
@@ -146,5 +140,5 @@ func PrintSuccess(cfg pkg.ProjectConfig) {
 		}
 	}
 
-	fmt.Println(BoxStyle.Render(header + cmds))
+	return BoxStyle.Render(header + cmds)
 }

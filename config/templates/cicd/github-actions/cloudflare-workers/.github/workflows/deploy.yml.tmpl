@@ -1,4 +1,4 @@
-{{- $paths := "\n    # An apps/api-only change can't affect the deployed web app — skip the run.\n    paths:\n      - 'apps/web/**'\n      - 'packages/**'\n      - 'pnpm-lock.yaml'\n      - 'package.json'" -}}
+{{- $paths := printf "\n    # An apps/api-only change can't affect the deployed web app — skip the run.\n    paths:\n      - 'apps/web/**'\n      - 'packages/**'\n      - '%s'\n      - 'package.json'" .PM.Lockfile -}}
 name: Deploy to Cloudflare Workers
 on:
   push:

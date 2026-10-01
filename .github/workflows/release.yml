@@ -127,6 +127,17 @@ jobs:
         run: |
           gh release upload "${{ needs.semantic-release.outputs.new_release_git_tag }}" assets/* --repo "${{ github.repository }}"
 
+      - name: Add the mascot to the release notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.semantic-release.outputs.new_release_git_tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          body=$(gh release view "$TAG" --repo "$REPO" --json body --jq '.body // ""')
+          case "$body" in *assets/mascot.gif*) exit 0 ;; esac
+          mascot="<img src=\"https://raw.githubusercontent.com/$REPO/main/.github/assets/mascot.gif\" alt=\"bungkus mascot\" width=\"96\" align=\"right\">"
+          gh release edit "$TAG" --repo "$REPO" --notes "$mascot"$'\n\n'"$body"
+
   announce:
     name: Announce release on Slack
     needs: [semantic-release, upload-assets]
@@ -136,6 +147,8 @@ jobs:
       !contains(needs.semantic-release.outputs.new_release_git_tag, 'canary')
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v7
+
       - name: Post release announcement
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -143,21 +156,16 @@ jobs:
           REPO: ${{ github.repository }}
           NAME: ${{ github.event.repository.name }}
           TAG: ${{ needs.semantic-release.outputs.new_release_git_tag }}
+          MASCOT_URL: https://raw.githubusercontent.com/${{ github.repository }}/main/.github/assets/mascot.gif
         run: |
           if [ -z "$SLACK_WEBHOOK_URL" ]; then
             echo "SLACK_WEBHOOK_URL not set — skipping Slack announcement"
             exit 0
           fi
 
-          title=$(gh release view "$TAG" --repo "$REPO" --json name --jq '.name // ""')
-          body=$(gh release view "$TAG" --repo "$REPO" --json body --jq '.body // ""')
-          url=$(gh release view "$TAG" --repo "$REPO" --json url --jq '.url')
+          export URL BODY
+          URL=$(gh release view "$TAG" --repo "$REPO" --json url --jq '.url')
+          BODY=$(gh release view "$TAG" --repo "$REPO" --json body --jq '.body // ""')
 
-          header="*${NAME}@${TAG}*"
-          if [ -n "$title" ] && [ "$title" != "$TAG" ]; then
-            header="${header} — ${title}"
-          fi
-          text="${header}"$'\n\n'"${body}"$'\n\n'"<${url}|View release>"
-
-          jq -n --arg t "$text" '{text: $t}' \
+          .github/scripts/slack-release.sh \
             | curl -sSf -X POST -H 'Content-type: application/json' --data @- "$SLACK_WEBHOOK_URL"

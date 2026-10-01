@@ -1,989 +1,616 @@
 package tui
 
 import (
-	"fmt"
-	"io"
+	"encoding/json"
+	"io/fs"
+	"maps"
+	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
+	"time"
 
-	"charm.land/bubbles/v2/list"
+	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"github.com/osbrjp/bungkus-cli/pkg"
 )
 
-const (
-	screenWizard  = iota // (Frontend tab: base, tooling, libraries, PM, advanced)
-	screenBackend        // (Backend tab: backend framework, ORM, database)
-	screenSummary        // (Summary screen for scaffold confirmation)
-)
+// Version is the bungkus-cli version shown in the header; cmd.SetVersion
+// sets it at startup.
+var Version = pkg.DevVersion
+
+// UpdateAvailable is the newer release tag (e.g. "v1.9.0") the header
+// announces, or "" when no update is known at startup.
+var UpdateAvailable string
+
+// pane identifies one of the three bento panes.
+type pane int
 
 const (
-	focusProjectName = iota // 0 (Top input text field)
-	focusBase               // 1 (Left panel: base framework list)
-	focusTooling            // 2 (Middle panel: CSS, Formatter, Linter, Test, Audit)
-	focusLibraries          // 3 (Right panel: Validation, Form, Query, State, CMS)
-	focusPM                 // 4 (Package manager horizontal selector)
-	focusAdvanced           // 5 (Advanced options dropdown row)
-	focusLen
+	paneSteps pane = iota
+	paneOptions
+	panePreview
+	paneCount
 )
+
+// phase is where the wizard is in its life: editing the config, running the
+// scaffold, or showing the scaffold's result.
+type phase int
 
 const (
-	panelBoxWidth   = 30 // outer width passed to border style
-	panelInnerWidth = 26 // content width inside border(2) + padding(2)
-	fullRowWidth    = panelBoxWidth * 3
+	phaseEdit phase = iota
+	phaseCreating
+	phaseDone
 )
 
-type PMModel struct {
-	options  []pkg.PMEntry
-	cursor   int
-	selected int
-}
-
-func (p *PMModel) CursorRight() {
-	p.cursor = (p.cursor + 1) % len(p.options)
-}
-
-func (p *PMModel) CursorLeft() {
-	p.cursor = (p.cursor - 1 + len(p.options)) % len(p.options)
-}
-
-func (p *PMModel) Select() {
-	p.selected = p.cursor
-}
-
-func (p *PMModel) View(active bool) string {
-	var parts []string
-	for i, opt := range p.options {
-		style := lipgloss.NewStyle().Padding(0, 2)
-
-		isSelected := i == p.selected
-		switch {
-		case active && i == p.cursor && isSelected:
-			style = style.Foreground(ColorOK).Reverse(true).Bold(true)
-		case active && i == p.cursor:
-			style = style.Reverse(true).Bold(true)
-		case isSelected:
-			style = style.Foreground(ColorOK).Reverse(true)
-		default:
-			style = style.Foreground(ColorMuted)
-		}
-
-		parts = append(parts, style.Render(opt.Label))
-	}
-	return lipgloss.JoinHorizontal(lipgloss.Center, parts...)
-}
-
-// advItem is one row in the advanced fold: a labeled horizontal value picker.
+// advItem is one row of the advanced step: a label and the values ←/→ cycle
+// through. The first option is always the default.
 type advItem struct {
 	name    string
-	options []Option // label/value pairs
-	cursor  int      // selected option index
+	options []string
+	cursor  int
 }
 
-// AdvancedModel is a collapsible set of low-frequency settings (version
-// channel, pin strategy, install, git, node engine). It renders as a single
-// muted line unless focused, keeping the common path uncluttered.
-type AdvancedModel struct {
-	items    []advItem
-	row      int
-	expanded bool
+// advancedModel holds the low-frequency settings of the advanced step:
+// version channel, pin strategy, install, git init and the node engine.
+type advancedModel struct {
+	items []advItem
+	row   int
 }
 
-func (a *AdvancedModel) Toggle()  { a.expanded = !a.expanded }
-func (a *AdvancedModel) RowDown() { a.row = (a.row + 1) % len(a.items) }
-func (a *AdvancedModel) RowUp()   { a.row = (a.row - 1 + len(a.items)) % len(a.items) }
-func (a *AdvancedModel) ValueRight() {
+// newAdvancedModel seeds the advanced rows so each starts on cfg's value.
+func newAdvancedModel(cfg pkg.ProjectConfig) advancedModel {
+	boolOpts := func(def bool) []string {
+		if def {
+			return []string{"yes", "no"}
+		}
+		return []string{"no", "yes"}
+	}
+	return advancedModel{items: []advItem{
+		{name: "channel", options: []string{string(pkg.ChannelPinned), string(pkg.ChannelLatest)}},
+		{name: "pin", options: []string{string(pkg.PinDefault), string(pkg.PinCaret), string(pkg.PinTilde), string(pkg.PinExact)}},
+		{name: "install", options: boolOpts(cfg.Install)},
+		{name: "git init", options: boolOpts(cfg.GitInit)},
+		{name: "node", options: []string{cfg.NodeEngine, ">=20.11.0", ">=18.18.0"}},
+	}}
+}
+
+// shift moves the focused row's value by d (±1), wrapping around.
+func (a *advancedModel) shift(d int) {
 	it := &a.items[a.row]
-	it.cursor = (it.cursor + 1) % len(it.options)
-}
-func (a *AdvancedModel) ValueLeft() {
-	it := &a.items[a.row]
-	it.cursor = (it.cursor - 1 + len(it.options)) % len(it.options)
+	it.cursor = (it.cursor + d + len(it.options)) % len(it.options)
 }
 
-// value returns the selected value for the named item.
-func (a *AdvancedModel) value(name string) string {
+// value returns the selected value of the named row.
+func (a advancedModel) value(name string) string {
 	for _, it := range a.items {
 		if it.name == name {
-			return it.options[it.cursor].value
+			return it.options[it.cursor]
 		}
 	}
 	return ""
 }
 
-func (a AdvancedModel) View(active bool) string {
-	caret := "▸"
-	label := "Advanced options"
-	head := MutedStyle.Render(label)
-	if active {
-		head = AccentStyle.Render(label)
-	}
-	if !a.expanded {
-		hint := FooterDescStyle.Render("  (space to expand)")
-		if !active {
-			hint = ""
-		}
-		return caret + " " + head + hint
-	}
-
-	var b strings.Builder
-	b.WriteString("▾ " + head + "\n")
-	for i, it := range a.items {
-		if i > 0 {
-			b.WriteString("\n")
-		}
-		b.WriteString(MutedStyle.Render(fmt.Sprintf("  %-13s", it.name+":")))
-		for j, opt := range it.options {
-			style := lipgloss.NewStyle().Padding(0, 1)
-			selected := j == it.cursor
-			focused := active && i == a.row
-			switch {
-			case focused && selected:
-				style = style.Foreground(ColorOK).Reverse(true).Bold(true)
-			case selected:
-				style = style.Foreground(ColorOK).Reverse(true)
-			case focused:
-				// terminal default foreground
-			default:
-				style = style.Foreground(ColorMuted)
-			}
-			b.WriteString(style.Render(opt.label))
-		}
-	}
-	return b.String()
-}
-
-// newAdvancedModel seeds the fold's selectors from the config defaults so the
-// highlighted option matches what scaffolding would use if left untouched.
-func newAdvancedModel(cfg pkg.ProjectConfig) AdvancedModel {
-	boolOpts := func(trueFirst bool) []Option {
-		yes := Option{label: "yes", value: "true"}
-		no := Option{label: "no", value: "false"}
-		if trueFirst {
-			return []Option{yes, no}
-		}
-		return []Option{no, yes}
-	}
-	return AdvancedModel{items: []advItem{
-		{name: "Channel", options: []Option{{"pinned", "pinned"}, {"latest", "latest"}}},
-		{name: "Pin", options: []Option{{"default", "default"}, {"caret", "caret"}, {"tilde", "tilde"}, {"exact", "exact"}}},
-		{name: "Install", options: boolOpts(cfg.Install)},
-		{name: "Git init", options: boolOpts(cfg.GitInit)},
-		{name: "Node", options: []Option{{cfg.NodeEngine, cfg.NodeEngine}, {">=20.11.0", ">=20.11.0"}, {">=18.18.0", ">=18.18.0"}}},
-	}}
-}
-
-type WizardModel struct {
-	Cfg         pkg.ProjectConfig
-	Canceled    bool
-	screen      uint
-	prevScreen  uint // tab to return to from the summary screen
-	focus       uint
-	width       int
-	height      int
-	BaseList    list.Model
-	tooling     AddOnsModel
-	libraries   AddOnsModel
-	backend     AddOnsModel
-	pm          PMModel
-	advanced    AdvancedModel
-	projectName textinput.Model
-}
-
-type Option struct {
-	label string
-	value string
-}
-
-func (o Option) FilterValue() string { return o.label }
-
-type optionDelegate struct{}
-
-func (d optionDelegate) Height() int                             { return 1 }
-func (d optionDelegate) Spacing() int                            { return 0 }
-func (d optionDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
-func (d optionDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
-	o, ok := listItem.(Option)
-	if !ok {
-		return
-	}
-
-	width := m.Width()
-	var line string
-	if index == m.Index() {
-		line = lipgloss.NewStyle().Width(width).Reverse(true).Bold(true).Render(" " + o.label)
-	} else {
-		line = lipgloss.NewStyle().Width(width).Foreground(ColorMuted).Render(" " + o.label)
-	}
-
-	fmt.Fprint(w, line)
-}
-
-// AddOnsModel holds multiple radio groups, each with independent selection.
-type AddOnsModel struct {
-	groups []RadioGroup
-	cursor int
-}
-
-type RadioGroup struct {
-	name     string
-	options  []RadioOption
-	selected int
-	disabled bool
-}
-
-type RadioOption struct {
-	label string
-	value string
-}
-
-func (a *AddOnsModel) totalItems() int {
+// changed counts the rows moved off their default.
+func (a advancedModel) changed() int {
 	n := 0
-	for _, g := range a.groups {
-		n += len(g.options)
+	for _, it := range a.items {
+		if it.cursor != 0 {
+			n++
+		}
 	}
 	return n
 }
 
-// cursorPos maps the flat cursor to (group index, item index).
-func (a *AddOnsModel) cursorPos() (int, int) {
-	offset := 0
-	for gi, g := range a.groups {
-		if a.cursor < offset+len(g.options) {
-			return gi, a.cursor - offset
-		}
-		offset += len(g.options)
-	}
-	return 0, 0
+// apply writes the advanced settings into cfg.
+func (a advancedModel) apply(cfg *pkg.ProjectConfig) {
+	cfg.Channel = pkg.VersionChannel(a.value("channel"))
+	cfg.Pin = pkg.PinStrategy(a.value("pin"))
+	cfg.Install = a.value("install") == "yes"
+	cfg.GitInit = a.value("git init") == "yes"
+	cfg.NodeEngine = a.value("node")
 }
 
-func (a *AddOnsModel) groupIndex(name string) int {
-	for i, g := range a.groups {
-		if g.name == name {
-			return i
-		}
-	}
-	return -1
+// WizardModel is the interactive create wizard: a steps pane listing every
+// choice, an options pane editing the selected step, and a preview pane with
+// the equivalent command, layout and dependencies. Scaffolding runs in the
+// preview pane; after the program exits the caller reads Cfg, Canceled,
+// Created and Err and runs the post-scaffold steps (install, git init),
+// whose subprocess output needs the normal terminal.
+type WizardModel struct {
+	// Cfg is the configuration being built; it is always consistent
+	// (see normalize).
+	Cfg pkg.ProjectConfig
+	// Canceled is true when the user quit before scaffolding finished.
+	Canceled bool
+	// Created is true when the project was scaffolded without error.
+	Created bool
+	// Err is the scaffolding error, if any.
+	Err error
+
+	templates     fs.FS
+	width, height int
+	focus         pane
+	step          int // index into steps
+	opt           int // cursor in the options pane
+	scroll        int // first visible line of the preview pane
+	help          bool
+	phase         phase
+	blocked       string // why the last create was refused
+	note          string // why the previous step kept its value; shown on the next step
+	name          textinput.Model
+	advanced      advancedModel
+	spin          spinner.Model
+	deps          depsMsg // package.json preview; stale unless deps.cfg == Cfg
+	wd, home      string
+	quote         int // index into quotes shown in the header
+	duck          int // position in duckLoop while scaffolding
+	jumpBuf       int // step number typed so far; 0 when no jump is pending
+	jumpSeq       int // identifies the latest digit so older expiry ticks are ignored
 }
 
-func (a *AddOnsModel) CursorDown() {
-	total := a.totalItems()
-	if total == 0 {
-		return
-	}
-	for range total {
-		a.cursor = (a.cursor + 1) % total
-		gi, _ := a.cursorPos()
-		if !a.groups[gi].disabled {
-			return
-		}
-	}
-}
-
-func (a *AddOnsModel) CursorUp() {
-	total := a.totalItems()
-	if total == 0 {
-		return
-	}
-	for range total {
-		a.cursor = (a.cursor - 1 + total) % total
-		gi, _ := a.cursorPos()
-		if !a.groups[gi].disabled {
-			return
-		}
-	}
-}
-
-func (a *AddOnsModel) Select() {
-	gi, ii := a.cursorPos()
-	if a.groups[gi].disabled {
-		return
-	}
-	a.groups[gi].selected = ii
-}
-
-func (a *AddOnsModel) View(active bool, width int) string {
-	var s strings.Builder
-
-	flatIdx := 0
-	for i, g := range a.groups {
-		if i > 0 {
-			s.WriteString("\n")
-		}
-
-		if g.disabled {
-			s.WriteString(MutedStyle.Render(g.name) + "\n")
-			for _, opt := range g.options {
-				text := " ◦ " + opt.label
-				s.WriteString(lipgloss.NewStyle().Width(width).Foreground(ColorDim).Render(text) + "\n")
-				flatIdx++
-			}
-			continue
-		}
-
-		s.WriteString(AccentStyle.Render(g.name) + "\n")
-
-		for j, opt := range g.options {
-			marker := "◦"
-			isSelected := j == g.selected
-			if isSelected {
-				marker = "•"
-			}
-
-			text := " " + marker + " " + opt.label
-			style := lipgloss.NewStyle().Width(width)
-
-			switch {
-			case active && flatIdx == a.cursor && isSelected:
-				style = style.Foreground(ColorOK).Reverse(true).Bold(true)
-			case active && flatIdx == a.cursor:
-				style = style.Reverse(true).Bold(true)
-			case isSelected:
-				style = style.Foreground(ColorOK).Reverse(true)
-			default:
-				style = style.Foreground(ColorMuted)
-			}
-
-			s.WriteString(style.Render(text) + "\n")
-			flatIdx++
-		}
-	}
-
-	return s.String()
-}
-
-func NewWizardModel() WizardModel {
+// NewWizardModel returns the wizard on its first step with a random header
+// quote, starting from pkg.NewProjectConfig with every choice on its
+// recommended or first option (see initialPicks). templates is the template
+// tree pkg.Scaffold renders from when the user creates the project.
+func NewWizardModel(templates fs.FS) WizardModel {
 	ti := textinput.New()
 	ti.Placeholder = "my-app"
-	ti.Focus()
-	ti.CharLimit = 156
-	ti.SetWidth(30)
+	ti.CharLimit = 214
+	ti.Prompt = ""
 
-	registry := pkg.GetRegistry()
-
-	baseItems := make([]list.Item, len(registry.Bases))
-	for i, b := range registry.Bases {
-		baseItems[i] = Option{
-			label: b.Label,
-			value: b.Value,
-		}
-	}
-
-	baseList := list.New(baseItems, optionDelegate{}, panelInnerWidth, len(registry.Bases)+2)
-	baseList.Title = "BASES"
-	baseList.Styles.TitleBar = lipgloss.NewStyle()
-	baseList.Styles.Title = PanelTitleStyle
-	baseList.Styles.NoItems = MutedStyle
-	baseList.SetShowStatusBar(false)
-	baseList.SetFilteringEnabled(false)
-	baseList.SetShowHelp(false)
-	baseList.SetShowPagination(false)
-
-	first := registry.Bases[0]
-	tooling, libraries, backend := buildAddOnPanels(registry, first.Group, first.Integration)
-
-	pm := PMModel{options: registry.PackageManagers}
-
-	defaults := pkg.NewProjectConfig()
+	cfg := pkg.NewProjectConfig()
+	wd, _ := os.Getwd()
+	home, _ := os.UserHomeDir()
 	m := WizardModel{
-		projectName: ti,
-		BaseList:    baseList,
-		tooling:     tooling,
-		libraries:   libraries,
-		backend:     backend,
-		pm:          pm,
-		advanced:    newAdvancedModel(defaults),
-		Cfg:         defaults,
+		Cfg:       cfg,
+		templates: templates,
+		name:      ti,
+		advanced:  newAdvancedModel(cfg),
+		spin:      spinner.New(spinner.WithSpinner(spinner.Dot)),
+		wd:        wd,
+		home:      home,
+		quote:     rand.IntN(len(quotes)),
 	}
-	m.syncLibraryConstraints()
+	initialPicks(&m.Cfg)
 	return m
 }
 
-// syncLibraryConstraints disables the CI/CD group when no deploy target is selected.
-func (m *WizardModel) syncLibraryConstraints() {
-	deployIdx := m.libraries.groupIndex("Deploy")
-	cicdIdx := m.libraries.groupIndex("CI/CD")
-	if deployIdx < 0 || cicdIdx < 0 {
-		return
-	}
-	deploy := &m.libraries.groups[deployIdx]
-	cicd := &m.libraries.groups[cicdIdx]
-	noDeploySelected := deploy.options[deploy.selected].value == "none"
-	if noDeploySelected {
-		cicd.disabled = true
-		cicd.selected = 0
-	} else {
-		cicd.disabled = false
-	}
+// Init starts loading the dependency preview.
+func (m WizardModel) Init() tea.Cmd {
+	return loadDeps(m.Cfg)
 }
 
-func buildAddOnPanels(reg *pkg.Registry, group string, integration string) (tooling, libraries, backend AddOnsModel) {
-	// Resolve effective integration: nuxt is implicitly vue
-	effectiveInt := integration
-	if group == "nuxt" {
-		effectiveInt = "vue"
-	}
+// appDeps is one package.json of the preview: its app name and its
+// dependencies then devDependencies, each sorted by name, as {name, version}.
+type appDeps struct {
+	name string
+	pkgs [][2]string
+}
 
-	toolingCats := []struct {
-		name    string
-		entries []pkg.OptionEntry
-	}{
-		{"CSS", reg.CSS},
-		{"Formatter", reg.Formatters},
-		{"Linter", reg.Linters},
-		{"Test", reg.Test},
-		{"Audit", reg.Audit},
-	}
+// depsMsg carries the package.json preview built for cfg.
+type depsMsg struct {
+	cfg    pkg.ProjectConfig
+	apps   []appDeps
+	extras []string // web packages only a combination of picks adds
+	err    error
+}
 
-	libraryCats := []struct {
-		name    string
-		entries []pkg.OptionEntry
-	}{
-		{"Validation", reg.Validation},
-		{"Form", reg.Form},
-		{"Query", reg.Query},
-		{"State", reg.State},
-		{"CMS", reg.CMS},
-		{"Deploy", reg.Deployment},
-		{"CI/CD", reg.CICD},
-		{"Desktop", reg.Desktop},
-	}
+// scaffoldedMsg reports the end of pkg.Scaffold.
+type scaffoldedMsg struct{ err error }
 
-	// Backend concerns live on their own tab, kept out of the frontend panels.
-	backendCats := []struct {
-		name    string
-		entries []pkg.OptionEntry
-	}{
-		{"Backend", reg.Backend},
-		{"ORM", reg.ORM},
-		{"Database", reg.Database},
-	}
+// jumpWindow is how long after a digit a second digit extends the step
+// number instead of starting a new one.
+const jumpWindow = 700 * time.Millisecond
 
-	build := func(cats []struct {
-		name    string
-		entries []pkg.OptionEntry
-	},
-	) AddOnsModel {
-		var groups []RadioGroup
-		for _, cat := range cats {
-			var opts []RadioOption
-			for _, e := range cat.entries {
-				if e.ExcludesGroup(group) {
-					continue
-				}
-				if len(e.RequiresIntegration) > 0 {
-					if effectiveInt == "" || !slices.Contains(e.RequiresIntegration, effectiveInt) {
-						continue
-					}
-				}
-				opts = append(opts, RadioOption{label: e.Label, value: e.Value})
+// jumpExpiredMsg ends the digit window opened by the digit numbered seq.
+type jumpExpiredMsg struct{ seq int }
+
+// duckMsg advances the header mascot's duck animation by one frame.
+type duckMsg struct{}
+
+// duckTick schedules the next duck frame, or nothing without a terminal.
+func duckTick() tea.Cmd {
+	if !animate {
+		return nil
+	}
+	return tea.Tick(duckInterval, func(time.Time) tea.Msg { return duckMsg{} })
+}
+
+// pkgBuilder names one package.json the preview shows and builds it.
+type pkgBuilder struct {
+	name  string
+	build func(pkg.ProjectConfig) ([]byte, error)
+}
+
+// loadDeps builds the package.json files cfg would produce: web alone in the
+// flat layout, web, api and domain in the monorepo. It runs off the update
+// loop because the builder shells out to the package manager for its version.
+func loadDeps(cfg pkg.ProjectConfig) tea.Cmd {
+	return func() tea.Msg {
+		msg := depsMsg{cfg: cfg}
+		builders := []pkgBuilder{{"web", pkg.BuildPackageJSON}}
+		if cfg.Layout.IsMonorepo() {
+			builders = append(builders, pkgBuilder{"api", pkg.BuildAPIPackageJSON}, pkgBuilder{"domain", pkg.BuildDomainPackageJSON})
+		}
+		for _, b := range builders {
+			raw, err := b.build(cfg)
+			if err != nil {
+				msg.err = err
+				return msg
 			}
-			if len(opts) > 0 {
-				groups = append(groups, RadioGroup{name: cat.name, options: opts})
+			var p struct {
+				Dependencies, DevDependencies map[string]string
+			}
+			if err := json.Unmarshal(raw, &p); err != nil {
+				msg.err = err
+				return msg
+			}
+			app := appDeps{name: b.name}
+			for _, set := range []map[string]string{p.Dependencies, p.DevDependencies} {
+				for _, n := range slices.Sorted(maps.Keys(set)) {
+					app.pkgs = append(app.pkgs, [2]string{n, set[n]})
+				}
+			}
+			msg.apps = append(msg.apps, app)
+			if b.name == "web" {
+				msg.extras = comboExtras(cfg, p.Dependencies, p.DevDependencies)
 			}
 		}
-		return AddOnsModel{groups: groups}
+		return msg
 	}
-
-	return build(toolingCats), build(libraryCats), build(backendCats)
 }
 
-func (m WizardModel) Init() tea.Cmd {
-	return textinput.Blink
+// comboExtras returns the names in sets that neither the registry's common
+// packages nor any single pick lists as its own: what the package.json
+// builder adds for a combination (prettier with tailwind, react-hook-form
+// with zod, a database driver, …). The result is sorted.
+func comboExtras(cfg pkg.ProjectConfig, sets ...map[string]string) []string {
+	common := pkg.GetRegistry().CommonPackages
+	known := map[string]bool{pkg.DomainPackage: true}
+	for n := range common.Dependencies {
+		known[n] = true
+	}
+	for n := range common.DevDependencies {
+		known[n] = true
+	}
+	for _, s := range steps {
+		if s.kind != kindChoice {
+			continue
+		}
+		v := s.get(cfg)
+		for _, c := range choices(s, cfg) {
+			if c.value == v {
+				for _, n := range c.adds {
+					known[n] = true
+				}
+			}
+		}
+	}
+	var out []string
+	for _, set := range sets {
+		for n := range set {
+			if !known[n] {
+				out = append(out, n)
+			}
+		}
+	}
+	slices.Sort(out)
+	return out
 }
 
+// runScaffold renders the project into dest.
+func runScaffold(dest string, templates fs.FS, cfg pkg.ProjectConfig) tea.Cmd {
+	return func() tea.Msg {
+		return scaffoldedMsg{err: pkg.Scaffold(dest, templates, cfg)}
+	}
+}
+
+// Update handles window size, async results and keys.
 func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
+		m.width, m.height = msg.Width, msg.Height
+		return m, nil
+	case depsMsg:
+		if msg.cfg == m.Cfg {
+			m.deps = msg
+		}
+		return m, nil
+	case spinner.TickMsg:
+		if m.phase != phaseCreating {
+			return m, nil
+		}
+		var cmd tea.Cmd
+		m.spin, cmd = m.spin.Update(msg)
+		return m, cmd
+	case duckMsg:
+		if m.phase != phaseCreating {
+			return m, nil
+		}
+		m.duck = (m.duck + 1) % len(duckLoop)
+		return m, duckTick()
+	case scaffoldedMsg:
+		m.phase = phaseDone
+		m.duck = 0
+		m.Err = msg.err
+		m.Created = msg.err == nil
+		return m, nil
+	case jumpExpiredMsg:
+		if msg.seq == m.jumpSeq {
+			m.jumpBuf = 0
+		}
 		return m, nil
 	case tea.KeyPressMsg:
-		// Summary screen key handling
-		if m.screen == screenSummary {
-			switch msg.String() {
-			case "ctrl+c", "esc", "q":
-				m.Canceled = true
-				return m, tea.Quit
-			case "enter":
-				// Confirm — quit with config ready
-				return m, tea.Quit
-			case "backspace":
-				// Go back to the tab we came from
-				m.screen = m.prevScreen
-				return m, nil
-			}
-			return m, nil
-		}
-
-		// Backend tab key handling
-		if m.screen == screenBackend {
-			switch msg.String() {
-			case "ctrl+c", "esc", "q":
-				m.Canceled = true
-				return m, tea.Quit
-			case "enter":
-				m.collectConfig()
-				m.prevScreen = m.screen
-				m.screen = screenSummary
-				return m, nil
-			case "[", "]", "tab", "shift+tab":
-				m.screen = screenWizard
-				return m, nil
-			case "down", "j":
-				m.backend.CursorDown()
-				return m, nil
-			case "up", "k":
-				m.backend.CursorUp()
-				return m, nil
-			case "space":
-				m.backend.Select()
-				return m, nil
-			}
-			return m, nil
-		}
-
-		// Wizard screen key handling
-		switch msg.String() {
-		case "[", "]":
-			// Switch to the backend tab. Brackets are never valid in a project
-			// name, so this works even while the name field has focus.
-			m.screen = screenBackend
-			return m, nil
-		case "q":
-			// Quit, unless typing into the project name field
-			if m.focus != focusProjectName {
-				m.Canceled = true
-				return m, tea.Quit
-			}
-		case "ctrl+c", "esc":
-			m.Canceled = true
-			return m, tea.Quit
-		case "enter":
-			// Collect config and move to summary screen
-			if m.focus != focusProjectName {
-				m.collectConfig()
-				m.prevScreen = m.screen
-				m.screen = screenSummary
-				return m, nil
-			}
-		case "tab":
-			m.focus = m.focusNext()
-		case "shift+tab":
-			m.focus = m.focusPrev()
-		case "down", "j", "right", "l":
-			if m.focus == focusBase {
-				var cmd tea.Cmd
-				m.BaseList, cmd = m.BaseList.Update(msg)
-				m.rebuildAddOns()
-				return m, cmd
-			}
-			if m.focus == focusTooling {
-				m.tooling.CursorDown()
-				return m, nil
-			}
-			if m.focus == focusLibraries {
-				m.libraries.CursorDown()
-				return m, nil
-			}
-			if m.focus == focusPM {
-				m.pm.CursorRight()
-				return m, nil
-			}
-			if m.focus == focusAdvanced && m.advanced.expanded {
-				if k := msg.String(); k == "down" || k == "j" {
-					m.advanced.RowDown()
-				} else {
-					m.advanced.ValueRight()
-				}
-				return m, nil
-			}
-		case "up", "k", "left", "h":
-			if m.focus == focusBase {
-				var cmd tea.Cmd
-				m.BaseList, cmd = m.BaseList.Update(msg)
-				m.rebuildAddOns()
-				return m, cmd
-			}
-			if m.focus == focusTooling {
-				m.tooling.CursorUp()
-				return m, nil
-			}
-			if m.focus == focusLibraries {
-				m.libraries.CursorUp()
-				return m, nil
-			}
-			if m.focus == focusPM {
-				m.pm.CursorLeft()
-				return m, nil
-			}
-			if m.focus == focusAdvanced && m.advanced.expanded {
-				if k := msg.String(); k == "up" || k == "k" {
-					m.advanced.RowUp()
-				} else {
-					m.advanced.ValueLeft()
-				}
-				return m, nil
-			}
-		case "space":
-			if m.focus == focusTooling {
-				m.tooling.Select()
-				return m, nil
-			}
-			if m.focus == focusLibraries {
-				m.libraries.Select()
-				m.syncLibraryConstraints()
-				return m, nil
-			}
-			if m.focus == focusPM {
-				m.pm.Select()
-				return m, nil
-			}
-			if m.focus == focusAdvanced {
-				m.advanced.Toggle()
-				return m, nil
-			}
-		}
+		return m.key(msg)
 	}
-
-	// Update text input field
-	if m.focus == focusProjectName {
+	if m.editingName() {
 		var cmd tea.Cmd
-		m.projectName, cmd = m.projectName.Update(msg)
+		m.name, cmd = m.name.Update(msg)
 		return m, cmd
 	}
-
-	var cmd tea.Cmd
-
-	return m, cmd
+	return m, nil
 }
 
-// collectConfig gathers all current selections into the ProjectConfig.
-func (m *WizardModel) collectConfig() {
-	name := m.projectName.Value()
-	if name == "" {
-		name = "my-app"
-	}
-	if name == "." {
-		cwd, _ := os.Getwd()
-		m.Cfg.DestDir = "."
-		name = filepath.Base(cwd)
-	}
-	m.Cfg.ProjectName = name
+// editingName reports whether printable keys go to the name field.
+func (m WizardModel) editingName() bool {
+	return m.phase == phaseEdit && !m.help && m.focus == paneOptions && steps[m.step].kind == kindName
+}
 
-	if sel, ok := m.BaseList.SelectedItem().(Option); ok {
-		m.Cfg.Base = pkg.BaseFramework(sel.value)
+// key dispatches one key press. The order encodes precedence: ctrl+c always
+// quits, then the scaffold phases, the help overlay, the name field, and
+// finally the pane keys.
+func (m WizardModel) key(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	k := msg.String()
+	if k == "ctrl+c" {
+		m.Canceled = m.phase != phaseDone
+		return m, tea.Quit
+	}
+	switch m.phase {
+	case phaseCreating:
+		return m, nil
+	case phaseDone:
+		switch k {
+		case "enter", "q", "esc":
+			return m, tea.Quit
+		}
+		return m, nil
+	}
+	if m.help {
+		m.help = false
+		return m, nil
 	}
 
-	for _, g := range m.tooling.groups {
-		selected := g.options[g.selected]
-		switch g.name {
-		case "CSS":
-			m.Cfg.CSS = pkg.CSSFramework(selected.value)
-		case "Formatter":
-			m.Cfg.Fmt = pkg.Formatter(selected.value)
-		case "Linter":
-			m.Cfg.Linter = pkg.Linter(selected.value)
-		case "Test":
-			m.Cfg.Test = pkg.TestingFramework(selected.value)
-		case "Audit":
-			m.Cfg.Audit = pkg.AuditTool(selected.value)
+	if m.editingName() {
+		switch k {
+		case "tab", "shift+tab", "enter", "esc":
+		default:
+			var cmd tea.Cmd
+			m.name, cmd = m.name.Update(msg)
+			return m, tea.Batch(cmd, m.syncName())
 		}
 	}
 
-	for _, g := range m.libraries.groups {
-		selected := g.options[g.selected]
-		switch g.name {
-		case "Validation":
-			m.Cfg.Validation = pkg.ValidationLib(selected.value)
-		case "Form":
-			m.Cfg.Form = pkg.FormLib(selected.value)
-		case "Query":
-			m.Cfg.Query = pkg.QueryLib(selected.value)
-		case "State":
-			m.Cfg.State = pkg.StateLib(selected.value)
-		case "CMS":
-			m.Cfg.CMS = pkg.CMS(selected.value)
-		case "Deploy":
-			m.Cfg.Deployment = pkg.DeployTarget(selected.value)
-		case "CI/CD":
-			m.Cfg.CICD = pkg.CICDProvider(selected.value)
-		case "Desktop":
-			m.Cfg.Desktop = pkg.DesktopTarget(selected.value)
+	if len(k) == 1 && k[0] >= '0' && k[0] <= '9' && m.focus != panePreview {
+		return m.jump(int(k[0] - '0'))
+	}
+	m.jumpBuf = 0
+
+	switch k {
+	case "q":
+		if m.focus != panePreview {
+			m.Canceled = true
+			return m, tea.Quit
 		}
-	}
-
-	// Backend tab
-	for _, g := range m.backend.groups {
-		selected := g.options[g.selected]
-		switch g.name {
-		case "Backend":
-			m.Cfg.Backend = pkg.BackendLib(selected.value)
-		case "ORM":
-			m.Cfg.ORM = pkg.ORMLib(selected.value)
-		case "Database":
-			m.Cfg.Database = pkg.Database(selected.value)
+	case "?":
+		m.help = true
+	case "r":
+		m.setStep(len(steps) - 1)
+		return m.focusPane(paneOptions)
+	case "esc":
+		return m.focusPane(paneSteps)
+	case "tab":
+		return m.focusPane((m.focus + 1) % paneCount)
+	case "shift+tab":
+		return m.focusPane((m.focus + paneCount - 1) % paneCount)
+	case "left", "h", "right", "l":
+		d := 1
+		if k == "left" || k == "h" {
+			d = -1
 		}
-	}
-
-	m.Cfg.PM = pkg.PackageManager(m.pm.options[m.pm.selected].Value)
-
-	m.Cfg.Channel = pkg.VersionChannel(m.advanced.value("Channel"))
-	m.Cfg.Pin = pkg.PinStrategy(m.advanced.value("Pin"))
-	m.Cfg.Install = m.advanced.value("Install") == "true"
-	m.Cfg.GitInit = m.advanced.value("Git init") == "true"
-	m.Cfg.NodeEngine = m.advanced.value("Node")
-
-	// A selected backend implies the monorepo layout (pnpm only).
-	m.Cfg.ApplyDefaultLayout()
-}
-
-func (m WizardModel) View() tea.View {
-	var c *tea.Cursor
-	if !m.projectName.VirtualCursor() {
-		c = m.projectName.Cursor()
-		c.Y += lipgloss.Height("10")
-	}
-
-	if m.screen == screenSummary {
-		return paint(tea.NewView(m.centered(m.summaryPopup())))
-	}
-
-	if m.screen == screenBackend {
-		layout := lipgloss.JoinVertical(lipgloss.Top, m.tabBar(), m.backendView(), m.footerView())
-		return paint(tea.NewView(layout))
-	}
-
-	lists := m.middleRow()
-	layout := lipgloss.JoinVertical(lipgloss.Top, m.tabBar(), m.projectNameInputView(), lists, m.pmView(), m.advancedView(), m.footerView())
-
-	return paint(tea.NewView(layout))
-}
-
-// centered places an overlay in the middle of the terminal.
-func (m WizardModel) centered(overlay string) string {
-	w, h := m.width, m.height
-	if w == 0 {
-		w = 80
-	}
-	if h == 0 {
-		h = 24
-	}
-	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center, overlay)
-}
-
-func (m WizardModel) summaryPopup() string {
-	title := AccentStyle.Render("  Confirm Project") + "\n\n"
-
-	row := func(label, value string) string {
-		if value == "none" {
-			return ""
+		// In the advanced step h/l and ←/→ change the row's value, like vim
+		// motions everywhere else; esc and tab still leave the pane.
+		if m.focus == paneOptions && steps[m.step].kind == kindAdvanced {
+			m.advanced.shift(d)
+			return m, m.refresh()
 		}
-		return MutedStyle.Render("  "+label) + PrimaryStyle.Render(value) + "\n"
-	}
-
-	yesno := func(b bool) string {
-		if b {
-			return "yes"
+		return m.focusPane(pane(min(max(int(m.focus)+d, 0), int(paneCount)-1)))
+	case "down", "j":
+		m.move(1)
+	case "up", "k":
+		m.move(-1)
+	case "space":
+		if m.focus == paneOptions {
+			return m, m.pick()
 		}
-		return "no"
+	case "enter":
+		return m.enter()
 	}
-
-	body := row("Project:    ", m.Cfg.ProjectName) +
-		row("Base:       ", string(m.Cfg.Base)) +
-		row("CSS:        ", string(m.Cfg.CSS)) +
-		row("Formatter:  ", string(m.Cfg.Fmt)) +
-		row("Linter:     ", string(m.Cfg.Linter)) +
-		row("Test:       ", string(m.Cfg.Test)) +
-		row("Audit:      ", string(m.Cfg.Audit)) +
-		row("Validation: ", string(m.Cfg.Validation)) +
-		row("Form:       ", string(m.Cfg.Form)) +
-		row("Query:      ", string(m.Cfg.Query)) +
-		row("State:      ", string(m.Cfg.State)) +
-		row("CMS:        ", string(m.Cfg.CMS)) +
-		row("Deploy:     ", string(m.Cfg.Deployment)) +
-		row("CI/CD:      ", string(m.Cfg.CICD)) +
-		row("Desktop:    ", string(m.Cfg.Desktop)) +
-		row("Backend:    ", string(m.Cfg.Backend)) +
-		row("ORM:        ", string(m.Cfg.ORM)) +
-		row("Database:   ", string(m.Cfg.Database)) +
-		row("Layout:     ", string(m.Cfg.Layout)) +
-		row("PM:         ", string(m.Cfg.PM)) +
-		row("Channel:    ", string(m.Cfg.Channel)) +
-		row("Pin:        ", string(m.Cfg.Pin)) +
-		row("Install:    ", yesno(m.Cfg.Install)) +
-		row("Git init:   ", yesno(m.Cfg.GitInit)) +
-		row("Node:       ", m.Cfg.NodeEngine)
-
-	key := func(k, desc string) string {
-		return FooterKeyStyle.Render(k) + FooterDescStyle.Render(" "+desc)
-	}
-
-	footer := "\n" +
-		key("enter", "confirm") +
-		FooterSepStyle.Render("  •  ") +
-		key("backspace", "back") +
-		FooterSepStyle.Render("  •  ") +
-		key("q/esc", "quit")
-
-	popup := lipgloss.NewStyle().
-		Border(inactiveShape).
-		BorderForeground(ColorMuted).
-		Padding(1, 2).
-		Render(title + body + footer)
-
-	return popup
+	return m, nil
 }
 
-func (m WizardModel) projectNameInputView() string {
-	label := AccentStyle.Render("Project Name:")
-	box := m.borderFor(focusProjectName).Width(fullRowWidth)
-	return box.Render(label + "\n" + m.projectName.View())
+// jump handles a digit typed in the steps or options pane. Within jumpWindow
+// of the previous digit it extends the number (1 then 6 is 16), otherwise it
+// starts a new one. A number naming a step selects it and focuses the steps
+// pane; one out of range leaves the last jump in place. 0 as the first digit
+// jumps to review, which is numbered 0.
+func (m WizardModel) jump(d int) (tea.Model, tea.Cmd) {
+	if d == 0 && m.jumpBuf == 0 {
+		m.setStep(len(steps) - 1)
+		return m.focusPane(paneSteps)
+	}
+	m.jumpBuf = m.jumpBuf*10 + d
+	m.jumpSeq++
+	seq := m.jumpSeq
+	expire := tea.Tick(jumpWindow, func(time.Time) tea.Msg { return jumpExpiredMsg{seq} })
+	if m.jumpBuf < 1 || m.jumpBuf > len(steps)-1 {
+		return m, expire
+	}
+	m.setStep(m.jumpBuf - 1)
+	next, cmd := m.focusPane(paneSteps)
+	return next, tea.Batch(cmd, expire)
 }
 
-func (m WizardModel) middleRow() string {
-	baseContent := m.BaseList.View()
-	toolingContent := PanelTitleStyle.Render("TOOLING") + "\n" + m.tooling.View(m.focus == focusTooling, panelInnerWidth)
-	librariesContent := PanelTitleStyle.Render("LIBRARIES") + "\n" + m.libraries.View(m.focus == focusLibraries, panelInnerWidth)
-
-	// Trim trailing newlines so lipgloss.Height counts consistently
-	baseContent = strings.TrimRight(baseContent, "\n")
-	toolingContent = strings.TrimRight(toolingContent, "\n")
-	librariesContent = strings.TrimRight(librariesContent, "\n")
-
-	h := max(
-		lipgloss.Height(baseContent),
-		lipgloss.Height(toolingContent),
-		lipgloss.Height(librariesContent),
-	)
-
-	box := func(focus uint) lipgloss.Style {
-		return m.borderFor(focus).Width(panelBoxWidth).Height(h)
+// focusPane moves focus to p and focuses or blurs the name field to match.
+func (m WizardModel) focusPane(p pane) (tea.Model, tea.Cmd) {
+	m.focus = p
+	if m.editingName() {
+		return m, m.name.Focus()
 	}
-
-	return lipgloss.JoinHorizontal(lipgloss.Top,
-		box(focusBase).Render(baseContent),
-		box(focusTooling).Render(toolingContent),
-		box(focusLibraries).Render(librariesContent),
-	)
+	m.name.Blur()
+	return m, nil
 }
 
-func (m WizardModel) pmView() string {
-	label := AccentStyle.Render("Package Manager:")
-	box := m.borderFor(focusPM).Width(fullRowWidth)
-	return box.Render(label + "\n" + m.pm.View(m.focus == focusPM))
-}
-
-func (m WizardModel) advancedView() string {
-	box := m.borderFor(focusAdvanced).Width(fullRowWidth)
-	return box.Render(m.advanced.View(m.focus == focusAdvanced))
-}
-
-// tabBar renders the Frontend / Backend tab selector shown on both screens.
-func (m WizardModel) tabBar() string {
-	tab := func(label string, active bool) string {
-		style := lipgloss.NewStyle().Padding(0, 3)
-		if active {
-			return style.Foreground(ColorOK).Reverse(true).Bold(true).Render(label)
-		}
-		return style.Foreground(ColorMuted).Render(label)
-	}
-	bar := lipgloss.JoinHorizontal(lipgloss.Top,
-		tab("Frontend", m.screen == screenWizard),
-		tab("Backend", m.screen == screenBackend),
-	)
-	return lipgloss.NewStyle().Width(fullRowWidth).Render(bar)
-}
-
-func (m WizardModel) backendView() string {
-	title := PanelTitleStyle.Render("BACKEND")
-	hint := FooterDescStyle.Render("Selecting a backend scaffolds a pnpm monorepo:\napps/web + apps/api + packages/domain.")
-	content := title + "\n" + m.backend.View(true, panelInnerWidth) + "\n\n" + hint
-	return ActiveBorder.Width(fullRowWidth).Render(content)
-}
-
-func (m *WizardModel) rebuildAddOns() {
-	sel, ok := m.BaseList.SelectedItem().(Option)
-	if !ok {
-		return
-	}
-	reg := pkg.GetRegistry()
-	base := reg.GetBase(sel.value)
-	if base != nil {
-		m.tooling, m.libraries, m.backend = buildAddOnPanels(reg, base.Group, base.Integration)
-		m.syncLibraryConstraints()
-	}
-}
-
-func (m WizardModel) borderFor(section uint) lipgloss.Style {
-	if m.focus == section {
-		return ActiveBorder
-	}
-	return InactiveBorder
-}
-
-func (m WizardModel) footerView() string {
-	key := func(k, desc string) string {
-		return FooterKeyStyle.Render(k) + FooterDescStyle.Render(" "+desc)
-	}
-
-	if m.screen == screenBackend {
-		line := strings.Join([]string{
-			key("[ / ]", "Frontend ⇄ Backend"),
-			key("↑/↓", "move"),
-			key("space", "select"),
-			key("enter", "confirm"),
-			key("q/esc", "quit"),
-		}, FooterSepStyle.Render("  •  "))
-		return FooterBarStyle.Render(StatusModeStyle.Render(" CREATE ") + "  " + line)
-	}
-
-	bindings := []string{
-		key("[ / ]", "Frontend ⇄ Backend"),
-		key("tab/shift+tab", "navigate"),
-	}
-
+// enter opens the options of the selected step from the steps pane. In the
+// options pane it picks the option under the cursor and moves to the next
+// step, or creates the project on the review step; an option that cannot be
+// picked leaves everything as it is.
+func (m WizardModel) enter() (tea.Model, tea.Cmd) {
 	switch m.focus {
-	case focusBase, focusTooling, focusLibraries:
-		bindings = append(bindings, key("↑/↓", "move"))
-	case focusPM:
-		bindings = append(bindings, key("←/→/↑/↓", "move"))
+	case paneSteps:
+		return m.focusPane(paneOptions)
+	case paneOptions:
+		s := steps[m.step]
+		if s.kind == kindReview {
+			return m.create()
+		}
+		var cmd tea.Cmd
+		note := ""
+		if s.kind == kindChoice {
+			if c := choices(s, m.Cfg)[m.opt]; c.reason != "" {
+				note = keptNote(s, m.Cfg, c)
+			} else {
+				cmd = m.pick()
+			}
+		}
+		m.setStep(m.step + 1)
+		m.note = note
+		next, focusCmd := m.focusPane(paneOptions)
+		return next, tea.Batch(cmd, focusCmd)
 	}
-	if m.focus == focusTooling || m.focus == focusLibraries || m.focus == focusPM {
-		bindings = append(bindings, key("space", "select"))
-	}
-	if m.focus == focusAdvanced {
-		if m.advanced.expanded {
-			bindings = append(bindings, key("↑/↓", "row"), key("←/→", "change"), key("space", "collapse"))
-		} else {
-			bindings = append(bindings, key("space", "expand"))
+	return m, nil
+}
+
+// keptNote explains why enter on an option the stack can't use moved on
+// without picking it, e.g. "React Hook Form needs React · kept None".
+func keptNote(s stepDef, cfg pkg.ProjectConfig, c choice) string {
+	kept := s.get(cfg)
+	for _, o := range choices(s, cfg) {
+		if o.value == kept {
+			kept = o.label
+			break
 		}
 	}
-
-	bindings = append(bindings, key("enter", "confirm"), key("q/esc", "quit"))
-
-	line := StatusModeStyle.Render(" CREATE ") + "  " + strings.Join(bindings, FooterSepStyle.Render("  •  "))
-	line += "\n" + FooterDescStyle.Render("* recommended")
-
-	return FooterBarStyle.Render(line)
+	return c.label + " " + c.reason + " · kept " + kept
 }
 
-func (m WizardModel) focusNext() uint {
-	if m.focus == focusLen-1 {
-		return focusProjectName
+// setStep selects step i (clamped) and puts the options cursor on that
+// step's current value.
+func (m *WizardModel) setStep(i int) {
+	m.step = min(max(i, 0), len(steps)-1)
+	m.opt = 0
+	m.advanced.row = 0
+	m.blocked = ""
+	m.note = ""
+	if s := steps[m.step]; s.kind == kindChoice {
+		v := s.get(m.Cfg)
+		m.opt = max(0, slices.IndexFunc(choices(s, m.Cfg), func(c choice) bool { return c.value == v }))
 	}
-
-	return m.focus + 1
 }
 
-func (m WizardModel) focusPrev() uint {
-	if m.focus == 0 {
-		return focusLen - 1
+// move handles j/k in the focused pane: the step cursor, the option or
+// advanced-row cursor, or the preview scroll offset.
+func (m *WizardModel) move(d int) {
+	switch m.focus {
+	case paneSteps:
+		m.setStep(m.step + d)
+	case paneOptions:
+		switch s := steps[m.step]; s.kind {
+		case kindChoice:
+			m.opt = min(max(m.opt+d, 0), len(choices(s, m.Cfg))-1)
+		case kindAdvanced:
+			m.advanced.row = min(max(m.advanced.row+d, 0), len(m.advanced.items)-1)
+		}
+	case panePreview:
+		w, h := m.paneBox(panePreview)
+		m.scroll = min(max(m.scroll+d, 0), max(0, len(m.previewLines(w-2))-(h-2)))
 	}
+}
 
-	return m.focus - 1
+// pick applies the option under the cursor of the options pane: a choice
+// step's option when it can be picked, or the next value of the focused
+// advanced row. It returns the command reloading the dependency preview.
+func (m *WizardModel) pick() tea.Cmd {
+	switch s := steps[m.step]; s.kind {
+	case kindChoice:
+		c := choices(s, m.Cfg)[m.opt]
+		if c.reason != "" {
+			return nil
+		}
+		s.set(&m.Cfg, c.value)
+	case kindAdvanced:
+		m.advanced.shift(1)
+	default:
+		return nil
+	}
+	return m.refresh()
+}
+
+// refresh re-derives Cfg after an edit and reloads the dependency preview.
+func (m *WizardModel) refresh() tea.Cmd {
+	m.advanced.apply(&m.Cfg)
+	normalize(&m.Cfg)
+	return loadDeps(m.Cfg)
+}
+
+// syncName copies the name field into Cfg as `create` reads the same
+// argument: empty means "my-app" and "." means the current directory.
+func (m *WizardModel) syncName() tea.Cmd {
+	switch v := m.name.Value(); v {
+	case "":
+		m.Cfg.ProjectName, m.Cfg.DestDir = "my-app", ""
+	case ".":
+		m.Cfg.ProjectName, m.Cfg.DestDir = filepath.Base(m.wd), "."
+	default:
+		m.Cfg.ProjectName, m.Cfg.DestDir = v, ""
+	}
+	return loadDeps(m.Cfg)
+}
+
+// dest is the directory the project is scaffolded into.
+func (m WizardModel) dest() string {
+	if m.Cfg.DestDir != "" {
+		return m.Cfg.DestDir
+	}
+	return m.Cfg.ProjectName
+}
+
+// create validates the name and destination with the checks `create`
+// applies, then starts scaffolding in the preview pane. A refusal is shown on
+// the review step instead.
+func (m WizardModel) create() (tea.Model, tea.Cmd) {
+	if ok, msg := nameStatus(m.name.Value()); !ok {
+		m.blocked = msg
+		return m, nil
+	}
+	if err := pkg.ValidateDest(m.dest()); err != nil {
+		m.blocked = err.Error()
+		return m, nil
+	}
+	m.phase = phaseCreating
+	m.focus = panePreview
+	m.name.Blur()
+	m.duck = 0
+	return m, tea.Batch(m.spin.Tick, duckTick(), runScaffold(m.dest(), m.templates, m.Cfg))
 }
