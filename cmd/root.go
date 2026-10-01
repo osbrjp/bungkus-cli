@@ -6,6 +6,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -21,6 +22,7 @@ var rootCmd = &cobra.Command{
 	Short: "A frontend scaffolding cli tool.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		tui.UpdateAvailable = knownUpdate(cmd.Root().Version)
+		tui.UpdateCommand = updateCommand(installedBy)
 		wizardResult, err := tea.NewProgram(tui.NewWizardModel(config.Templates)).Run()
 		if err != nil {
 			return err
@@ -78,7 +80,12 @@ func isTerminal(f *os.File) bool {
 }
 
 // SetVersion sets the version `--version` prints and the wizard header shows.
+// v is the build-time stamp; without one, the version Go recorded for a
+// `go install` build is used (see resolveVersion), which also decides how
+// `update` works.
 func SetVersion(v string) {
+	bi, ok := debug.ReadBuildInfo()
+	v, installedBy = resolveVersion(v, bi, ok)
 	rootCmd.Version = v
 	tui.Version = v
 }
@@ -113,8 +120,8 @@ func startUpdateCheck() func() {
 		select {
 		case tag := <-latest:
 			if tag != "" {
-				fmt.Fprintf(os.Stderr, "\na newer version is available (%s → %s) — run: bungkus-cli update\n",
-					pkg.NormalizeVersion(current), tag)
+				fmt.Fprintf(os.Stderr, "\na newer version is available (%s → %s) — run: %s\n",
+					pkg.NormalizeVersion(current), tag, updateCommand(installedBy))
 			}
 		case <-time.After(500 * time.Millisecond):
 			// Still in flight; not worth holding the shell for.
