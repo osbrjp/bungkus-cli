@@ -24,6 +24,10 @@ var Version = pkg.DevVersion
 // announces, or "" when no update is known at startup.
 var UpdateAvailable string
 
+// UpdateCommand is the command the header's update notice suggests; cmd sets
+// it to match how the binary was installed.
+var UpdateCommand = "bungkus-cli update"
+
 // pane identifies one of the three bento panes.
 type pane int
 
