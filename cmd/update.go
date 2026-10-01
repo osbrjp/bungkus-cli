@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"time"
 
 	"github.com/osbrjp/bungkus-cli/pkg"
@@ -61,5 +62,21 @@ func runUpdate(cmd *cobra.Command, _ []string) error {
 	install := exec.CommandContext(cmd.Context(), "bash", "-c",
 		"set -o pipefail; curl -fsSL "+pkg.InstallScriptURL+" | bash")
 	install.Stdin, install.Stdout, install.Stderr = os.Stdin, os.Stdout, os.Stderr
+	install.Env = installEnv(os.Environ())
 	return install.Run()
+}
+
+// installEnv returns env plus BUNGKUS_CURRENT_BIN, the resolved path of the
+// running binary, so install.sh updates this copy in place (or, when its
+// folder isn't writable, moves it to ~/.local/bin) instead of guessing from
+// PATH. When the path can't be determined, install.sh falls back to PATH.
+func installEnv(env []string) []string {
+	exe, err := os.Executable()
+	if err != nil {
+		return env
+	}
+	if real, err := filepath.EvalSymlinks(exe); err == nil {
+		exe = real
+	}
+	return append(env, "BUNGKUS_CURRENT_BIN="+exe)
 }
