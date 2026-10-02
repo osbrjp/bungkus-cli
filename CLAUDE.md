@@ -67,5 +67,5 @@ Flags (see `--help` for full list): `--base`, `--css`, `--fmt`, `--linter`, `--v
 - Commit messages: conventional commits (`feat:`, `fix:`, `test:`, `chore:`)
 - Branch naming: `i{issue#}-{date}-{seq}` (e.g. `i37-20260414-1741`)
 - GitHub repo: `osbrjp/bungkus-cli`
-- Plugin: `plugin/` holds the `bungkus` plugin (`bungkus-scaffold` skill, published from this repo's own marketplace as `bungkus@bungkus-cli`). When a `create` flag or preset changes, update `plugin/skills/bungkus-scaffold/SKILL.md` in the same PR and bump `version` in both `plugin/.claude-plugin/plugin.json` and `plugin/.codex-plugin/plugin.json`.
+- Plugin: `plugin/` holds the `bungkus` plugin (skills `bungkus-scaffold`, `bungkus-add`, `bungkus-recommend`; published from this repo's own marketplace as `bungkus@bungkus-cli`). When a `create` or `add` flag, option or preset changes, update the matching skill under `plugin/skills/` in the same PR and bump `version` in both `plugin/.claude-plugin/plugin.json` and `plugin/.codex-plugin/plugin.json`.
 - Tests live next to the code (`pkg/config_test.go`, `pkg/packagejson_test.go`). Table-driven; they exercise the real embedded registry so changes to `registry.json` are covered automatically.

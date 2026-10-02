@@ -200,7 +200,7 @@ Every scaffolded project ships with files that make it work well with Claude Cod
 
 ### Agent plugin
 
-The `bungkus` plugin lets Claude Code or Codex turn a plain request ("an Astro + React site with Tailwind") into the right `bungkus-cli create` command. This repo is its marketplace:
+The `bungkus` plugin lets Claude Code or Codex turn a plain request ("an Astro + React site with Tailwind") into the right `bungkus-cli create` command, add a tool to an existing project with `bungkus-cli add`, and recommend a stack when you haven't picked one. This repo is its marketplace:
 
 ```bash
 # Claude Code
@@ -254,7 +254,7 @@ pkg/
   scaffold.go                   # Template rendering and file emission
   validate.go                   # Project-name / destination validation
   bump.go                       # Version-bump resolution (used by cmd/bump.go)
-plugin/                         # `bungkus` Claude Code / Codex plugin (bungkus-scaffold skill)
+plugin/                         # `bungkus` Claude Code / Codex plugin (scaffold, add, recommend skills)
 .claude-plugin/marketplace.json # Claude Code marketplace listing the plugin
 .agents/plugins/marketplace.json # Codex marketplace listing the plugin
 ```
@@ -281,7 +281,7 @@ go test ./...
 
 ### Plugin
 
-`plugin/` holds the `bungkus` plugin, and this repo is its marketplace (`.claude-plugin/marketplace.json` for Claude Code, `.agents/plugins/marketplace.json` for Codex). Its one skill, `bungkus-scaffold`, turns a plain request into a `bungkus-cli create` command. When a `create` flag or preset changes, update `plugin/skills/bungkus-scaffold/SKILL.md` in the same PR and bump `version` in both `plugin/.claude-plugin/plugin.json` and `plugin/.codex-plugin/plugin.json`.
+`plugin/` holds the `bungkus` plugin, and this repo is its marketplace (`.claude-plugin/marketplace.json` for Claude Code, `.agents/plugins/marketplace.json` for Codex). It has three skills: `bungkus-scaffold` turns a plain request into a `bungkus-cli create` command, `bungkus-add` does the same for `bungkus-cli add` on an existing project, and `bungkus-recommend` helps someone who hasn't chosen a stack pick one. When a `create` or `add` flag, option or preset changes, update the matching skill under `plugin/skills/` in the same PR and bump `version` in both `plugin/.claude-plugin/plugin.json` and `plugin/.codex-plugin/plugin.json`.
 
 ## License
 
