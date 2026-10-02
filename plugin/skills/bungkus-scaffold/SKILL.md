@@ -37,14 +37,24 @@ listed option — do not invent flags.
 ### 2. Pick a preset, then override
 
 Presets (`-t`) set a coherent bundle of choices; flags override individual
-fields. Prefer starting from the closest preset and overriding only what the
-user explicitly asked for — it's less error-prone than specifying every flag.
+fields. A preset sets more than its name says — typically a CSS framework plus
+validation, form, query and state libraries — and `--help` does not show what
+each one bundles. So:
+
+- Use a preset when the user asked for that kind of batteries-included setup,
+  and override every bundled option they did not ask for (for example
+  `--css vanilla --form none --query none --validation none --state none`).
+- Use `--base` with explicit flags when the user named a lean or specific
+  stack; nothing is implied that way.
+
+Never tell the user what they will get from the flag defaults or from memory;
+step 3's dry run is the only source for that.
 
 - "Astro + React" → `-t astro-react`
 - "Nuxt" → `-t nuxt`
 - "Vite + Vue" → `-t vite-vue`
 
-Then add only the flags the user named. Example: user wants Astro+React but
+Then add the flags the user named. Example: user wants Astro+React but
 with `bun` and `biome`:
 
 ```
@@ -58,9 +68,23 @@ that to the user rather than pretending it worked.
 
 ### 3. Confirm before scaffolding
 
-Scaffolding writes a new directory. Show the user the exact command you're
-about to run and the target directory, then run it. If the project name /
-directory already exists, stop and ask — don't overwrite.
+Scaffolding writes a new directory. First run the exact command with
+`--dry-run` added: it writes nothing and prints the resolved config, one line
+per flag, then the packages it would install.
+
+```
+bungkus-cli create <name> [flags] --dry-run
+```
+
+Check every line against the request. If it shows a CSS framework or library
+the user did not ask for, add the override and dry-run again. Then show the
+user the command, the target directory and the resolved config (every option,
+including the bundled libraries), and run it once they agree. If the project
+name / directory already exists, stop and ask — don't overwrite.
+
+If the binary rejects `--dry-run` as an unknown flag, tell the user to run
+`bungkus-cli update`; until then avoid `-t` presets and write every option
+flag out explicitly.
 
 ### 4. Run and report
 

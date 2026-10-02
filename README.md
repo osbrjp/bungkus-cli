@@ -147,9 +147,10 @@ bungkus-cli create my-app --base astro-react --backend hono --orm drizzle --db p
 | `--install`      | `false`      | run the package manager install after scaffolding                            |
 | `--git`          | `true`       | initialize a git repo with an initial commit                                 |
 | `--node-engine`  | `>=22.12.0`  | `package.json` `engines.node` constraint                                     |
+| `--dry-run`      | `false`      | print the resolved config and its packages, then exit without writing        |
 | `-t, --template` | —            | `astro`, `astro-react`, `astro-vue`, `nuxt`, `vite`, `vite-react`, `vite-vue` |
 
-Flags take precedence over template presets, so `-t nuxt --pm bun` uses the Nuxt preset but overrides the package manager.
+Flags take precedence over template presets, so `-t nuxt --pm bun` uses the Nuxt preset but overrides the package manager. A preset sets several options at once (for example a CSS framework plus validation, form, query and state libraries); add `--dry-run` to see exactly what a preset plus your flags resolves to before anything is written.
 
 Combination rules the CLI enforces:
 

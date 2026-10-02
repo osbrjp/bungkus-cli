@@ -1,6 +1,6 @@
 {
   "name": "bungkus",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Scaffold full-stack projects with bungkus-cli from a plain-language request, add tools to an existing project, get a stack recommendation, and set up bungkus-mc.",
   "author": {"name": "OSBR"},
   "repository": "https://github.com/osbrjp/bungkus-cli",
