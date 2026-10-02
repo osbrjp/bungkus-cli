@@ -10,7 +10,23 @@
       "name": "bungkus",
       "description": "Scaffold full-stack projects with bungkus-cli: a frontend (Astro/Nuxt/Vite) with a batteries-included optional backend (Hono/Elysia + ORM/database, /health-check, monorepo), translating a plain-language request into the correct `bungkus-cli create` command, reading valid options from the tool's own --help so flag values are never guessed",
       "category": "productivity",
-      "source": "./plugin"
+      "source": {
+        "source": "git-subdir",
+        "url": "osbrjp/bungkus-cli",
+        "path": "plugin",
+        "ref": "release"
+      }
+    },
+    {
+      "name": "bungkus-canary",
+      "description": "Pre-release build of the bungkus plugin, from the main branch. For testing the plugin before a stable release; install bungkus instead for normal use.",
+      "category": "productivity",
+      "source": {
+        "source": "git-subdir",
+        "url": "osbrjp/bungkus-cli",
+        "path": "plugin",
+        "ref": "main"
+      }
     }
   ]
 }

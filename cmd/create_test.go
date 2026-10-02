@@ -1,8 +1,11 @@
 package cmd
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/osbrjp/bungkus-cli/config"
@@ -120,5 +123,90 @@ func TestCreateMonorepoAllPMs(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// --dry-run prints what a preset plus flags resolves to and writes nothing.
+// A preset sets several options at once, so the output must show the preset's
+// values and the flags typed over them.
+func TestCreateDryRun(t *testing.T) {
+	if err := pkg.InitRegistry(config.RegistryJSON); err != nil {
+		t.Fatalf("InitRegistry: %v", err)
+	}
+	t.Chdir(t.TempDir())
+	var out bytes.Buffer
+	c := &cobra.Command{RunE: createCmd.RunE, SilenceUsage: true}
+	addCreateFlags(c)
+	c.SetOut(&out)
+	c.SetArgs([]string{"demo", "-t", "astro-react", "--css", "vanilla", "--dry-run"})
+	if err := c.Execute(); err != nil {
+		t.Fatalf("create --dry-run: %v", err)
+	}
+	for _, want := range []string{"base         astro-react", "css          vanilla", "form         react-hook-form", "state        nanostores"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("dry-run output missing %q:\n%s", want, out.String())
+		}
+	}
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		t.Errorf("dry run wrote %d entries, want none", len(entries))
+	}
+}
+
+// Each flag's help text must name every value the registry accepts for it, and
+// -t every preset: --help is what agents and users read to learn the options.
+func TestCreateHelpListsEveryValue(t *testing.T) {
+	if err := pkg.InitRegistry(config.RegistryJSON); err != nil {
+		t.Fatalf("InitRegistry: %v", err)
+	}
+	values := func(entries []pkg.OptionEntry) []string {
+		out := make([]string, 0, len(entries))
+		for _, e := range entries {
+			out = append(out, e.Value)
+		}
+		return out
+	}
+	r := pkg.GetRegistry()
+	cases := map[string][]string{
+		"css":        values(r.CSS),
+		"fmt":        values(r.Formatters),
+		"linter":     values(r.Linters),
+		"validation": values(r.Validation),
+		"form":       values(r.Form),
+		"query":      values(r.Query),
+		"state":      values(r.State),
+		"cms":        values(r.CMS),
+		"test":       values(r.Test),
+		"audit":      values(r.Audit),
+		"desktop":    values(r.Desktop),
+		"deploy":     values(r.Deployment),
+		"cicd":       values(r.CICD),
+		"backend":    values(r.Backend),
+		"orm":        values(r.ORM),
+		"db":         values(r.Database),
+	}
+	for _, b := range r.Bases {
+		cases["base"] = append(cases["base"], b.Value)
+	}
+	for _, pm := range r.PackageManagers {
+		cases["pm"] = append(cases["pm"], pm.Value)
+	}
+	for name := range templates {
+		cases["template"] = append(cases["template"], name)
+	}
+
+	c := &cobra.Command{}
+	addCreateFlags(c)
+	for flag, want := range cases {
+		usage := c.Flags().Lookup(flag).Usage
+		listed := strings.FieldsFunc(usage, func(r rune) bool { return strings.ContainsRune(" ,().", r) })
+		for _, v := range want {
+			if !slices.Contains(listed, v) {
+				t.Errorf("--%s help does not list %q: %s", flag, v, usage)
+			}
+		}
 	}
 }
