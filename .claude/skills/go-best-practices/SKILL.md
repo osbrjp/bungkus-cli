@@ -133,5 +133,5 @@ breaking `go test`.
 - [ ] Every error is returned and wrapped with `%w`; no new `panic`, no `os.Exit` outside `main.go` / `cmd.Execute`.
 - [ ] No new mutable global, no new shell string, no write outside the validated destination.
 - [ ] New logic has a table-driven test next to it.
-- [ ] A `create` flag or preset change also updates `plugin/skills/bungkus-scaffold/SKILL.md` and bumps the plugin version.
+- [ ] A `create` or `add` flag, option or preset change also updates the matching skill under `plugin/skills/` and bumps the plugin version.
 - [ ] Comments explain why; no edit narration.
