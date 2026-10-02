@@ -198,6 +198,20 @@ Every scaffolded project ships with files that make it work well with Claude Cod
 - **`.claude/commands/`** — project slash-commands: `/verify` (typecheck + build + test, and curl the health-check), `/format-fix`, and `/new-component` (follows the repo's naming + JSDoc conventions).
 - **`.mcp.json`** — with `--test playwright`, a Playwright MCP server so an agent can drive the running app in a browser.
 
+### Agent plugin
+
+The `bungkus` plugin lets Claude Code or Codex turn a plain request ("an Astro + React site with Tailwind") into the right `bungkus-cli create` command. This repo is its marketplace:
+
+```bash
+# Claude Code
+claude plugin marketplace add osbrjp/bungkus-cli
+claude plugin install bungkus@bungkus-cli
+
+# Codex
+codex plugin marketplace add osbrjp/bungkus-cli
+codex plugin add bungkus@bungkus-cli
+```
+
 ## Project Structure
 
 ```
@@ -241,6 +255,8 @@ pkg/
   validate.go                   # Project-name / destination validation
   bump.go                       # Version-bump resolution (used by cmd/bump.go)
 plugin/                         # `bungkus` Claude Code / Codex plugin (bungkus-scaffold skill)
+.claude-plugin/marketplace.json # Claude Code marketplace listing the plugin
+.agents/plugins/marketplace.json # Codex marketplace listing the plugin
 ```
 
 ## Development
@@ -265,7 +281,7 @@ go test ./...
 
 ### Plugin
 
-`plugin/` holds the `bungkus` plugin (published through the `osbrjp/DevTools` marketplace as `bungkus@devtools`). Its one skill, `bungkus-scaffold`, turns a plain request into a `bungkus-cli create` command. When a `create` flag or preset changes, update `plugin/skills/bungkus-scaffold/SKILL.md` in the same PR and bump `version` in both `plugin/.claude-plugin/plugin.json` and `plugin/.codex-plugin/plugin.json`.
+`plugin/` holds the `bungkus` plugin, and this repo is its marketplace (`.claude-plugin/marketplace.json` for Claude Code, `.agents/plugins/marketplace.json` for Codex). Its one skill, `bungkus-scaffold`, turns a plain request into a `bungkus-cli create` command. When a `create` flag or preset changes, update `plugin/skills/bungkus-scaffold/SKILL.md` in the same PR and bump `version` in both `plugin/.claude-plugin/plugin.json` and `plugin/.codex-plugin/plugin.json`.
 
 ## License
 

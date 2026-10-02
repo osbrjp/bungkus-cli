@@ -1,0 +1,16 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "bungkus-cli",
+  "description": "The bungkus plugin: scaffold projects with bungkus-cli from a plain-language request",
+  "owner": {
+    "name": "OSBR"
+  },
+  "plugins": [
+    {
+      "name": "bungkus",
+      "description": "Scaffold full-stack projects with bungkus-cli: a frontend (Astro/Nuxt/Vite) with a batteries-included optional backend (Hono/Elysia + ORM/database, /health-check, monorepo), translating a plain-language request into the correct `bungkus-cli create` command, reading valid options from the tool's own --help so flag values are never guessed",
+      "category": "productivity",
+      "source": "./plugin"
+    }
+  ]
+}
