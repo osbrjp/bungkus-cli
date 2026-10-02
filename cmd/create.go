@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/osbrjp/bungkus-cli/config"
 	"github.com/osbrjp/bungkus-cli/internal/tui"
@@ -188,6 +190,11 @@ to scaffold into the current directory.`,
 			return err
 		}
 
+		if dry, _ := cmd.Flags().GetBool("dry-run"); dry {
+			printResolved(cmd.OutOrStdout(), cfg)
+			return nil
+		}
+
 		if err := pkg.Scaffold(destDir, config.Templates, cfg); err != nil {
 			return fmt.Errorf("scaffold failed: %w", err)
 		}
@@ -336,6 +343,47 @@ func configFromFlags(cmd *cobra.Command, args []string) (pkg.ProjectConfig, erro
 	return cfg, nil
 }
 
+// printResolved writes the config `create` would scaffold, one flag name per
+// line, then every package it would install. It is what --dry-run shows: a
+// preset sets several options at once, and neither the preset name nor the
+// per-flag defaults in --help say which.
+func printResolved(w io.Writer, cfg pkg.ProjectConfig) {
+	fmt.Fprintln(w, "Resolved config (dry run, nothing written):")
+	for _, f := range []struct{ flag, value string }{
+		{"name", cfg.ProjectName},
+		{"base", string(cfg.Base)},
+		{"css", string(cfg.CSS)},
+		{"fmt", string(cfg.Fmt)},
+		{"linter", string(cfg.Linter)},
+		{"validation", string(cfg.Validation)},
+		{"form", string(cfg.Form)},
+		{"query", string(cfg.Query)},
+		{"state", string(cfg.State)},
+		{"cms", string(cfg.CMS)},
+		{"test", string(cfg.Test)},
+		{"audit", string(cfg.Audit)},
+		{"desktop", string(cfg.Desktop)},
+		{"deploy", string(cfg.Deployment)},
+		{"cicd", string(cfg.CICD)},
+		{"backend", string(cfg.Backend)},
+		{"orm", string(cfg.ORM)},
+		{"db", string(cfg.Database)},
+		{"layout", string(cfg.Layout)},
+		{"pm", string(cfg.PM)},
+		{"channel", string(cfg.Channel)},
+		{"pin", string(cfg.Pin)},
+		{"node-engine", cfg.NodeEngine},
+		{"install", strconv.FormatBool(cfg.Install)},
+		{"git", strconv.FormatBool(cfg.GitInit)},
+	} {
+		fmt.Fprintf(w, "  %-12s %s\n", f.flag, f.value)
+	}
+	fmt.Fprintln(w, "\nPackages:")
+	for _, e := range cfg.Stack() {
+		fmt.Fprintf(w, "  %-12s %s %s\n", e.Tech, e.Name, e.Version)
+	}
+}
+
 func init() {
 	rootCmd.AddCommand(createCmd)
 	addCreateFlags(createCmd)
@@ -343,12 +391,12 @@ func init() {
 
 // addCreateFlags declares the `create` flags on cmd.
 func addCreateFlags(cmd *cobra.Command) {
-	cmd.Flags().String("base", "astro", "Base framework (astro, vite)")
+	cmd.Flags().String("base", "astro", "Base framework (astro, astro-react, astro-vue, nuxt, vite, vite-react, vite-vue)")
 	cmd.Flags().String("css", "vanilla", "CSS framework (vanilla, tailwindcss)")
 	cmd.Flags().String("fmt", "biome", "Formatter (prettier, biome, oxfmt)")
 	cmd.Flags().String("linter", "biome", "Linter (biome, eslint, oxlint)")
 	cmd.Flags().String("validation", "none", "Validation library (none, zod)")
-	cmd.Flags().String("form", "none", "Form library (none, tanstack-form)")
+	cmd.Flags().String("form", "none", "Form library (none, react-hook-form, tanstack-form, veevalidate)")
 	cmd.Flags().String("query", "none", "Query library (none, tanstack-query)")
 	cmd.Flags().String("state", "none", "State management library (none, jotai, zustand, pinia, nanostores)")
 	cmd.Flags().String("pm", "pnpm", "Package manager (bun, npm, yarn, pnpm)")
@@ -367,5 +415,6 @@ func addCreateFlags(cmd *cobra.Command) {
 	cmd.Flags().String("pin", "default", "Pin strategy: default (as registry), caret, tilde, exact")
 	cmd.Flags().Bool("install", false, "Run the package manager install after scaffolding")
 	cmd.Flags().Bool("git", true, "Initialize a git repo with an initial commit")
+	cmd.Flags().Bool("dry-run", false, "Print the resolved config (preset + flags) and its packages, then exit without writing anything")
 	cmd.Flags().String("node-engine", pkg.DefaultNodeEngine, "package.json engines.node constraint")
 }
