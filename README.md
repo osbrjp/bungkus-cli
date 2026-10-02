@@ -240,6 +240,7 @@ pkg/
   scaffold.go                   # Template rendering and file emission
   validate.go                   # Project-name / destination validation
   bump.go                       # Version-bump resolution (used by cmd/bump.go)
+plugin/                         # `bungkus` Claude Code / Codex plugin (bungkus-scaffold skill)
 ```
 
 ## Development
@@ -261,6 +262,10 @@ go run . create my-app --base vite-react --css tailwindcss --fmt biome
 ```bash
 go test ./...
 ```
+
+### Plugin
+
+`plugin/` holds the `bungkus` plugin (published through the `osbrjp/DevTools` marketplace as `bungkus@devtools`). Its one skill, `bungkus-scaffold`, turns a plain request into a `bungkus-cli create` command. When a `create` flag or preset changes, update `plugin/skills/bungkus-scaffold/SKILL.md` in the same PR and bump `version` in both `plugin/.claude-plugin/plugin.json` and `plugin/.codex-plugin/plugin.json`.
 
 ## License
 

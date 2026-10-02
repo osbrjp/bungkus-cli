@@ -1,0 +1,17 @@
+{
+  "name": "bungkus",
+  "version": "0.3.0",
+  "description": "Scaffold full-stack projects with bungkus-cli from a plain-language request.",
+  "author": {"name": "OSBR"},
+  "repository": "https://github.com/osbrjp/bungkus-cli",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Bungkus",
+    "shortDescription": "Scaffold full-stack applications.",
+    "longDescription": "Translate a project request into verified bungkus-cli options and scaffold the selected full-stack application.",
+    "developerName": "OSBR",
+    "category": "Developer Tools",
+    "capabilities": ["Interactive", "Write"],
+    "defaultPrompt": ["Scaffold a full-stack app with bungkus."]
+  }
+}

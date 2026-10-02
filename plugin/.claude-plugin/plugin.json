@@ -1,0 +1,8 @@
+{
+  "name": "bungkus",
+  "description": "Scaffold full-stack projects with bungkus-cli: a frontend (Astro/Nuxt/Vite) with a batteries-included optional backend (Hono/Elysia + ORM/database, /health-check, monorepo). Translate a plain-language request into the correct `bungkus-cli create` flags, using the tool's own registry as the source of truth for valid options.",
+  "version": "0.3.0",
+  "author": {
+    "name": "OSBR"
+  }
+}
