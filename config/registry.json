@@ -369,7 +369,7 @@
         },
         "vue": {
           "dependencies": {
-            "@tanstack/vue-query": "^5.102.8"
+            "@tanstack/vue-query": "^5.103.1"
           }
         }
       }
