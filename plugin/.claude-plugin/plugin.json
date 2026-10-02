@@ -1,7 +1,7 @@
 {
   "name": "bungkus",
   "description": "Scaffold full-stack projects with bungkus-cli: a frontend (Astro/Nuxt/Vite) with a batteries-included optional backend (Hono/Elysia + ORM/database, /health-check, monorepo). Translate a plain-language request into the correct `bungkus-cli create` flags, using the tool's own registry as the source of truth for valid options. Also adds tools to an existing project with `bungkus-cli add` and recommends a stack when none is chosen. Also sets up bungkus-mc, the terminal mission control for Claude Code and Codex sessions.",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "author": {
     "name": "OSBR"
   }
