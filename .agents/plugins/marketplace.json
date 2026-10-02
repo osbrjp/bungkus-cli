@@ -7,8 +7,10 @@
     {
       "name": "bungkus",
       "source": {
-        "source": "local",
-        "path": "./plugin"
+        "source": "git-subdir",
+        "url": "https://github.com/osbrjp/bungkus-cli.git",
+        "path": "./plugin",
+        "ref": "release"
       },
       "policy": {
         "installation": "AVAILABLE",
