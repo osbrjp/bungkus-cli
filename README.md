@@ -204,12 +204,22 @@ The `bungkus` plugin lets Claude Code or Codex turn a plain request ("an Astro +
 
 ```bash
 # Claude Code
-claude plugin marketplace add osbrjp/bungkus-cli
+claude plugin marketplace add osbrjp/bungkus-cli@release
 claude plugin install bungkus@bungkus-cli
 
 # Codex
-codex plugin marketplace add osbrjp/bungkus-cli
+codex plugin marketplace add osbrjp/bungkus-cli@release
 codex plugin add bungkus@bungkus-cli
+```
+
+`@release` pins the marketplace to the stable branch, so the plugin changes only with a stable release. Without it the marketplace follows `main`, the canary line, which is what you want only when testing the plugin before a release.
+
+One machine holds one copy of the marketplace. To switch between stable and canary, remove it and add it again:
+
+```bash
+claude plugin marketplace remove bungkus-cli   # Codex: codex plugin marketplace remove bungkus-cli
+claude plugin marketplace add osbrjp/bungkus-cli@release
+claude plugin install bungkus@bungkus-cli
 ```
 
 ## Project Structure
