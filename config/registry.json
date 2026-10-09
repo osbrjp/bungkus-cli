@@ -582,7 +582,7 @@
           "@hono/node-server": "^2.1.1"
         },
         "devDependencies": {
-          "tsx": "^4.23.13"
+          "tsx": "^4.23.15"
         },
         "scripts": {
           "dev:server": "tsx watch --env-file-if-exists=.env server/index.ts"
@@ -617,7 +617,7 @@
         },
         "devDependencies": {
           "drizzle-kit": "^0.31.10",
-          "tsx": "^4.23.13"
+          "tsx": "^4.23.15"
         },
         "scripts": {
           "db:generate": "drizzle-kit generate",
@@ -636,7 +636,7 @@
         },
         "devDependencies": {
           "prisma": "~7.9.1",
-          "tsx": "^4.23.13"
+          "tsx": "^4.23.15"
         },
         "scripts": {
           "db:generate": "prisma generate",
