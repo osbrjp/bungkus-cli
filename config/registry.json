@@ -14,7 +14,7 @@
           "astro": "astro"
         },
         "dependencies": {
-          "astro": "^7.3.2"
+          "astro": "^7.3.3"
         }
       }
     },
@@ -33,9 +33,9 @@
           "astro": "astro"
         },
         "dependencies": {
-          "astro": "^7.3.2",
-          "@astrojs/vue": "^7.0.2",
-          "vue": "^3.5.42"
+          "astro": "^7.3.3",
+          "@astrojs/vue": "^7.0.3",
+          "vue": "^3.5.43"
         }
       }
     },
@@ -54,7 +54,7 @@
           "astro": "astro"
         },
         "dependencies": {
-          "astro": "^7.3.2",
+          "astro": "^7.3.3",
           "@astrojs/react": "^6.0.6",
           "react": "^19.3.0",
           "react-dom": "^19.3.0"
@@ -82,7 +82,7 @@
         },
         "dependencies": {
           "nuxt": "4.5.2",
-          "vue": "^3.5.42",
+          "vue": "^3.5.43",
           "vue-router": "^5.3.1"
         },
         "devDependencies": {
@@ -105,7 +105,7 @@
         },
         "devDependencies": {
           "typescript": "~7.0.2",
-          "vite": "^8.3.0"
+          "vite": "^8.3.1"
         }
       }
     },
@@ -130,7 +130,7 @@
         },
         "devDependencies": {
           "typescript": "~7.0.2",
-          "vite": "^8.3.0",
+          "vite": "^8.3.1",
           "@vitejs/plugin-react": "^6.1.1",
           "@types/react": "^19.3.0",
           "@types/react-dom": "^19.3.0"
@@ -153,11 +153,11 @@
           "preview": "vite preview"
         },
         "dependencies": {
-          "vue": "^3.5.42"
+          "vue": "^3.5.43"
         },
         "devDependencies": {
           "typescript": "~7.0.2",
-          "vite": "^8.3.0",
+          "vite": "^8.3.1",
           "@vitejs/plugin-vue": "^6.0.8",
           "vue-tsc": "^3.3.11",
           "@vue/tsconfig": "^0.9.1"
@@ -207,7 +207,7 @@
           "format": "prettier --write ."
         },
         "devDependencies": {
-          "prettier": "3.9.6"
+          "prettier": "3.9.8"
         }
       }
     },
@@ -582,7 +582,7 @@
           "@hono/node-server": "^2.1.1"
         },
         "devDependencies": {
-          "tsx": "^4.23.13"
+          "tsx": "^4.23.15"
         },
         "scripts": {
           "dev:server": "tsx watch --env-file-if-exists=.env server/index.ts"
@@ -617,7 +617,7 @@
         },
         "devDependencies": {
           "drizzle-kit": "^0.31.10",
-          "tsx": "^4.23.13"
+          "tsx": "^4.23.15"
         },
         "scripts": {
           "db:generate": "drizzle-kit generate",
@@ -636,7 +636,7 @@
         },
         "devDependencies": {
           "prisma": "~7.9.1",
-          "tsx": "^4.23.13"
+          "tsx": "^4.23.15"
         },
         "scripts": {
           "db:generate": "prisma generate",
