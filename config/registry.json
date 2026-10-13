@@ -389,7 +389,7 @@
       ],
       "packages": {
         "dependencies": {
-          "jotai": "^2.20.3"
+          "jotai": "^3.0.0"
         }
       }
     },
