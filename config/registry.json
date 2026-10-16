@@ -14,7 +14,7 @@
           "astro": "astro"
         },
         "dependencies": {
-          "astro": "^7.3.3"
+          "astro": "^7.3.5"
         }
       }
     },
@@ -33,7 +33,7 @@
           "astro": "astro"
         },
         "dependencies": {
-          "astro": "^7.3.3",
+          "astro": "^7.3.5",
           "@astrojs/vue": "^7.0.3",
           "vue": "^3.5.43"
         }
@@ -54,7 +54,7 @@
           "astro": "astro"
         },
         "dependencies": {
-          "astro": "^7.3.3",
+          "astro": "^7.3.5",
           "@astrojs/react": "^6.0.6",
           "react": "^19.3.0",
           "react-dom": "^19.3.0"
