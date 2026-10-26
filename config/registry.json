@@ -14,7 +14,7 @@
           "astro": "astro"
         },
         "dependencies": {
-          "astro": "^7.3.3"
+          "astro": "^7.3.8"
         }
       }
     },
@@ -33,7 +33,7 @@
           "astro": "astro"
         },
         "dependencies": {
-          "astro": "^7.3.3",
+          "astro": "^7.3.8",
           "@astrojs/vue": "^7.0.3",
           "vue": "^3.5.43"
         }
@@ -54,8 +54,8 @@
           "astro": "astro"
         },
         "dependencies": {
-          "astro": "^7.3.3",
-          "@astrojs/react": "^6.0.6",
+          "astro": "^7.3.8",
+          "@astrojs/react": "^7.0.1",
           "react": "^19.3.0",
           "react-dom": "^19.3.0"
         },
@@ -81,12 +81,12 @@
           "postinstall": "nuxt prepare"
         },
         "dependencies": {
-          "nuxt": "4.5.2",
+          "nuxt": "4.6.1",
           "vue": "^3.5.43",
-          "vue-router": "^5.3.1"
+          "vue-router": "^5.4.0"
         },
         "devDependencies": {
-          "@types/node": "^26.6.1"
+          "@types/node": "^26.6.5"
         }
       }
     },
@@ -105,7 +105,7 @@
         },
         "devDependencies": {
           "typescript": "~7.0.2",
-          "vite": "^8.3.1"
+          "vite": "^8.3.4"
         }
       }
     },
@@ -130,8 +130,8 @@
         },
         "devDependencies": {
           "typescript": "~7.0.2",
-          "vite": "^8.3.1",
-          "@vitejs/plugin-react": "^6.1.1",
+          "vite": "^8.3.4",
+          "@vitejs/plugin-react": "^6.1.2",
           "@types/react": "^19.3.0",
           "@types/react-dom": "^19.3.0"
         }
@@ -157,9 +157,9 @@
         },
         "devDependencies": {
           "typescript": "~7.0.2",
-          "vite": "^8.3.1",
-          "@vitejs/plugin-vue": "^6.0.9",
-          "vue-tsc": "^3.3.11",
+          "vite": "^8.3.4",
+          "@vitejs/plugin-vue": "^6.0.10",
+          "vue-tsc": "^3.3.13",
           "@vue/tsconfig": "^0.9.1"
         }
       }
@@ -195,7 +195,7 @@
           "format": "biome format --write ."
         },
         "devDependencies": {
-          "@biomejs/biome": "2.5.14"
+          "@biomejs/biome": "2.5.15"
         }
       }
     },
@@ -207,7 +207,7 @@
           "format": "prettier --write ."
         },
         "devDependencies": {
-          "prettier": "3.9.8"
+          "prettier": "3.9.10"
         }
       }
     },
@@ -222,7 +222,7 @@
           "format": "oxfmt ."
         },
         "devDependencies": {
-          "oxlint": "^1.83.0"
+          "oxlint": "^1.87.0"
         }
       }
     }
@@ -236,7 +236,7 @@
           "lint": "biome lint ."
         },
         "devDependencies": {
-          "@biomejs/biome": "2.5.14"
+          "@biomejs/biome": "2.5.15"
         }
       }
     },
@@ -248,10 +248,10 @@
           "lint": "eslint ."
         },
         "devDependencies": {
-          "eslint": "^10.11.0",
+          "eslint": "^10.12.0",
           "@eslint/js": "^10.0.1",
-          "globals": "^17.12.0",
-          "typescript-eslint": "^8.70.1"
+          "globals": "^17.13.0",
+          "typescript-eslint": "^8.71.1"
         }
       }
     },
@@ -266,7 +266,7 @@
           "lint": "oxlint ."
         },
         "devDependencies": {
-          "oxlint": "^1.83.0"
+          "oxlint": "^1.87.0"
         }
       }
     }
@@ -282,7 +282,7 @@
       "label": "Zod",
       "packages": {
         "dependencies": {
-          "zod": "^4.6.5"
+          "zod": "^4.6.6"
         }
       }
     }
@@ -301,7 +301,7 @@
       ],
       "packages": {
         "dependencies": {
-          "react-hook-form": "^7.88.0"
+          "react-hook-form": "^7.90.0"
         }
       }
     },
@@ -364,12 +364,12 @@
       "integrationPackages": {
         "react": {
           "dependencies": {
-            "@tanstack/react-query": "^5.103.1"
+            "@tanstack/react-query": "^5.104.2"
           }
         },
         "vue": {
           "dependencies": {
-            "@tanstack/vue-query": "^5.103.1"
+            "@tanstack/vue-query": "^5.104.2"
           }
         }
       }
@@ -389,7 +389,7 @@
       ],
       "packages": {
         "dependencies": {
-          "jotai": "^3.0.0"
+          "jotai": "^3.0.1"
         }
       }
     },
@@ -433,7 +433,7 @@
       ],
       "packages": {
         "dependencies": {
-          "nanostores": "^1.5.3"
+          "nanostores": "^1.5.5"
         }
       },
       "integrationPackages": {
@@ -482,7 +482,7 @@
           "test:e2e": "playwright test"
         },
         "devDependencies": {
-          "@playwright/test": "^1.63.0"
+          "@playwright/test": "^1.64.0"
         }
       }
     }
@@ -510,7 +510,7 @@
       "label": "Cloudflare Pages",
       "packages": {
         "devDependencies": {
-          "wrangler": "^4.140.0"
+          "wrangler": "^4.149.0"
         },
         "scripts": {
           "deploy": "wrangler pages deploy dist"
@@ -522,7 +522,7 @@
       "label": "Cloudflare Workers",
       "packages": {
         "devDependencies": {
-          "wrangler": "^4.140.0"
+          "wrangler": "^4.149.0"
         },
         "scripts": {
           "deploy": "wrangler deploy"
@@ -562,7 +562,7 @@
           "tauri": "tauri"
         },
         "devDependencies": {
-          "@tauri-apps/cli": "^2.11.5"
+          "@tauri-apps/cli": "^2.12.2"
         }
       }
     }
@@ -578,8 +578,8 @@
       "label": "Hono",
       "packages": {
         "dependencies": {
-          "hono": "^4.13.8",
-          "@hono/node-server": "^2.1.1"
+          "hono": "^4.13.13",
+          "@hono/node-server": "^2.1.4"
         },
         "devDependencies": {
           "tsx": "^4.23.15"
@@ -613,7 +613,7 @@
       "label": "Drizzle ORM",
       "packages": {
         "dependencies": {
-          "drizzle-orm": "^0.45.3"
+          "drizzle-orm": "^0.45.4"
         },
         "devDependencies": {
           "drizzle-kit": "^0.31.11",
@@ -632,10 +632,10 @@
       "label": "Prisma",
       "packages": {
         "dependencies": {
-          "@prisma/client": "~7.9.1"
+          "@prisma/client": "~7.10.0"
         },
         "devDependencies": {
-          "prisma": "~7.9.1",
+          "prisma": "~7.10.0",
           "tsx": "^4.23.15"
         },
         "scripts": {
