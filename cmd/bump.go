@@ -2,7 +2,7 @@
 
 // The bump command is maintainer/CI-only tooling. It is gated behind the
 // "bump" build tag so it is NOT compiled into released binaries — build or run
-// it with `-tags bump` (see .github/workflows/bump-versions.yml).
+// it with `-tags bump`. A weekly Claude Code cloud routine runs it and opens PRs.
 package cmd
 
 import (

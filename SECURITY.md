@@ -19,15 +19,15 @@ maintainer. Please do not file public issues for undisclosed vulnerabilities.
 - **Scanning.** `govulncheck ./...` runs in CI on every push
   (`.github/workflows/run-tests.yml`) and fails the build on any advisory that
   affects called code.
-- **Updates.** Dependabot opens PRs for the `gomod` and `github-actions`
-  ecosystems weekly (`.github/dependabot.yml`).
+- **Updates.** Dependencies are bumped manually when `govulncheck` flags an
+  advisory or during periodic review.
 - **Remediation windows** (by advisory severity affecting called code):
   - Critical: ≤ 7 days
   - High: ≤ 30 days
   - Moderate / Low: ≤ 90 days
 
   Advisories in required-but-uncalled modules are bumped opportunistically
-  (e.g. on the next Dependabot PR) rather than under an SLA.
+  (e.g. on the next routine dependency bump) rather than under an SLA.
 
 ## External communication
 
@@ -72,4 +72,4 @@ installer or updater must be applied to both repositories.
 
 Reviewed 2026-07-23 against `go.mod`: no unmaintained, end-of-life, or
 known-vulnerable third-party component identified (`govulncheck` clean).
-Reassess on each Dependabot PR and at least quarterly.
+Reassess on each dependency bump and at least quarterly.
