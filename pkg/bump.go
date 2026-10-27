@@ -101,10 +101,39 @@ type BumpResult struct {
 // leading run of range operators (^, ~, >=, etc.) before the numeric version.
 var rangePrefix = regexp.MustCompile(`^[\^~><=\s]*`)
 
+// needsBump reports whether moving a pin to target needs a registry edit.
+// Scaffolded projects have no lockfile, so a range that already admits target
+// floats to it on install (^ within a major, ^0.x / ~ within a minor) and
+// rewriting it is pure churn. Downgrades (target older than the pin, e.g. a pin
+// newer than the soak window) are never proposed. Exact pins always qualify.
+func needsBump(raw, prefix, target string) bool {
+	cur, next := "v"+strings.TrimPrefix(raw, prefix), "v"+target
+	if !semver.IsValid(cur) || !semver.IsValid(next) {
+		return true
+	}
+	if semver.Compare(next, cur) <= 0 {
+		return false
+	}
+	switch strings.TrimSpace(prefix) {
+	case "^":
+		if semver.Major(cur) != "v0" {
+			return semver.Major(cur) != semver.Major(next)
+		}
+		if semver.MajorMinor(cur) == "v0.0" {
+			return true // ^0.0.x admits only that exact version
+		}
+		return semver.MajorMinor(cur) != semver.MajorMinor(next)
+	case "~":
+		return semver.MajorMinor(cur) != semver.MajorMinor(next)
+	}
+	return true
+}
+
 // BumpRegistry parses a registry.json body, asks resolve() for the target bare
 // version of every pinned package (resolve returns ok=false to leave one
-// untouched), and rewrites the pins in place — preserving each pin's range
-// prefix and the rest of the file byte-for-byte, so diffs stay minimal.
+// untouched), and rewrites the pins the current range cannot reach in place —
+// preserving each pin's range prefix and the rest of the file byte-for-byte, so
+// diffs stay minimal.
 func BumpRegistry(content string, resolve func(name string) (string, bool)) (BumpResult, error) {
 	var reg Registry
 	if err := json.Unmarshal([]byte(content), &reg); err != nil {
@@ -151,7 +180,7 @@ func BumpRegistry(content string, resolve func(name string) (string, bool)) (Bum
 		for raw := range values {
 			prefix := rangePrefix.FindString(raw)
 			next := prefix + target
-			if next == raw {
+			if next == raw || !needsBump(raw, prefix, target) {
 				continue
 			}
 			key := name + "\x00" + raw
