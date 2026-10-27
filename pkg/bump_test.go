@@ -68,7 +68,7 @@ func TestBumpRegistry(t *testing.T) {
 	resolve := func(name string) (string, bool) {
 		switch name {
 		case "astro":
-			return "6.4.0", true
+			return "7.0.0", true
 		case "typescript":
 			return "5.9.3", true // unchanged version
 		}
@@ -79,10 +79,10 @@ func TestBumpRegistry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(res.Changes) != 1 || res.Changes[0].To != "^6.4.0" {
-		t.Fatalf("changes = %+v; want single astro -> ^6.4.0", res.Changes)
+	if len(res.Changes) != 1 || res.Changes[0].To != "^7.0.0" {
+		t.Fatalf("changes = %+v; want single astro -> ^7.0.0", res.Changes)
 	}
-	if want := `"astro": "^6.4.0"`; !contains(res.Content, want) {
+	if want := `"astro": "^7.0.0"`; !contains(res.Content, want) {
 		t.Errorf("content missing %q", want)
 	}
 	if !contains(res.Content, `"astro": "astro"`) {
@@ -90,6 +90,30 @@ func TestBumpRegistry(t *testing.T) {
 	}
 	if !contains(res.Content, `"typescript": "~5.9.3"`) {
 		t.Error("unchanged pin should keep its prefix")
+	}
+}
+
+func TestNeedsBump(t *testing.T) {
+	cases := []struct {
+		raw, target string
+		want        bool
+	}{
+		{"^6.1.3", "6.4.0", false}, // caret floats within the major
+		{"^6.1.3", "7.0.0", true},  // major needs a human
+		{"^0.45.2", "0.45.9", false},
+		{"^0.45.2", "0.46.0", true}, // ^0.x floats patch only
+		{"^0.0.3", "0.0.4", true},   // ^0.0.x is effectively exact
+		{"~7.9.1", "7.9.4", false},
+		{"~7.9.1", "7.10.0", true},   // tilde floats patch only
+		{"2.5.9", "2.5.13", true},    // exact pins never float
+		{"^19.3.0", "19.2.9", false}, // never downgrade
+		{"2.5.13", "2.5.12", false},
+	}
+	for _, c := range cases {
+		prefix := rangePrefix.FindString(c.raw)
+		if got := needsBump(c.raw, prefix, c.target); got != c.want {
+			t.Errorf("needsBump(%q, %q) = %v; want %v", c.raw, c.target, got, c.want)
+		}
 	}
 }
 
@@ -135,7 +159,7 @@ func TestBumpRegistryDesktop(t *testing.T) {
 }`
 	resolve := func(name string) (string, bool) {
 		if name == "@tauri-apps/cli" {
-			return "2.12.0", true
+			return "3.0.0", true
 		}
 		return "", false
 	}
@@ -143,10 +167,10 @@ func TestBumpRegistryDesktop(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(res.Changes) != 1 || res.Changes[0].To != "^2.12.0" {
-		t.Fatalf("changes = %+v; want single @tauri-apps/cli -> ^2.12.0", res.Changes)
+	if len(res.Changes) != 1 || res.Changes[0].To != "^3.0.0" {
+		t.Fatalf("changes = %+v; want single @tauri-apps/cli -> ^3.0.0", res.Changes)
 	}
-	if want := `"@tauri-apps/cli": "^2.12.0"`; !contains(res.Content, want) {
+	if want := `"@tauri-apps/cli": "^3.0.0"`; !contains(res.Content, want) {
 		t.Errorf("content missing %q", want)
 	}
 }
@@ -165,7 +189,7 @@ func TestBumpRegistryScansBackendOrmDatabase(t *testing.T) {
     { "value": "postgres", "packages": { "dependencies": { "pg": "^8.13.1" } } }
   ]
 }`
-	bumped := map[string]string{"hono": "4.7.0", "drizzle-orm": "0.39.0", "pg": "8.14.0"}
+	bumped := map[string]string{"hono": "5.0.0", "drizzle-orm": "0.39.0", "pg": "9.0.0"}
 	resolve := func(name string) (string, bool) {
 		v, ok := bumped[name]
 		return v, ok
@@ -177,7 +201,7 @@ func TestBumpRegistryScansBackendOrmDatabase(t *testing.T) {
 	if len(res.Changes) != len(bumped) {
 		t.Fatalf("changes = %+v; want one per backend/orm/database pin", res.Changes)
 	}
-	for _, want := range []string{`"hono": "^4.7.0"`, `"drizzle-orm": "^0.39.0"`, `"pg": "^8.14.0"`} {
+	for _, want := range []string{`"hono": "^5.0.0"`, `"drizzle-orm": "^0.39.0"`, `"pg": "^9.0.0"`} {
 		if !contains(res.Content, want) {
 			t.Errorf("content missing %q", want)
 		}
